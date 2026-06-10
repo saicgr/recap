@@ -1,0 +1,16 @@
+name = "recap-worker"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+account_id = "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID"
+
+# Secrets (set via `wrangler secret put`):
+#   GEMINI_API_KEY        - Google AI Studio key for Gemini 3.1 Flash Lite
+#   INSTALL_TOKEN_PEPPER  - random 32+ byte string; used to validate per-install tokens
+#                            (the app HMACs its install UUID with this and sends as Bearer)
+#
+# Optional KV namespace for rate-limiting:
+#   wrangler kv:namespace create recap-rate-limit
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

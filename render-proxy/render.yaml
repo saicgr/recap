@@ -1,0 +1,29 @@
+# Render service spec for the Recap cloud summary proxy.
+# https://render.com/docs/blueprint-spec
+#
+# Deployed on push to main (auto-deploy).
+
+services:
+  - type: web
+    name: recap-proxy
+    runtime: node
+    region: oregon
+    plan: starter # $7/mo — auto-scales to zero on quiet periods? No; starter
+                  # stays warm. Sufficient for v1.
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: GEMINI_API_KEY
+        sync: false   # set manually in dashboard; never commit
+      - key: ALLOWED_BUNDLE_IDS
+        value: com.recapfreenote.recap
+      - key: RATE_LIMIT_UNAUTH_PER_HOUR
+        value: "60"
+      - key: RATE_LIMIT_AUTH_PER_HOUR
+        value: "600"
+      - key: DAILY_BUDGET_USD
+        value: "10"
+    autoDeploy: true

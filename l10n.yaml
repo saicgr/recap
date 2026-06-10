@@ -1,0 +1,61 @@
+# Flutter localization generation config (D11.6 — 36 languages).
+#
+# Run: flutter gen-l10n
+#
+# English source of truth lives in lib/l10n/app_en.arb. Translated locales
+# live alongside (app_<locale>.arb) and are auto-generated via the ported
+# scripts/i18n_add_feature.py pipeline (from the AIFitnessCoach Zealova
+# repo).
+#
+# To add a 37th locale: append it to LOCALES_NON_EN in the script, run the
+# script, commit the resulting .arb + Dart files. See docs/i18n/README.md
+# once we add it.
+
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+output-dir: lib/l10n/generated
+nullable-getter: false
+# Suppress the per-locale "N untranslated messages" warning during build by
+# redirecting the full report to a file. The locale ARBs start empty and get
+# populated by scripts/i18n_fill_translations.py — until then, the file
+# below is regenerated on every build and is .gitignored.
+untranslated-messages-file: lib/l10n/_untranslated.json
+preferred-supported-locales:
+  - en
+  - ar
+  - bn
+  - cs
+  - de
+  - es
+  - fi
+  - fr
+  - ha
+  - hi
+  - id
+  - it
+  - ja
+  - jv
+  - kn
+  - ko
+  - ml
+  - mr
+  - ms
+  - ne
+  - nl
+  - or
+  - pa
+  - pl
+  - pt
+  - ru
+  - sv
+  - sw
+  - ta
+  - te
+  - th
+  - tl
+  - tr
+  - ur
+  - vi
+  - zh

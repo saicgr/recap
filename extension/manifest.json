@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Recap — Meeting Notes",
+  "version": "0.1.0",
+  "description": "Capture meeting audio from your browser tab. Transcripts + summaries land in the Recap desktop / mobile app. No bot in the participant list.",
+  "permissions": [
+    "tabCapture",
+    "activeTab",
+    "storage",
+    "sidePanel",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "http://localhost:*/*",
+    "https://meet.google.com/*",
+    "https://*.zoom.us/*",
+    "https://teams.microsoft.com/*",
+    "https://teams.live.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "Recap"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel.html"
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "minimum_chrome_version": "116",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "recap@recapfreenote.com",
+      "strict_min_version": "115.0"
+    }
+  }
+}

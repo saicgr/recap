@@ -1,0 +1,28 @@
+{
+  "name": "recap-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloud summary proxy for the Recap app — forwards to Gemini 3.1 Flash Lite.",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,114 @@
+name: recap
+description: Meeting recorder with on-device transcription + on-device AI summaries.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State
+  flutter_riverpod: ^2.5.1
+
+  # Local DB — Drift with FTS5 for cross-meeting search
+  drift: ^2.33.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # Audio
+  record: ^6.0.0
+  just_audio: ^0.9.40
+
+  # On-device transcription
+  whisper_ggml: ^1.3.1
+
+  # On-device summaries (everything except Apple Foundation Models)
+  flutter_gemma: ^0.10.0
+
+  # Speaker diarization — Pyannote segmentation + speaker embeddings via ONNX.
+  # Models downloaded on first use (~80 MB total).
+  sherpa_onnx: ^1.13.2
+
+  # Untarring sherpa-onnx model archives (.tar.bz2) post-download.
+  archive: ^3.6.1
+
+  # ONNX Runtime for the bespoke models we don't get via sherpa_onnx:
+  # Silero VAD (D15.2 / PR 4), RNNoise (C2), all-MiniLM-L6-v2 sentence
+  # embeddings (B3), GLiNER-mini NER (B2 Android fallback). Cross-platform.
+  flutter_onnxruntime: ^1.5.1
+
+  # Cloud summaries (Cloudflare Worker proxy → Gemini)
+  http: ^1.2.2
+
+  # Settings + secure storage (Power tier BYOK keys)
+  shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
+
+  # IAP + sharing + notifications
+  in_app_purchase: ^3.2.0
+  share_plus: ^10.0.2
+  flutter_local_notifications: ^17.2.3
+  url_launcher: ^6.3.0
+
+  # Calendar integration (auto-title from event)
+  device_calendar: ^4.3.3
+
+  # Free+ sign-in (Apple). Google requires Firebase/OAuth setup — deferred.
+  sign_in_with_apple: ^6.1.0
+
+  # Universal import (files, gallery, URL, YouTube captions, share-sheet).
+  # NOTE: we DON'T declare ffmpeg_kit_flutter_new here. whisper_ggml ^1.7
+  # already pulls `ffmpeg_kit_flutter_new_min` transitively, and both
+  # Flutter plugins ship the same `com.antonkarpenko.ffmpegkit.FFmpegKit
+  # FlutterMethodResultHandler` class — dex-merge fails if both are
+  # registered. The -min variant has every codec we use (mp3 / m4a / aac /
+  # wav / opus / ogg / flac + mp4 / mov / webm audio-strip). Import via
+  # `package:ffmpeg_kit_flutter_new_min/...`. If we ever need a codec the
+  # -min build excludes (rare — AC3, WMA), revisit by patching whisper_ggml.
+  file_picker: ^8.1.4
+  image_picker: ^1.1.2
+  xml: ^6.5.0
+  receive_sharing_intent: ^1.8.0
+
+  # Util
+  intl: ^0.20.2
+  uuid: ^4.4.2
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.5.0
+  drift_dev: ^2.33.0
+
+# NOTE on build_runner + native-assets hooks:
+# `dart compile aot-snapshot` refuses to compile when any transitive dep has
+# a `hook/` directory (sqlite3 >=3.0 has one — Dart's new native-assets
+# system). This used to break `flutter pub run build_runner build` for us.
+# The fix is to run codegen with the `--force-jit` flag so build_runner
+# uses JIT instead of AOT:
+#     dart run build_runner build --force-jit
+# Drop this note once build_runner ships a version that uses `dart build`
+# natively (tracked in dart-lang/build#4343).
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/sample_meeting.wav
+    # Bundled on-device models. Files come from scripts/fetch_bundled_models.sh
+    # (CI step before flutter build). The .gitignore excludes the binaries
+    # themselves; the directory ships so flutter doesn't fail asset resolution
+    # if the script hasn't run yet (assets/models/README.md is committed).
+    - assets/models/README.md
+    # ggml-tiny.en.bin (~75 MB) — Whisper tiny.en, live-caption model on every
+    # tier. Bundled for instant-start (D15.1). Pulled by
+    # scripts/fetch_bundled_models.sh; .gitignore excludes the binary.
+    - assets/models/ggml-tiny.en.bin

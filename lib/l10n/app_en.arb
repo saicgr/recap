@@ -1,0 +1,77 @@
+{
+  "@@locale": "en",
+
+  "appName": "Recap",
+  "@appName": {
+    "description": "Product name (does not translate)."
+  },
+
+  "homeRecord": "Record",
+  "@homeRecord": {
+    "description": "Primary CTA on home screen."
+  },
+
+  "homeImport": "Import",
+  "@homeImport": {
+    "description": "Toolbar action to open the universal import screen."
+  },
+
+  "homeSearch": "Search",
+  "homeSettings": "Settings",
+  "homeEmptyTitle": "No recordings yet",
+  "homeEmptySubtitle": "Tap the button below to record your first meeting. Audio stays on your device.",
+
+  "transcribing": "Transcribing on-device…",
+  "transcriptionFailed": "Transcription failed",
+
+  "tabTranscript": "Transcript",
+  "tabSummary": "Summary",
+  "tabBookmarks": "Bookmarks",
+
+  "summaryPickStyle": "Pick a style above and tap Generate.",
+  "summaryNoneYet": "No summary yet",
+  "summaryGenerate": "Generate",
+
+  "onDeviceAiNotInstalled": "On-device AI not installed",
+
+  "settingsTier": "Tier",
+  "settingsAppearance": "Appearance",
+  "settingsSummaries": "Summaries",
+  "settingsTranscription": "Transcription",
+  "settingsOrganization": "Organization",
+  "settingsPrivacy": "Privacy & security",
+  "settingsBackup": "Backup",
+  "settingsAbout": "About",
+
+  "settingsAppLock": "App Lock",
+  "settingsBackupTitle": "Backup & restore",
+  "settingsPrivacyDashboard": "Privacy dashboard",
+  "settingsInsights": "Insights",
+  "settingsActionItems": "Action items",
+  "settingsVoiceEnrollment": "Voice enrollment",
+
+  "actionItemsEmpty": "All clear — nothing pending",
+
+  "importFile": "From file or gallery",
+  "importUrl": "From URL",
+  "importYoutube": "From YouTube",
+
+  "onboardingWelcomeTitle": "Recap",
+  "onboardingWelcomeSubtitle": "Voice Memos, with on-device AI.",
+  "onboardingPrivacyTitle": "Nothing leaves your phone",
+  "onboardingPermissionsTitle": "Permissions",
+  "onboardingDownloadsTitle": "Better AI in the background",
+  "onboardingReadyTitle": "You're set",
+  "onboardingReadyCta": "Start using Recap",
+  "onboardingNext": "Next",
+
+  "permMicLabel": "Microphone",
+  "permMicDesc": "Required for recording. Recap never shares mic audio.",
+  "permCalLabel": "Calendar",
+  "permCalDesc": "Optional. Auto-titles meetings from calendar events.",
+  "permNotifLabel": "Notifications",
+  "permNotifDesc": "Optional. Local-only — \"transcript ready\", \"action item due\".",
+
+  "wifiOnly": "Wi-Fi only",
+  "wifiOnlySubtitle": "Recommended — large models stay off your cellular data plan."
+}

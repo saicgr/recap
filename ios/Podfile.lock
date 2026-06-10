@@ -1,0 +1,148 @@
+PODS:
+  - background_downloader (0.0.1):
+    - Flutter
+  - device_calendar (0.0.1):
+    - Flutter
+  - ffmpeg_kit_flutter_new_min (7.1.1):
+    - ffmpeg_kit_flutter_new_min/min (= 7.1.1)
+    - Flutter
+  - ffmpeg_kit_flutter_new_min/min (7.1.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - flutter_gemma (0.10.6):
+    - Flutter
+    - MediaPipeTasksGenAI (= 0.10.24)
+    - MediaPipeTasksGenAIC (= 0.10.24)
+  - flutter_local_notifications (0.0.1):
+    - Flutter
+  - flutter_secure_storage (6.0.0):
+    - Flutter
+  - in_app_purchase_storekit (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - large_file_handler (0.0.1):
+    - Flutter
+  - MediaPipeTasksGenAI (0.10.24):
+    - MediaPipeTasksGenAIC (= 0.10.24)
+  - MediaPipeTasksGenAIC (0.10.24)
+  - record_ios (1.2.1):
+    - Flutter
+  - share_plus (0.0.1):
+    - Flutter
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - sign_in_with_apple (0.0.1):
+    - Flutter
+  - sqlite3 (3.52.0):
+    - sqlite3/common (= 3.52.0)
+  - sqlite3/common (3.52.0)
+  - sqlite3/dbstatvtab (3.52.0):
+    - sqlite3/common
+  - sqlite3/fts5 (3.52.0):
+    - sqlite3/common
+  - sqlite3/math (3.52.0):
+    - sqlite3/common
+  - sqlite3/perf-threadsafe (3.52.0):
+    - sqlite3/common
+  - sqlite3/rtree (3.52.0):
+    - sqlite3/common
+  - sqlite3/session (3.52.0):
+    - sqlite3/common
+  - sqlite3_flutter_libs (0.0.1):
+    - Flutter
+    - FlutterMacOS
+    - sqlite3 (~> 3.52.0)
+    - sqlite3/dbstatvtab
+    - sqlite3/fts5
+    - sqlite3/math
+    - sqlite3/perf-threadsafe
+    - sqlite3/rtree
+    - sqlite3/session
+  - url_launcher_ios (0.0.1):
+    - Flutter
+  - whisper_ggml (1.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - background_downloader (from `.symlinks/plugins/background_downloader/ios`)
+  - device_calendar (from `.symlinks/plugins/device_calendar/ios`)
+  - ffmpeg_kit_flutter_new_min (from `.symlinks/plugins/ffmpeg_kit_flutter_new_min/ios`)
+  - Flutter (from `Flutter`)
+  - flutter_gemma (from `.symlinks/plugins/flutter_gemma/ios`)
+  - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
+  - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
+  - in_app_purchase_storekit (from `.symlinks/plugins/in_app_purchase_storekit/darwin`)
+  - large_file_handler (from `.symlinks/plugins/large_file_handler/ios`)
+  - record_ios (from `.symlinks/plugins/record_ios/ios`)
+  - share_plus (from `.symlinks/plugins/share_plus/ios`)
+  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/ios`)
+  - sqlite3_flutter_libs (from `.symlinks/plugins/sqlite3_flutter_libs/darwin`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - whisper_ggml (from `.symlinks/plugins/whisper_ggml/ios`)
+
+SPEC REPOS:
+  trunk:
+    - MediaPipeTasksGenAI
+    - MediaPipeTasksGenAIC
+    - sqlite3
+
+EXTERNAL SOURCES:
+  background_downloader:
+    :path: ".symlinks/plugins/background_downloader/ios"
+  device_calendar:
+    :path: ".symlinks/plugins/device_calendar/ios"
+  ffmpeg_kit_flutter_new_min:
+    :path: ".symlinks/plugins/ffmpeg_kit_flutter_new_min/ios"
+  Flutter:
+    :path: Flutter
+  flutter_gemma:
+    :path: ".symlinks/plugins/flutter_gemma/ios"
+  flutter_local_notifications:
+    :path: ".symlinks/plugins/flutter_local_notifications/ios"
+  flutter_secure_storage:
+    :path: ".symlinks/plugins/flutter_secure_storage/ios"
+  in_app_purchase_storekit:
+    :path: ".symlinks/plugins/in_app_purchase_storekit/darwin"
+  large_file_handler:
+    :path: ".symlinks/plugins/large_file_handler/ios"
+  record_ios:
+    :path: ".symlinks/plugins/record_ios/ios"
+  share_plus:
+    :path: ".symlinks/plugins/share_plus/ios"
+  shared_preferences_foundation:
+    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  sign_in_with_apple:
+    :path: ".symlinks/plugins/sign_in_with_apple/ios"
+  sqlite3_flutter_libs:
+    :path: ".symlinks/plugins/sqlite3_flutter_libs/darwin"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
+  whisper_ggml:
+    :path: ".symlinks/plugins/whisper_ggml/ios"
+
+SPEC CHECKSUMS:
+  background_downloader: 50e91d979067b82081aba359d7d916b3ba5fadad
+  device_calendar: b55b2c5406cfba45c95a59f9059156daee1f74ed
+  ffmpeg_kit_flutter_new_min: 85493896be79f45e846b5c9b23a3bf73eb284c4a
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_gemma: cf33b60ebf1e2feb8445003e05190f80173427e2
+  flutter_local_notifications: ad39620c743ea4c15127860f4b5641649a988100
+  flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+  in_app_purchase_storekit: 22cca7d08eebca9babdf4d07d0baccb73325d3c8
+  large_file_handler: b37481e9b4972562ffcdc8f75700f47cd592bcec
+  MediaPipeTasksGenAI: 076ba7032a6e9da16db9c7cf0c3b67c751c18bc1
+  MediaPipeTasksGenAIC: ec35d9f431f6a6b651a0bc9f67a4ed149ffa575c
+  record_ios: 980fd386a97a35987d0fce3dfda4b26a38c90f4c
+  share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  sign_in_with_apple: c5dcc141574c8c54d5ac99dd2163c0c72ad22418
+  sqlite3: a51c07cf16e023d6c48abd5e5791a61a47354921
+  sqlite3_flutter_libs: b3e120efe9a82017e5552a620f696589ed4f62ab
+  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
+  whisper_ggml: 383283d526f6c91024c16bf65b707cc08568a685
+
+PODFILE CHECKSUM: 5b73e52a863d5edb03d8642fd9694cb760d64649
+
+COCOAPODS: 1.16.2
