@@ -360,7 +360,54 @@ class AppDb extends _$AppDb {
             await m.createTable(purchases);
           }
         },
+        beforeOpen: (details) async {
+          // Foreign keys are OFF by default in SQLite — per connection, every
+          // time. Without this, all 10 of our onDelete: cascade declarations
+          // are inert decoration: deleting a meeting silently orphans its
+          // transcripts, segments, summaries, bookmarks, embeddings and action
+          // items, and they accumulate forever.
+          //
+          // ORDER MATTERS. Databases created before this hook existed have been
+          // running with cascades disabled, so they may already contain orphans.
+          // Turning enforcement on over a dirty database makes later writes fail
+          // on constraints the user never violated. So: sweep first, enable
+          // second. The sweep is idempotent and cheap once clean.
+          await _sweepOrphans();
+          await customStatement('PRAGMA foreign_keys = ON');
+        },
       );
+
+  /// Delete rows whose parent is already gone.
+  ///
+  /// Runs with foreign_keys still OFF (see beforeOpen) — which is what makes the
+  /// deletes possible at all. Child-first order, so we never strand a row we
+  /// were about to remove anyway. Wrapped in a transaction: interrupted halfway
+  /// it rolls back, and the next launch simply sweeps again.
+  Future<void> _sweepOrphans() async {
+    await transaction(() async {
+      await customStatement(
+          'DELETE FROM transcripts WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM transcript_segments WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM summaries WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM bookmarks WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM action_items WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM meeting_folders WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM meeting_tags WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM meeting_folders WHERE folder_id NOT IN (SELECT id FROM folders)');
+      // segment_embeddings hangs off BOTH a segment and a meeting.
+      await customStatement(
+          'DELETE FROM segment_embeddings WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+      await customStatement(
+          'DELETE FROM segment_embeddings WHERE segment_id NOT IN (SELECT id FROM transcript_segments)');
+    });
+  }
 
   // -------------------------------------------------------------------------
   // High-level queries used by services

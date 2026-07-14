@@ -114,7 +114,27 @@ class EmbeddingService {
     return map;
   }
 
+  /// True if the MiniLM model + vocab are installed and this service can
+  /// actually embed. Callers MUST check this before embedding in bulk — [embed]
+  /// throws rather than inventing a vector.
+  Future<bool> isReady() async {
+    try {
+      await _ensureSession();
+      await _ensureVocab();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Embed a single text. Returns a 384-dim L2-normalized Float32List.
+  ///
+  /// THROWS if the model is unavailable. It used to return a deterministic
+  /// hash-of-the-text vector instead, which was silent, permanent corruption:
+  /// those fake vectors get written to SegmentEmbeddings and poison
+  /// cross-meeting search forever, and nothing anywhere would ever report a
+  /// problem. A meaningless vector is not a degraded answer, it is a wrong one.
+  /// (CLAUDE.md: no mock/fallback data — throw StateError with context.)
   Future<Float32List> embed(String text) async {
     try {
       final session = await _ensureSession();
@@ -153,10 +173,15 @@ class EmbeddingService {
         }
       }
       return _l2Normalize(out);
+    } on StateError {
+      rethrow;
     } catch (e) {
-      // Graceful fallback: deterministic hash vector so call sites stay
-      // exercised in tests / dev builds where the model isn't installed.
-      return _hashFallback(text);
+      throw StateError(
+        'EmbeddingService.embed failed — the MiniLM model is unavailable or the '
+        'ONNX run errored ($e). Call isReady() first and skip the '
+        'embedding-dependent feature; do NOT persist a substitute vector, it '
+        'would silently poison the search index.',
+      );
     }
   }
 
@@ -203,18 +228,6 @@ class EmbeddingService {
     return out;
   }
 
-  Float32List _hashFallback(String text) {
-    final out = Float32List(dim);
-    var h = 2166136261;
-    for (final c in text.codeUnits) {
-      h = (h ^ c) * 16777619 & 0xffffffff;
-    }
-    for (var i = 0; i < dim; i++) {
-      h = h * 1103515245 + 12345 & 0x7fffffff;
-      out[i] = (h % 10000) / 10000.0 - 0.5;
-    }
-    return _l2Normalize(out);
-  }
 
   /// Cosine similarity between two L2-normalized vectors (== dot product).
   static double cosineSim(Float32List a, Float32List b) {

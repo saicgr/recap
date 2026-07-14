@@ -59,9 +59,18 @@ class ChapterDetector {
 
     // Pre-compute embeddings for all segments (parallelism not strictly
     // needed — MiniLM 384d is fast).
+    //
+    // embed() now THROWS when the MiniLM model is not installed, rather than
+    // handing back a hash-of-the-text vector that looks like an embedding and
+    // is not. So check first, and if it is unavailable, drop the embedding term
+    // and score boundaries on speaker change + silence gap alone — a genuinely
+    // weaker signal, rather than a confidently wrong one.
+    final useEmbeddings = await embeddings.isReady();
     final vecs = <Float32List>[];
-    for (final s in segments) {
-      vecs.add(await embeddings.embed(s.body));
+    if (useEmbeddings) {
+      for (final s in segments) {
+        vecs.add(await embeddings.embed(s.body));
+      }
     }
 
     // Score each boundary i (between segment i-1 and i).
@@ -70,8 +79,10 @@ class ChapterDetector {
       final prev = segments[i - 1];
       final curr = segments[i];
       var s = 0.0;
-      final embDist = 1.0 - EmbeddingService.cosineSim(vecs[i - 1], vecs[i]);
-      s += embeddingShiftWeight * embDist;
+      if (useEmbeddings) {
+        final embDist = 1.0 - EmbeddingService.cosineSim(vecs[i - 1], vecs[i]);
+        s += embeddingShiftWeight * embDist;
+      }
       if (prev.speaker != null &&
           curr.speaker != null &&
           prev.speaker != curr.speaker) {
