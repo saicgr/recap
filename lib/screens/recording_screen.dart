@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/database.dart';
 import '../main.dart';
+import '../services/calendar_matcher.dart';
 import '../services/live_captions.dart';
 import '../services/wav_utils.dart';
 import '../ui/components.dart';
@@ -58,6 +59,24 @@ class _RecordingScreenState extends State<RecordingScreen> {
   String _chunkPath(int index) =>
       p.join(_recordingsDir.path, '${_id}__$index.wav');
 
+  /// The calendar event this recording appears to be, if any. Resolved in the
+  /// background while recording; read once at save time.
+  CalendarMatch? _calendarMatch;
+
+  Future<void> _matchCalendarEvent() async {
+    try {
+      final match = await calendarMatcher.matchNow();
+      if (!mounted) return;
+      if (match.eventTitle != null && match.eventTitle!.trim().isNotEmpty) {
+        setState(() => _calendarMatch = match);
+      }
+    } catch (_) {
+      // Permission denied, no calendars, or the plugin threw. The recording is
+      // the product; a missing title is a cosmetic loss and must never surface
+      // as an error mid-record.
+    }
+  }
+
   Future<void> _begin() async {
     try {
       final docs = await getApplicationDocumentsDirectory();
@@ -70,6 +89,17 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
       // Usage counter is independent of the mic — fire and forget.
       unawaited(entitlements.recordMeetingStarted().catchError((_) {}));
+
+      // Ask the device calendar what meeting is happening right now, so the
+      // recording gets the event's real name instead of "Meeting on Jul 14".
+      // Matched at START (that is when the meeting is actually on) and applied
+      // at save. Purely local — the OS calendar API, no network — so it works
+      // on the Privacy tier too. CalendarMatcher has existed, complete, since
+      // the first commit and was never once called.
+      //
+      // Fire-and-forget: a calendar permission prompt must never delay or block
+      // the mic. If it fails or the user declines, we keep the date-based title.
+      unawaited(_matchCalendarEvent());
 
       // Critical path: open the mic (this is what triggers the runtime
       // permission prompt on Android first-run).
@@ -180,15 +210,22 @@ class _RecordingScreenState extends State<RecordingScreen> {
     // 1. Insert the meeting row with "processing" status now, so the home
     //    list shows it immediately when we pop. The actual audio file
     //    doesn't exist on disk yet — the background worker creates it.
+    // Prefer the calendar event's name. "Q3 Board Review" beats "Meeting on
+    // Jul 14, 2:00 PM" — and Meetings.calendarEventId has existed since the
+    // first commit without ever being written to.
+    final calendarTitle = _calendarMatch?.eventTitle?.trim();
     final meeting = MeetingsCompanion.insert(
       id: _id,
-      title: 'Meeting on ${DateFormat('MMM d, h:mm a').format(_start)}',
+      title: (calendarTitle != null && calendarTitle.isNotEmpty)
+          ? calendarTitle
+          : 'Meeting on ${DateFormat('MMM d, h:mm a').format(_start)}',
       audioPath: mergedPath,
       createdAt: _start,
       updatedAt: DateTime.now(),
       status: MeetingStatus.processing,
       durationMs: Value(_elapsed.inMilliseconds),
       language: const Value('en'),
+      calendarEventId: Value(_calendarMatch?.eventId),
     );
     await db.into(db.meetings).insert(meeting);
 

@@ -49,6 +49,12 @@
 	<string>Recap records meetings on this device. Your audio never leaves it.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Recap reads calendar events to auto-title meetings.</string>
+	<!-- iOS 17 split calendar access into full/write-only and REQUIRES this key.
+	     With only NSCalendarsUsageDescription, EventKit denies access on iOS 17+
+	     (and can terminate the app), so auto-titling would silently never work
+	     on any current iPhone. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Recap reads calendar events to auto-title your meetings and suggest who was in the room. This stays on your device.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
