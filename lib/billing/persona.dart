@@ -145,9 +145,31 @@ Summarize this medical appointment for the patient's own records (not a medical 
   ),
 ];
 
+/// The 7 built-ins, by key. **Does not contain custom templates.**
+///
+/// Reaching for this directly to render a name is a bug — a summary made with a
+/// custom template has a `custom:<id>` key that is not in here, so the lookup
+/// misses and you either print the raw key or silently mislabel it. Use
+/// [resolvePersona]. (Both mistakes shipped: the summary header rendered
+/// "OVERVIEW · custom:1752438…", and the persona chip claimed "Meeting notes"
+/// while a custom template was selected.)
 final Map<String, Persona> personasByKey = {
   for (final p in personas) p.key: p,
 };
 
 Persona personaForStyle(SummaryStyle style) =>
     personas.firstWhere((p) => p.style == style);
+
+/// Resolve any persona key — built-in or `custom:<id>` — to a [Persona].
+///
+/// The single source of truth for key -> Persona. Anything that displays or
+/// exports a persona name must go through here, passing the user's custom
+/// templates.
+Persona resolvePersona(String key, Iterable<Persona> customs) {
+  if (key.startsWith('custom:')) {
+    for (final p in customs) {
+      if (p.key == key) return p;
+    }
+  }
+  return personasByKey[key] ?? personaForStyle(SummaryStyle.basic);
+}

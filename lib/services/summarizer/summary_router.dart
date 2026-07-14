@@ -73,6 +73,27 @@ class SummaryRouter {
   }) async {
     final tier = entitlements.currentTier;
 
+    // Enforce the persona gate HERE, not only in the UI.
+    //
+    // Tier.personaTemplates was filtered exclusively in transcript_screen's
+    // picker, so it was a presentation detail: any code path that handed a
+    // Persona straight to the router (an export, a retry, a future automation,
+    // a bug) got a paid template on a Free account for free. A gate that only
+    // exists in the widget tree is not a gate.
+    //
+    // Custom templates (key `custom:…`) carry style basic and are governed by
+    // their own tier check at creation time, so they are allowed through.
+    if (!persona.key.startsWith('custom:') &&
+        !tier.personaTemplates.contains(persona.style)) {
+      return SummaryFailed(
+        StateError(
+          'The "${persona.displayName}" template is not available on the '
+          '${tier.name} tier.',
+        ),
+        StackTrace.current,
+      );
+    }
+
     // Privacy tier: never touch cloud.
     final mode = tier == Tier.privacy ? SummaryMode.onDevice : requested;
 

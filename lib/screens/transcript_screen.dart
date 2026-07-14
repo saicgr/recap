@@ -34,7 +34,9 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   List<TranscriptSegment> _segments = const [];
   bool _summarizing = false;
   String? _error;
-  String _personaKey = 'basic';
+  // settings.defaultPersonaKey has existed with zero readers; this screen just
+  // hardcoded 'basic', so setting a default persona did nothing.
+  late String _personaKey = settings.defaultPersonaKey;
   late String _title = widget.meeting.title;
 
   /// Per-summary translation state, keyed by summary.id.
@@ -136,15 +138,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
     }
   }
 
-  Persona _resolvePersona(String key) {
-    if (key.startsWith('custom:')) {
-      final found = customPersonas.personas
-          .where((p) => p.key == key)
-          .toList(growable: false);
-      if (found.isNotEmpty) return found.first;
-    }
-    return personasByKey[key] ?? personaForStyle(SummaryStyle.basic);
-  }
+  Persona _resolvePersona(String key) =>
+      resolvePersona(key, customPersonas.personas);
 
   /// Translate the given summary to [targetLocale]. If a translation is
   /// already cached for that target, this is a no-op visually. Tap again
@@ -710,7 +705,10 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           children: [
             Expanded(
               child: Text(
-                'OVERVIEW · ${personasByKey[latest.personaKey]?.displayName ?? latest.personaKey}',
+                // _resolvePersona, not personasByKey: the latter holds only the
+                // 7 built-ins, so a summary generated with a custom template
+                // rendered its raw key here — literally "OVERVIEW · custom:1752438…".
+                'OVERVIEW · ${_resolvePersona(latest.personaKey).displayName}',
                 style: RT.caption.copyWith(color: t.textMuted),
               ),
             ),
@@ -744,7 +742,10 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   }
 
   Widget _personaBar(RecapTheme t) {
-    final persona = personasByKey[_personaKey];
+    // _resolvePersona, not personasByKey: with a custom template selected the
+    // lookup missed and the chip fell back to the label "Meeting notes" — it
+    // told the user they had picked a persona they had not picked.
+    final persona = _resolvePersona(_personaKey);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -765,7 +766,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                 children: [
                   Icon(Icons.auto_awesome, size: 13, color: t.accent),
                   const SizedBox(width: 6),
-                  Text(persona?.displayName ?? 'Meeting notes',
+                  Text(persona.displayName,
                       style: RT.label.copyWith(
                           color: t.accent, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),

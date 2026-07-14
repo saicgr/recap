@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../billing/persona.dart';
 import '../data/database.dart';
 
 /// Branded PDF reports (D14.11). Free tier gets the "Made with Recap"
@@ -20,6 +21,9 @@ class PdfExporter {
     required List<Summary> summaries,
     PdfTemplate template = PdfTemplate.minimal,
     bool watermark = true,
+    /// The user's custom templates, so a `custom:<id>` key resolves to its real
+    /// name instead of being printed raw as a heading.
+    Iterable<Persona> customPersonas = const [],
   }) async {
     final docs = await getApplicationSupportDirectory();
     final outDir = Directory(p.join(docs.path, 'exports'));
@@ -38,8 +42,10 @@ class PdfExporter {
       ..writeln('## Summaries (${summaries.length})')
       ..writeln('');
     for (final s in summaries) {
+      // resolvePersona, not the raw key: a custom template would otherwise be
+      // exported as the heading "### custom:1752438…".
       buf
-        ..writeln('### ${s.personaKey}')
+        ..writeln('### ${resolvePersona(s.personaKey, customPersonas).displayName}')
         ..writeln(s.body)
         ..writeln('');
     }
