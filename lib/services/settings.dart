@@ -64,6 +64,21 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- Microphone ----
+
+  /// The input the user explicitly pinned, if any. null = let MicPolicy choose
+  /// (which prefers the built-in mic over a Bluetooth headset).
+  String? get pinnedMicId => _prefs.getString('pinnedMicId');
+
+  Future<void> setPinnedMicId(String? id) async {
+    if (id == null) {
+      await _prefs.remove('pinnedMicId');
+    } else {
+      await _prefs.setString('pinnedMicId', id);
+    }
+    notifyListeners();
+  }
+
   // ---- Home: upcoming events ----
 
   /// How far ahead the home-screen "coming up" strip looks. Granola's mobile

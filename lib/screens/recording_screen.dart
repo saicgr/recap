@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/database.dart';
 import '../main.dart';
+import '../services/audio/mic_policy.dart';
 import '../services/calendar_matcher.dart';
 import '../services/live_captions.dart';
 import '../services/wav_utils.dart';
@@ -40,6 +41,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
   bool _switchingMic = false;
   String? _error;
   final String _persona = 'Meeting notes';
+
+  /// Shown when we are forced to record through Bluetooth (user pinned it, or
+  /// it is genuinely the only input). Never a silent quality loss.
+  String? _micWarning;
 
   final List<LiveCaption> _captions = [];
   StreamSubscription<LiveCaption>? _captionSub;
@@ -103,7 +108,14 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
       // Critical path: open the mic (this is what triggers the runtime
       // permission prompt on Android first-run).
-      await recorder.start(_currentChunkPath);
+      // Records from the BUILT-IN mic even when AirPods are connected — see
+      // MicPolicy. They keep playing audio over A2DP; we just refuse to capture
+      // through their narrowband HFP microphone.
+      final choice =
+          await recorder.start(_currentChunkPath, pinnedDeviceId: settings.pinnedMicId);
+      if (mounted && MicPolicy.shouldWarn(choice)) {
+        setState(() => _micWarning = MicPolicy.warning);
+      }
 
       // The Android foreground-service type=microphone requires RECORD_AUDIO
       // to already be granted. Only safe to start it after recorder.start()
@@ -160,7 +172,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
         _chunkIndex++;
         _currentChunkPath = _chunkPath(_chunkIndex);
         _chunkPaths.add(_currentChunkPath);
-        await recorder.start(_currentChunkPath);
+        await recorder.start(_currentChunkPath, pinnedDeviceId: settings.pinnedMicId);
         await _startCaptions(_currentChunkPath);
       } else {
         // PAUSE → stop the recorder (closes file, releases mic, kills the
@@ -474,6 +486,35 @@ class _RecordingScreenState extends State<RecordingScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Recording through Bluetooth means narrowband call-quality audio
+            // and a visibly worse transcript. The whole point of this feature is
+            // that the user is TOLD, instead of silently getting a bad result
+            // and never knowing why.
+            if (_micWarning != null)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: t.recordRed.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: t.recordRed.withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.bluetooth_audio,
+                        size: 16, color: t.recordRed),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(_micWarning!,
+                          style: RT.caption.copyWith(color: t.textPrimary)),
+                    ),
+                  ],
+                ),
+              ),
             // Status pill row
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),

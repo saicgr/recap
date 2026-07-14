@@ -22,7 +22,12 @@ dependencies:
   path: ^1.9.0
 
   # Audio
-  record: ^6.0.0
+  # PINNED, not caret. record's defaults are what cause the Bluetooth hijack
+  # (iOS categoryOptions include allowBluetooth; Android manageBluetooth=true).
+  # A minor bump could change them back under us and silently reintroduce
+  # narrowband capture — no error, no test failure, just a much worse transcript.
+  # See lib/services/recorder.dart. Re-audit _config() before changing this.
+  record: 6.1.1
   just_audio: ^0.9.40
 
   # On-device transcription
