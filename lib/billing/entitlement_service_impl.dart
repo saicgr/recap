@@ -13,15 +13,116 @@ class DriftEntitlementService implements EntitlementService {
 
   final AppDb db;
   Tier _tier;
+  bool _initialized = false;
 
   final _usageController = StreamController<TierUsage>.broadcast();
 
   @override
-  Tier get currentTier => _tier;
+  Tier get currentTier {
+    // Reading the tier before it has been rehydrated from disk would hand back
+    // Free — which is exactly the bug this class used to have (every relaunch
+    // silently downgraded a paying customer). main.dart must await init()
+    // before resolving the Whisper ceiling, the Gemma variant, or the
+    // translator chain, all of which branch on the tier.
+    assert(
+      _initialized,
+      'DriftEntitlementService.currentTier read before init(). '
+      'Await entitlements.init() during startup.',
+    );
+    return _tier;
+  }
 
-  /// Called by IapService when a purchase is verified.
+  /// Rehydrate the tier from persisted purchases.
+  ///
+  /// Deliberately does NOT catch: if the read fails we let it throw rather than
+  /// defaulting to Free. Free has cloud summaries enabled, so a silent fallback
+  /// would hand a Privacy-tier user a cloud-capable build — the one invariant
+  /// we cannot break. Failing loudly beats degrading quietly.
+  Future<void> init() async {
+    final rows = await db.select(db.purchases).get();
+    _tier = _resolveTier(rows);
+    _initialized = true;
+    await _emitUsage();
+  }
+
+  /// Reduce the persisted purchase rows to a single effective tier.
+  static Tier _resolveTier(List<Purchase> rows) {
+    // A debug override wins outright (debug builds only) so the tier switcher
+    // in Settings can preview *lower* tiers too, not just higher ones.
+    for (final r in rows) {
+      if (r.source == 'debug_override') {
+        final t = _tierFromName(r.tier);
+        if (t != null) return t;
+      }
+    }
+    // Otherwise the most expensive tier the user owns. Owning both Privacy and
+    // Power is pathological; if it happens, the later/pricier deliberate
+    // purchase (Power) wins.
+    var best = Tier.free;
+    for (final r in rows) {
+      if (r.source != 'store') continue;
+      final t = _tierFromName(r.tier);
+      if (t != null && t.priceUsd > best.priceUsd) best = t;
+    }
+    return best;
+  }
+
+  static Tier? _tierFromName(String? name) {
+    if (name == null) return null;
+    for (final t in Tier.values) {
+      if (t.name == name) return t;
+    }
+    return null;
+  }
+
+  /// Persist a verified store purchase.
+  ///
+  /// Idempotent on [purchaseId]: `restorePurchases()` replays every past
+  /// transaction through `purchaseStream`, so without this guard each restore
+  /// would re-grant consumable top-up credits. Returns true only if the row was
+  /// newly inserted — callers use that to decide whether to grant credits.
+  Future<bool> recordPurchase({
+    required String purchaseId,
+    required String productId,
+    Tier? tier,
+    DateTime? purchasedAt,
+  }) async {
+    // insertReturningOrNull, NOT insert(): with insertOrIgnore, insert() hands
+    // back a rowid even when the row was ignored (SQLite does not reset
+    // last_insert_rowid on a no-op), so it reports a replayed purchase as new —
+    // which would mint free top-up credits on every restore.
+    // insertReturningOrNull returns null when nothing was inserted.
+    final row = await db.into(db.purchases).insertReturningOrNull(
+          PurchasesCompanion.insert(
+            id: purchaseId,
+            productId: productId,
+            tier: Value(tier?.name),
+            purchasedAt: Value(purchasedAt),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+    if (tier != null) await _refreshTier();
+    return row != null;
+  }
+
+  /// Debug-only tier override (the Settings → Switch tier picker). Persisted
+  /// with source 'debug_override' so it can never be confused with a real
+  /// purchase, and so it survives a restart like a real tier does.
   Future<void> setTier(Tier tier) async {
-    _tier = tier;
+    await db.into(db.purchases).insertOnConflictUpdate(
+          PurchasesCompanion.insert(
+            id: 'debug_override',
+            productId: 'debug_override',
+            tier: Value(tier.name),
+            source: const Value('debug_override'),
+          ),
+        );
+    await _refreshTier();
+  }
+
+  Future<void> _refreshTier() async {
+    _tier = _resolveTier(await db.select(db.purchases).get());
+    _initialized = true;
     await _emitUsage();
   }
 

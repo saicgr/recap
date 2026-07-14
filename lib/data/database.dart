@@ -125,6 +125,43 @@ class TopUpCredits extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Persisted store purchases — the source of truth for the user's tier across
+/// restarts. Before this table existed the tier lived only in a memory field on
+/// DriftEntitlementService, so every relaunch silently dropped a paying
+/// customer back to Free.
+///
+/// One row per store transaction, keyed by the store's own purchase id, which
+/// makes restores idempotent: `restorePurchases()` replays every past
+/// transaction through `purchaseStream`, and without a stable key each replay
+/// would re-grant consumable top-up credits.
+class Purchases extends Table {
+  /// Store-issued purchase/transaction id (falls back to the product id for
+  /// stores that omit it).
+  TextColumn get id => text()();
+  TextColumn get productId => text()();
+
+  /// The [Tier] this purchase grants, by enum name. Null for top-up packs,
+  /// which grant credits rather than a tier.
+  TextColumn get tier => text().nullable()();
+
+  /// Store transaction date. Nullable on purpose: the two stores disagree on
+  /// the format (Android sends ms-since-epoch, iOS sends a date string), and
+  /// recording "unknown" is better than fabricating DateTime.now() — the
+  /// lifetime-grandfathering invariant is enforced against this value, so a
+  /// wrong date silently corrupts it.
+  DateTimeColumn get purchasedAt => dateTime().nullable()();
+
+  /// 'store' | 'debug_override'. A debug tier switch must never be mistaken
+  /// for a real purchase.
+  TextColumn get source => text().withDefault(const Constant('store'))();
+
+  DateTimeColumn get recordedAt =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Voice ID enrollment (D14.4). One row per known speaker; embedding is a
 /// WeSpeaker 256-dim Float32 vector stored as raw bytes.
 class Voiceprints extends Table {
@@ -252,12 +289,18 @@ class GlossaryTerms extends Table {
   MeetingTags,
   TranslationCache,
   GlossaryTerms,
+  Purchases,
 ])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
+  /// Test-only: run against an injected executor (e.g. NativeDatabase.memory())
+  /// so migrations and entitlement logic can be exercised without a device.
+  /// Do not use in app code — production always goes through [_open].
+  AppDb.forTesting(super.e);
+
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -308,6 +351,13 @@ class AppDb extends _$AppDb {
             await m.createTable(meetingTags);
             await m.createTable(translationCache);
             await m.createTable(glossaryTerms);
+          }
+          // v2 → v3: Purchases. The tier was previously held only in memory,
+          // so every relaunch dropped a paying user to Free. Existing installs
+          // start with an empty table and repopulate it from iap.restore() on
+          // the next launch.
+          if (from < 3) {
+            await m.createTable(purchases);
           }
         },
       );

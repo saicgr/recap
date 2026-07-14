@@ -125,6 +125,14 @@ Future<void> main() async {
   // ── Service objects (constructors only — no I/O yet) ─────────────────────
 
   entitlements = DriftEntitlementService(db: db);
+  // Rehydrate the tier from persisted purchases BEFORE anything branches on it.
+  // Three things below read the tier at startup — the Whisper ceiling, the
+  // Gemma variant, and the translator chain — and until this table existed the
+  // tier lived only in memory, so every relaunch silently served a paying
+  // customer the Free-tier models. This is a local DB read: fast, offline, and
+  // it throws rather than defaulting to Free (Free has cloud enabled, so a
+  // silent fallback would hand a Privacy user a cloud-capable build).
+  await entitlements.init();
   recorder = RecorderService();
   transcriber = TranscriberService();
   // Resolve the Whisper ceiling for the current tier — Free → base.en
@@ -228,10 +236,18 @@ Future<void> _initDeferredServices() async {
   // result here — CloudBackend has it).
   try {
     await iap.init();
+    // Repair a reinstall / new device: the store replays past transactions
+    // through purchaseStream, which persists them to the Purchases table.
+    // Idempotent (rows are keyed by the store's purchase id), so this is safe
+    // on every launch. The tier itself already came from disk in
+    // entitlements.init() — this only recovers purchases we have no local row
+    // for. Previously restore() was reachable only from a button on the
+    // paywall, so a reinstall lost the purchase until the user found it.
+    await iap.restore();
   } catch (e) {
     // No analytics SDK — log to console only.
     // ignore: avoid_print
-    print('iap.init() failed: $e');
+    print('iap.init()/restore() failed: $e');
   }
   try {
     await customPersonas.init();
