@@ -91,3 +91,6 @@ assets/models/*.litertlm
 
 # --- l10n build report (regenerated on every flutter pub get) ---
 lib/l10n/_untranslated.json
+
+# Local reference screenshots (competitor app) — not for the public repo.
+granola/

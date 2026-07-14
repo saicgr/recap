@@ -2,27 +2,26 @@
   "name": "recap-proxy",
   "version": "0.1.0",
   "private": true,
-  "description": "Cloud summary proxy for the Recap app — forwards to Gemini 3.1 Flash Lite.",
+  "description": "Backend keyholder for the Recap app — proxies to Gemini (and later Deepgram/R2). Holds all API keys; the app holds none.",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
-    "@google/genai": "^1.0.0",
     "express": "^4.21.0",
-    "express-rate-limit": "^7.4.0",
     "cors": "^2.8.5"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
     "@types/node": "^22.0.0",
-    "tsx": "^4.0.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }
 }
