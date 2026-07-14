@@ -85,6 +85,7 @@ dependencies:
   intl: ^0.20.2
   uuid: ^4.4.2
   collection: ^1.18.0
+  cryptography: ^2.9.0
 
 dev_dependencies:
   flutter_test:
