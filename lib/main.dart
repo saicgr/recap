@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:whisper_ggml/whisper_ggml.dart' show WhisperModel;
 
@@ -23,6 +21,7 @@ import 'services/recorder.dart';
 import 'services/settings.dart';
 import 'services/summarizer/apple_foundation_models_backend.dart';
 import 'services/summarizer/byok_backend.dart';
+import 'services/cloud/install_identity.dart';
 import 'services/summarizer/cloud_backend.dart';
 import 'services/summarizer/gemma_backend.dart';
 import 'services/summarizer/gemma_downloader.dart';
@@ -86,6 +85,7 @@ late final WakeWordService wakeWord;
 late final FolderService folderService;
 late final List<Translator> translatorChain;
 late final AppleFoundationModelsBackend appleFmBackend;
+late final InstallIdentity installIdentity;
 late final CloudBackend cloudBackend;
 late final ByokBackend byokBackend;
 late final ThemeController themeController;
@@ -164,14 +164,18 @@ Future<void> main() async {
   customPersonas = CustomPersonasService();
   iap = IapService(entitlements: entitlements);
 
-  // Install token — secure-storage RSA key gen runs in the background; the
-  // CloudBackend awaits this future lazily on the first cloud-summary call,
-  // so the ~130ms cost never lands on the main isolate during startup.
-  final installTokenFuture = _ensureInstallToken();
+  // Anonymous identity with the Render proxy. Constructing it touches nothing:
+  // the install id is minted and the token registered LAZILY, on the first
+  // cloud summary the user actually asks for. Registering at launch would be a
+  // background ping, which the Karpathy invariants forbid.
+  installIdentity = InstallIdentity(proxyUrlProvider: () => settings.proxyUrl);
 
   cloudBackend = CloudBackend(
-    workerUrl: settings.workerUrl,
-    installTokenFuture: installTokenFuture,
+    // Read through so a Settings change takes effect without a restart.
+    proxyUrlProvider: () => settings.proxyUrl,
+    identity: installIdentity,
+    // Privacy tier: the network call site itself refuses, not just the UI.
+    cloudEnabled: () => entitlements.currentTier.cloudSummariesEnabled,
   );
   summaryRouter = SummaryRouter(
     entitlements: entitlements,
@@ -265,19 +269,6 @@ Future<void> _initDeferredServices() async {
     print('BundledModels.ensureAll() failed: $e');
   }
   transcriber.warmUp();
-}
-
-Future<String> _ensureInstallToken() async {
-  const storage = FlutterSecureStorage();
-  const key = 'install_token';
-  var token = await storage.read(key: key);
-  if (token == null) {
-    final rng = Random.secure();
-    final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
-    token = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    await storage.write(key: key, value: token);
-  }
-  return token;
 }
 
 /// First-launch gate: shows onboarding once, then HomeScreen forever.

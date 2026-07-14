@@ -316,9 +316,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SettingsRow(
           icon: Icons.cloud_outlined,
           title: 'Worker URL',
-          value: settings.workerUrl.isEmpty
+          value: settings.proxyUrl.isEmpty
               ? 'Not set'
-              : Uri.parse(settings.workerUrl).host,
+              : Uri.parse(settings.proxyUrl).host,
           trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: _editWorkerUrl,
           last: true,
@@ -851,7 +851,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _editWorkerUrl() async {
     final t = RecapThemeScope.of(context);
-    final controller = TextEditingController(text: settings.workerUrl);
+    final controller = TextEditingController(text: settings.proxyUrl);
     final url = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -885,7 +885,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (url != null) {
-      await settings.setWorkerUrl(url);
+      await settings.setProxyUrl(url);
       if (mounted) setState(() {});
     }
   }

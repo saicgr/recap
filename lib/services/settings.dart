@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../billing/entitlement_service.dart';
 import '../billing/tier.dart';
+import 'cloud/cloud_proxy.dart';
 
 class SettingsService extends ChangeNotifier {
   late SharedPreferences _prefs;
@@ -64,15 +65,31 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ---- Cloud worker config ----
-  /// Default placeholder. Replace via build-time --dart-define=RECAP_WORKER_URL=...
-  /// or via Settings once you deploy your Worker.
-  String get workerUrl {
-    final stored = _prefs.getString('workerUrl');
-    if (stored != null && stored.isNotEmpty) return stored;
+  // ---- Cloud proxy config ----
+
+  /// URL of the Render proxy (the app's only backend; it holds the API keys).
+  ///
+  /// Precedence: user override -> --dart-define -> the shipped default.
+  ///
+  /// IMPORTANT: a stored URL pointing at the retired Cloudflare Worker is
+  /// IGNORED. Early installs may have persisted a `*.workers.dev` URL, and that
+  /// service is being un-deployed — honouring it would permanently pin those
+  /// users to a dead host and silently break cloud summaries for exactly the
+  /// people who used the feature first.
+  String get proxyUrl {
+    final stored = _prefs.getString('proxyUrl') ?? _prefs.getString('workerUrl');
+    if (stored != null &&
+        stored.isNotEmpty &&
+        !stored.contains(kRetiredWorkerHostFragment)) {
+      return stored;
+    }
+    const fromProxyEnv = String.fromEnvironment('RECAP_PROXY_URL');
+    if (fromProxyEnv.isNotEmpty) return fromProxyEnv;
     const fromEnv = String.fromEnvironment('RECAP_WORKER_URL');
-    if (fromEnv.isNotEmpty) return fromEnv;
-    return '';
+    if (fromEnv.isNotEmpty && !fromEnv.contains(kRetiredWorkerHostFragment)) {
+      return fromEnv;
+    }
+    return kDefaultProxyUrl;
   }
 
   // ---- Theme tweaks ----
@@ -128,8 +145,10 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setWorkerUrl(String url) async {
-    await _prefs.setString('workerUrl', url);
+  Future<void> setProxyUrl(String url) async {
+    await _prefs.setString('proxyUrl', url);
+    // Drop the pre-Render key so it can never win the precedence check again.
+    await _prefs.remove('workerUrl');
     notifyListeners();
   }
 
