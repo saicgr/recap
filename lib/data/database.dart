@@ -482,6 +482,12 @@ class AppDb extends _$AppDb {
           // second. The sweep is idempotent and cheap once clean.
           await _sweepOrphans();
           await customStatement('PRAGMA foreign_keys = ON');
+          // Internal sync bookkeeping (pull cursor per workspace, last-applied
+          // HLC per row). Plain KV, never synced, not user-facing — a raw table
+          // rather than a Drift-managed one so it needs no codegen or migration.
+          await customStatement(
+            'CREATE TABLE IF NOT EXISTS sync_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)',
+          );
         },
       );
 
