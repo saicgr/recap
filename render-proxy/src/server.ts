@@ -19,6 +19,9 @@ import {
 } from './auth';
 import { HourlyRateLimiter, DailyBudget } from './budget';
 import { summarizeWithGemini, GEMINI_MODEL_ID, UpstreamError } from './gemini';
+import { transcribeStream, DeepgramError, DG_MODEL } from './deepgram';
+import { isLedgerConfigured } from './db';
+import { reserve, settle, refund, remaining, QuotaExceeded } from './ledger';
 
 /** Read a required secret or refuse to boot — never run a keyholder unconfigured. */
 function requireEnv(name: string): string {
@@ -32,6 +35,28 @@ function requireEnv(name: string): string {
 
 const GEMINI_API_KEY = requireEnv('GEMINI_API_KEY');
 const PEPPER = requireEnv('INSTALL_TOKEN_PEPPER');
+
+// Deepgram is OPTIONAL: cloud transcription is an opt-in upgrade, so the server
+// must still boot (and summaries must still work) without a key. The route
+// reports 503 "not configured" rather than the process refusing to start.
+const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY?.trim() ?? '';
+
+// Nova-3 batch list price. Used only to charge the daily circuit breaker; the
+// authoritative per-request duration comes back from Deepgram itself.
+const DEEPGRAM_USD_PER_MIN = parseFloat(process.env.DEEPGRAM_USD_PER_MIN ?? '0.0043');
+
+// Monthly per-install allowance. Deliberately modest: Recap is a ONE-TIME
+// purchase, so every cloud minute is a permanent liability against a payment we
+// already banked. Real per-tier quotas need store-receipt validation (a receipt
+// is anonymous, so it does not break "no account required").
+const FREE_AUDIO_SECONDS_PER_MONTH = parseInt(
+  process.env.FREE_AUDIO_SECONDS_PER_MONTH ?? '1800', // 30 minutes
+  10,
+);
+
+// Hard ceiling per request. An 8-hour upload is almost certainly a mistake or an
+// attack, and we would rather 413 than silently bill for it.
+const MAX_AUDIO_SECONDS = parseInt(process.env.MAX_AUDIO_SECONDS ?? '14400', 10); // 4h
 
 const PORT = parseInt(process.env.PORT ?? '10000', 10);
 const AUTH_PER_HOUR = parseInt(process.env.RATE_LIMIT_AUTH_PER_HOUR ?? '600', 10);
@@ -132,6 +157,145 @@ app.post(
     }
   },
 );
+
+// ---------------------------------------------------------------------------
+// Cloud transcription (Deepgram Nova-3). OPT-IN and metered.
+//
+// On-device Whisper remains the default and the only always-available path;
+// this route exists solely for the user who explicitly turns on "Cloud
+// transcription" in Settings and then taps "Improve this transcript" on a
+// specific meeting. It is never called implicitly.
+//
+// The Privacy tier can never reach this: the client never constructs the
+// Deepgram engine. That is a client-side structural guarantee, so we ALSO
+// enforce a server-side quota here — defence in depth, and the only thing that
+// actually protects the bill.
+//
+// NOTE: no express.json() runs on this path. The client sends audio with
+// Content-Type: audio/flac (or audio/wav), which the JSON parser ignores,
+// leaving `req` readable so we can stream it straight to Deepgram.
+// ---------------------------------------------------------------------------
+app.post(
+  '/v1/transcribe',
+  requireInstallAuth(PEPPER),
+  async (req: AuthedRequest, res) => {
+    const installId = req.installId!;
+
+    if (!DEEPGRAM_API_KEY) {
+      res.status(503).json({ error: 'cloud transcription is not configured' });
+      return;
+    }
+    if (!isLedgerConfigured()) {
+      // Fail closed. Running an unmetered per-minute paid API against a
+      // one-time-purchase product is how the business dies.
+      res.status(503).json({ error: 'metering unavailable; refusing to spend' });
+      return;
+    }
+    if (!perInstall.hit(`dg:${installId}`)) {
+      res.status(429).json({ error: 'rate limited' });
+      return;
+    }
+
+    const contentType = req.header('content-type') ?? '';
+    if (!/^audio\//i.test(contentType)) {
+      res.status(415).json({ error: 'body must be audio/* (flac or wav)' });
+      return;
+    }
+
+    // The client tells us how long its audio is so we can hold quota BEFORE
+    // spending. It is not trusted: we settle against Deepgram's own duration.
+    const claimedSeconds = Number(req.header('x-audio-duration-seconds') ?? '0');
+    if (!Number.isFinite(claimedSeconds) || claimedSeconds <= 0) {
+      res.status(400).json({ error: 'X-Audio-Duration-Seconds required (> 0)' });
+      return;
+    }
+    if (claimedSeconds > MAX_AUDIO_SECONDS) {
+      res.status(413).json({
+        error: `recording too long (${Math.round(claimedSeconds / 60)} min); max ${MAX_AUDIO_SECONDS / 60} min`,
+      });
+      return;
+    }
+
+    const estUsd = (claimedSeconds / 60) * DEEPGRAM_USD_PER_MIN;
+    if (!budget.canSpend(estUsd)) {
+      res.status(503).json({ error: 'daily budget exhausted; try later or use on-device' });
+      return;
+    }
+
+    let reservation;
+    try {
+      reservation = await reserve(installId, claimedSeconds, FREE_AUDIO_SECONDS_PER_MONTH);
+    } catch (err) {
+      if (err instanceof QuotaExceeded) {
+        res.status(402).json({
+          error: 'monthly cloud-transcription quota exhausted',
+          used_seconds: err.usedSeconds,
+          limit_seconds: err.limitSeconds,
+        });
+        return;
+      }
+      console.error('reserve failed', err);
+      res.status(500).json({ error: 'could not reserve quota' });
+      return;
+    }
+
+    const language = req.header('x-language') || undefined;
+    const keyterms = (req.header('x-keyterms') ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 100);
+
+    try {
+      const result = await transcribeStream(DEEPGRAM_API_KEY, req, {
+        contentType,
+        language,
+        keyterms,
+      });
+      // True the hold up to Deepgram's authoritative duration, then charge.
+      await settle(installId, reservation, result.durationSeconds);
+      budget.record((result.durationSeconds / 60) * DEEPGRAM_USD_PER_MIN);
+
+      res.json({
+        transcript: result.transcript,
+        words: result.words,
+        duration_seconds: result.durationSeconds,
+        model_id: result.modelId,
+        detected_language: result.detectedLanguage,
+        remaining_seconds: await remaining(installId, FREE_AUDIO_SECONDS_PER_MONTH),
+      });
+    } catch (err) {
+      // The user must not pay for our failure.
+      await refund(installId, reservation).catch((e) =>
+        console.error('refund failed', e),
+      );
+      if (err instanceof DeepgramError) {
+        res.status(502).json({ error: err.message, detail: err.detail });
+        return;
+      }
+      console.error('transcribe error', err);
+      res.status(500).json({ error: 'internal error' });
+    }
+  },
+);
+
+/** Remaining cloud-transcription seconds, so the client can show a balance. */
+app.get('/v1/quota', requireInstallAuth(PEPPER), async (req: AuthedRequest, res) => {
+  if (!isLedgerConfigured()) {
+    res.status(503).json({ error: 'metering unavailable' });
+    return;
+  }
+  try {
+    res.json({
+      remaining_seconds: await remaining(req.installId!, FREE_AUDIO_SECONDS_PER_MONTH),
+      limit_seconds: FREE_AUDIO_SECONDS_PER_MONTH,
+      model_id: DG_MODEL,
+    });
+  } catch (err) {
+    console.error('quota error', err);
+    res.status(500).json({ error: 'internal error' });
+  }
+});
 
 app.use((_req, res) => res.status(404).json({ error: 'not found' }));
 
