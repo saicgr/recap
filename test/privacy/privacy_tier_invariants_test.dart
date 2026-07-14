@@ -1,5 +1,8 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:recap/billing/tier.dart';
+import 'package:recap/data/database.dart';
+import 'package:recap/services/sync/sync_manager.dart';
 
 /// The Privacy tier ($69) sells exactly one promise: this build cannot reach
 /// the network. CLAUDE.md calls it "verifiable in code" — these tests are what
@@ -59,6 +62,29 @@ void main() {
           reason: '${t.name} has cloudExportsEnabled=false but leaks a '
               'network destination through availableExports',
         );
+      }
+    });
+  });
+
+  group('the sync subsystem is never constructed on Privacy', () {
+    late AppDb db;
+    setUp(() => db = AppDb.forTesting(NativeDatabase.memory()));
+    tearDown(() => db.close());
+
+    test('Privacy => SyncManager.create returns null (no object, no socket)',
+        () {
+      // The structural guarantee: not a disabled flag, an absent object. There
+      // is no NeonAuth, no Data API client, nothing that could open a
+      // connection. This is what makes "verifiable no-network" true instead of
+      // aspirational.
+      expect(SyncManager.create(tier: Tier.privacy, db: db), isNull);
+    });
+
+    test('every non-Privacy tier CAN construct sync (so the gate is real)', () {
+      // If create() returned null for everyone, the test above would pass
+      // vacuously. It must return an object for the tiers that are allowed sync.
+      for (final t in [Tier.free, Tier.pro, Tier.power]) {
+        expect(SyncManager.create(tier: t, db: db), isNotNull, reason: t.name);
       }
     });
   });

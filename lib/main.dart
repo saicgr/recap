@@ -42,6 +42,7 @@ import 'services/embedding_service.dart';
 import 'services/rag/chat_service.dart';
 import 'services/rag/embedding_indexer.dart';
 import 'services/rag/segment_retriever.dart';
+import 'services/sync/sync_manager.dart';
 import 'services/insights_service.dart';
 import 'services/mcp_export_service.dart';
 import 'services/notification_service.dart';
@@ -84,6 +85,11 @@ late final EmbeddingService embeddings;
 late final EmbeddingIndexer embeddingIndexer;
 late final SegmentRetriever segmentRetriever;
 late final ChatService chatService;
+
+/// The sync subsystem, or null. NULL on the Privacy tier — not disabled, NOT
+/// constructed. This nullability IS the structural no-network guarantee; do not
+/// replace it with a bool flag.
+SyncManager? syncManager;
 late final ClipStudioService clipStudio;
 late final McpExportService mcpExport;
 late final VadService vad;
@@ -223,6 +229,14 @@ Future<void> main() async {
     backends: [ollamaBackend, appleFmBackend, gemmaBackend],
     tierProvider: () => entitlements.currentTier,
   );
+
+  // Sync is constructed HERE and only here. On the Privacy tier create() returns
+  // null, so no auth client, no Data API client and no sync engine object ever
+  // exists — there is no socket to open. This is the structural half of the
+  // no-network guarantee, verifiable by reading sync_manager.dart and enforced
+  // by test/privacy/. The tier was already resolved from disk (entitlements.init
+  // above), fail-closed.
+  syncManager = SyncManager.create(tier: entitlements.currentTier, db: db);
   clipStudio = ClipStudioService();
   mcpExport = McpExportService();
   vad = VadService();
