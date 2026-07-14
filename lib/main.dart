@@ -206,7 +206,7 @@ Future<void> main() async {
   mcpExport = McpExportService();
   vad = VadService();
   wakeWord = NullWakeWordService();
-  folderService = FolderService();
+  folderService = FolderService(db: db);
   translatorChain = buildTranslatorChain(entitlements.currentTier);
   unawaited(appLock.init());
   unawaited(notifications.init());
