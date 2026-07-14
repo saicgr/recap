@@ -11,7 +11,31 @@ enum ExportTarget {
   googleDocs,
   notion,
   obsidian,
-  slack,
+  slack;
+
+  /// True if reaching this destination requires a network call.
+  ///
+  /// Obsidian is deliberately NOT a cloud destination — it writes a Markdown
+  /// file into a local vault folder and never touches the network. The other
+  /// three POST to a third-party API.
+  ///
+  /// The Privacy tier is *defined* by the absence of these, so this is the
+  /// single source of truth. Never hand-maintain a parallel list: add a new
+  /// target here and [Tier.availableExports] filters it out of Privacy for
+  /// free.
+  bool get isCloudDestination => switch (this) {
+        ExportTarget.googleDocs ||
+        ExportTarget.notion ||
+        ExportTarget.slack =>
+          true,
+        ExportTarget.copy ||
+        ExportTarget.shareSheet ||
+        ExportTarget.appleReminders ||
+        ExportTarget.appleNotes ||
+        ExportTarget.markdown ||
+        ExportTarget.obsidian =>
+          false,
+      };
 }
 
 enum Tier {
@@ -53,8 +77,22 @@ enum Tier {
     priceUsd: 69, // slight premium over Pro — signals "this is the special SKU" for the verifiable-no-network buyer
     account: AccountRequirement.optional,
     cloudSummariesEnabled: false, // verifiable no-network
+    cloudExportsEnabled: false, // Notion / Slack / Google Docs are network calls
+    cloudTranscriptionEnabled: false, // no Deepgram — Whisper only, structurally
     personaTemplates: SummaryStyle.values,
-    exports: ExportTarget.values, // all offline exports
+    // Offline destinations only. Obsidian is a local vault file write, so it
+    // stays. This list used to be ExportTarget.values, which silently shipped
+    // Notion/Slack/Google Docs on the tier whose entire promise is "this build
+    // cannot reach the network" — [availableExports] now enforces that
+    // regardless of what is written here.
+    exports: [
+      ExportTarget.copy,
+      ExportTarget.shareSheet,
+      ExportTarget.appleReminders,
+      ExportTarget.appleNotes,
+      ExportTarget.markdown,
+      ExportTarget.obsidian,
+    ],
     speakerLabels: true,
     crossMeetingSearch: true,
     autoSegment: true,
@@ -76,6 +114,8 @@ enum Tier {
     required this.account,
     this.cloudSummariesPerMonth = 0,
     this.cloudSummariesEnabled = true,
+    this.cloudExportsEnabled = true,
+    this.cloudTranscriptionEnabled = true,
     this.topUpsEnabled = false,
     this.byok = false,
     this.personaTemplates = const [SummaryStyle.basic],
@@ -100,6 +140,21 @@ enum Tier {
   /// Privacy tier sets this to false (verifiable no-network).
   final bool cloudSummariesEnabled;
 
+  /// If false, export destinations that post to a third-party API
+  /// (Notion / Slack / Google Docs) are removed. Privacy tier sets this to
+  /// false — see [availableExports], which enforces it rather than trusting
+  /// each call site to remember.
+  final bool cloudExportsEnabled;
+
+  /// If false, the cloud-transcription (Deepgram) engine is never offered and
+  /// never constructed. Privacy tier sets this to false, so Whisper is the only
+  /// ASR path — the same structural guarantee AsrRouter already makes.
+  ///
+  /// Note this gates *availability*, not the default: on every other tier cloud
+  /// transcription is available but still OFF until the user turns it on.
+  /// On-device stays the default everywhere.
+  final bool cloudTranscriptionEnabled;
+
   /// Whether the user can buy one-time top-up packs for cloud summaries.
   final bool topUpsEnabled;
 
@@ -112,6 +167,17 @@ enum Tier {
   final bool crossMeetingSearch;
   final bool autoSegment;
   final bool watermark;
+
+  /// The export destinations actually offered to this tier.
+  ///
+  /// Use this, never [exports], anywhere a user-facing list is built. When
+  /// [cloudExportsEnabled] is false every network destination is stripped, so
+  /// the Privacy tier's "this build cannot reach the network" promise holds
+  /// even if someone later adds a cloud target to its [exports] list by
+  /// mistake. Defence in depth: the list is correct AND the filter enforces it.
+  List<ExportTarget> get availableExports => cloudExportsEnabled
+      ? exports
+      : exports.where((t) => !t.isCloudDestination).toList(growable: false);
 
   /// Which on-device Gemma 4 variant the tier is entitled to download.
   /// Free → E2B (smaller, 2.4 GB, weaker reasoning). Pro+ → E4B (larger,

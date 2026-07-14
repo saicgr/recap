@@ -26,7 +26,11 @@ class Exporter {
 
   final EntitlementService entitlements;
 
-  List<ExportTarget> get availableTargets => entitlements.currentTier.exports;
+  /// availableExports, not exports: on the Privacy tier this strips every
+  /// destination that would make a network call, so the cloud targets are never
+  /// rendered in the first place.
+  List<ExportTarget> get availableTargets =>
+      entitlements.currentTier.availableExports;
 
   String _format(Meeting m, String body) {
     final tier = entitlements.currentTier;
