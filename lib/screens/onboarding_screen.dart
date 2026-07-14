@@ -76,8 +76,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Icon(Icons.mic, size: 88, color: t.accent),
           const SizedBox(height: 32),
           Text('Recap',
-              style: RT.titleLg.copyWith(
-                  color: t.textPrimary, fontWeight: FontWeight.w700)),
+              style: RT.titleLg
+                  .copyWith(color: t.textPrimary, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           Text(
             'Voice Memos, with on-device AI.',
@@ -108,9 +108,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 16),
           _bullet(t, 'No account required. Ever.'),
           _bullet(t, 'No analytics. No telemetry.'),
-          _bullet(t, 'No background pings — online only when you tap a cloud button.'),
+          _bullet(t,
+              'No background pings — online only when you tap a cloud button.'),
           _bullet(t, 'Transcription runs locally (Whisper).'),
-          _bullet(t, 'Summaries run locally (Gemma 4 / Apple Foundation Models).'),
+          _bullet(
+              t, 'Summaries run locally (Gemma 4 / Apple Foundation Models).'),
           _bullet(t, 'Cloud summaries are opt-in only.'),
           _bullet(t,
               'On the Privacy tier, cloud is structurally disabled — verifiable by reading our code.'),
@@ -143,14 +145,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Icon(Icons.mic_none, size: 48, color: t.accent),
           const SizedBox(height: 24),
-          Text('Permissions',
-              style: RT.title.copyWith(color: t.textPrimary)),
+          Text('Permissions', style: RT.title.copyWith(color: t.textPrimary)),
           const SizedBox(height: 16),
           _permRow(t, Icons.mic, 'Microphone',
               'Required for recording. Recap never shares mic audio.', true),
           _permRow(t, Icons.calendar_month_outlined, 'Calendar',
               'Optional. Auto-titles meetings from calendar events.', false),
-          _permRow(t, Icons.notifications_none, 'Notifications',
+          _permRow(
+              t,
+              Icons.notifications_none,
+              'Notifications',
               'Optional. Local-only — "transcript ready", "action item due".',
               false),
         ],
@@ -158,8 +162,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _permRow(RecapTheme t, IconData icon, String name, String desc,
-      bool required) {
+  Widget _permRow(
+      RecapTheme t, IconData icon, String name, String desc, bool required) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -174,8 +178,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Row(children: [
                   Text(name,
                       style: RT.body.copyWith(
-                          color: t.textPrimary,
-                          fontWeight: FontWeight.w600)),
+                          color: t.textPrimary, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
                   if (required)
                     Container(
@@ -186,13 +189,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text('Required',
-                          style:
-                              RT.caption.copyWith(color: t.accent)),
+                          style: RT.caption.copyWith(color: t.accent)),
                     ),
                 ]),
                 const SizedBox(height: 4),
-                Text(desc,
-                    style: RT.bodySm.copyWith(color: t.textSecondary)),
+                Text(desc, style: RT.bodySm.copyWith(color: t.textSecondary)),
               ],
             ),
           ),
@@ -248,8 +249,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Icon(Icons.fiber_manual_record, size: 88, color: t.recordRed),
           const SizedBox(height: 32),
           Text("You're set",
-              style: RT.titleLg.copyWith(
-                  color: t.textPrimary, fontWeight: FontWeight.w700)),
+              style: RT.titleLg
+                  .copyWith(color: t.textPrimary, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           Text(
             'Tap Record on the home screen to capture your first meeting. Live captions appear instantly.',

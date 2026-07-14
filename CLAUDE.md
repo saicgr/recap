@@ -14,7 +14,7 @@ A single product, not a phased rollout. Everything in `docs/TIERS.md` is part of
 - On-device AI summaries (Apple Foundation Models on iPhone 15 Pro+/16+, `flutter_gemma` with Gemma 4 E2B/E4B elsewhere, Ollama on desktop)
 - Cloud summaries via Render proxy → Gemini 3.1 Flash Lite (opt-in)
 - All 7 persona templates (basic, 1:1, standup, sales call, interview, lecture, doctor visit)
-- Custom persona prompts (Power tier)
+- Custom persona prompts (1 on Free, unlimited on Pro+ — Granola gives templates away free, so gating them behind a SKU was a losing trade)
 - Speaker diarization (Pyannote ONNX via sherpa_onnx, post-record + post-import)
 - Voice ID / speaker enrollment — auto-label known speakers across meetings
 - Cross-meeting search (SQLite FTS5 + on-device MiniLM embeddings)
@@ -95,7 +95,7 @@ Karpathy publicly chose SuperWhisper because it's fully offline, no telemetry, n
 | Free | $0 | Unlimited | Unlimited | 5/mo | Watermark on shared exports, top-ups available, Whisper tiny + Gemma 4 E2B |
 | Pro | $49 IAP | Unlimited | Unlimited | 100/mo | All 7 personas, viral clips, voice ID, translation, cross-meeting search, Whisper small + Gemma 4 E4B + Apple FM |
 | Privacy | $69 IAP | Unlimited | Unlimited (offline) | **Disabled — verifiable no-network** | Everything in Pro but cloud is structurally unreachable; verifiable by reading `lib/` |
-| Power | $99 IAP | Unlimited | Unlimited | BYOK (unlimited) | Custom personas, MCP companion, Notion/Slack/Obsidian/GDocs exports, wake word, branded clips |
+| Power | $99 IAP | Unlimited | Unlimited | BYOK (unlimited) | MCP companion, Notion/Slack/Obsidian/GDocs exports, wake word, branded clips |
 
 Top-up packs: 25/$2.99, 100/$9.99, 500/$39.99 (cloud summaries only; not for Privacy or Power).
 

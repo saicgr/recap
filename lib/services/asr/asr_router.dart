@@ -10,8 +10,10 @@ import 'whisper_asr.dart';
 enum AsrEnginePreference {
   /// Pick based on platform + availability.
   auto,
+
   /// Always prefer the platform native engine (Apple / Google / Windows).
   nativeOnly,
+
   /// Always use Whisper (Recap-bundled). Required on Privacy tier.
   whisperOnly,
 }

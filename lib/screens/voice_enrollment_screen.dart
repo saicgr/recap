@@ -56,8 +56,7 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('Enroll'),
@@ -109,14 +108,13 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
                                 size: 48, color: t.textMuted),
                             const SizedBox(height: 16),
                             Text('No voices enrolled yet',
-                                style: RT.subtitle
-                                    .copyWith(color: t.textPrimary)),
+                                style:
+                                    RT.subtitle.copyWith(color: t.textPrimary)),
                             const SizedBox(height: 8),
                             Text(
                               'Enroll a 30s reference clip of each known speaker. We\'ll auto-label them in future meetings.',
                               textAlign: TextAlign.center,
-                              style: RT.bodySm
-                                  .copyWith(color: t.textSecondary),
+                              style: RT.bodySm.copyWith(color: t.textSecondary),
                             ),
                           ],
                         ),

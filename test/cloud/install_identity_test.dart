@@ -64,7 +64,8 @@ void main() {
         () async {
       final legacy = 'a' * 64; // the old locally-generated random hex
       final store = FakeStore({InstallIdentity.kLegacyTokenKey: legacy});
-      final id = build(store, MockClient((_) async => http.Response('{}', 500)));
+      final id =
+          build(store, MockClient((_) async => http.Response('{}', 500)));
 
       expect(await id.installId(), legacy,
           reason: 'reusing it keeps the rate-limit bucket stable');
@@ -79,7 +80,8 @@ void main() {
       // Silently minting a new identity would quietly reset the user's quota
       // bucket and hide a real device problem.
       final store = FakeStore()..failReads = true;
-      final id = build(store, MockClient((_) async => http.Response('{}', 200)));
+      final id =
+          build(store, MockClient((_) async => http.Response('{}', 200)));
       await expectLater(
         id.installId(),
         throwsA(isA<CloudError>()
@@ -123,8 +125,10 @@ void main() {
     test('authHeaders sends BOTH the bearer and X-Install-Id', () async {
       // Render 401s a request missing either one.
       final store = FakeStore();
-      final id = build(store,
-          MockClient((_) async => http.Response(jsonEncode({'token': 't'}), 200)));
+      final id = build(
+          store,
+          MockClient(
+              (_) async => http.Response(jsonEncode({'token': 't'}), 200)));
 
       final h = await id.authHeaders();
       expect(h['Authorization'], 'Bearer t');
@@ -133,8 +137,10 @@ void main() {
 
     test('a 429 on register is reported as rate-limited, not a generic error',
         () async {
-      final id = build(FakeStore(),
-          MockClient((_) async => http.Response('{"error":"rate limited"}', 429)));
+      final id = build(
+          FakeStore(),
+          MockClient(
+              (_) async => http.Response('{"error":"rate limited"}', 429)));
       await expectLater(
         id.token(),
         throwsA(isA<CloudError>()
@@ -144,8 +150,10 @@ void main() {
 
     test('an empty token body is rejected rather than cached', () async {
       final store = FakeStore();
-      final id = build(store,
-          MockClient((_) async => http.Response(jsonEncode({'token': ''}), 200)));
+      final id = build(
+          store,
+          MockClient(
+              (_) async => http.Response(jsonEncode({'token': ''}), 200)));
       await expectLater(
         id.token(),
         throwsA(isA<CloudError>()
@@ -157,7 +165,8 @@ void main() {
 
   group('proxy url', () {
     test('an unconfigured url throws instead of dialling a dead host', () {
-      expect(() => requireConfiguredProxyUrl(''),
+      expect(
+          () => requireConfiguredProxyUrl(''),
           throwsA(isA<CloudError>()
               .having((e) => e.kind, 'kind', CloudFailureKind.notConfigured)));
       expect(() => requireConfiguredProxyUrl(kPlaceholderProxyUrl),

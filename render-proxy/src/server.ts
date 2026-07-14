@@ -18,7 +18,13 @@ import {
   type AuthedRequest,
 } from './auth';
 import { HourlyRateLimiter, DailyBudget } from './budget';
-import { summarizeWithGemini, GEMINI_MODEL_ID, UpstreamError } from './gemini';
+import {
+  summarizeWithGemini,
+  clampOutputTokens,
+  GEMINI_MODEL_ID,
+  MAX_OUTPUT_TOKENS,
+  UpstreamError,
+} from './gemini';
 import { transcribeStream, DeepgramError, DG_MODEL } from './deepgram';
 import { isLedgerConfigured } from './db';
 import { reserve, settle, refund, remaining, QuotaExceeded } from './ledger';
@@ -62,11 +68,50 @@ const PORT = parseInt(process.env.PORT ?? '10000', 10);
 const AUTH_PER_HOUR = parseInt(process.env.RATE_LIMIT_AUTH_PER_HOUR ?? '600', 10);
 const UNAUTH_PER_HOUR = parseInt(process.env.RATE_LIMIT_UNAUTH_PER_HOUR ?? '60', 10);
 const DAILY_BUDGET_USD = parseFloat(process.env.DAILY_BUDGET_USD ?? '10');
-// Rough per-summary cost for the circuit breaker (safety backstop, not billing).
-// Flash Lite is cheap: a few k input + ~2k output is well under a cent.
+
+// Floor for the per-summary circuit-breaker charge (safety backstop, not
+// billing). Raised 0.005 -> 0.02 by the summarizer rebuild: the single-pass
+// prompt now asks for up to 8192 output tokens instead of 2048, and output is
+// the expensive half. A guard that under-counts is not a guard.
+//
+// NOTE: render.yaml pins EST_COST_PER_SUMMARY_USD in the service env, which
+// OVERRIDES this default in production. It has been raised to "0.02" to match;
+// keep the two in step, or the pin silently reinstates the old under-count.
+// Independently of the floor, estimateSummaryCostUsd() below prices each request
+// from its actual size, so a large request can never be charged as if it were
+// small.
 const EST_COST_PER_SUMMARY_USD = parseFloat(
-  process.env.EST_COST_PER_SUMMARY_USD ?? '0.005',
+  process.env.EST_COST_PER_SUMMARY_USD ?? '0.02',
 );
+
+// Gemini 3.1 Flash Lite list price, USD per 1M tokens. Used ONLY to size the
+// daily circuit breaker; nothing here bills a user.
+const GEMINI_USD_PER_M_INPUT = parseFloat(process.env.GEMINI_USD_PER_M_INPUT ?? '0.10');
+const GEMINI_USD_PER_M_OUTPUT = parseFloat(
+  process.env.GEMINI_USD_PER_M_OUTPUT ?? '0.40',
+);
+
+// A system instruction is the anti-hallucination preamble + glossary: ~600
+// tokens today, ~2 KB of text. 16 KB leaves generous headroom for a long
+// glossary while still refusing an attempt to smuggle a novel through it.
+const MAX_SYSTEM_INSTRUCTION_CHARS = parseInt(
+  process.env.MAX_SYSTEM_INSTRUCTION_CHARS ?? '16384',
+  10,
+);
+
+/**
+ * Price a summarize request from what it actually asks for, floored at
+ * EST_COST_PER_SUMMARY_USD. The chars/3.6 ratio matches the app's deliberately
+ * pessimistic token_estimator.dart — over-estimating costs us a little daily
+ * headroom; under-estimating costs money.
+ */
+function estimateSummaryCostUsd(inputChars: number, maxOutputTokens: number): number {
+  const inputTokens = Math.ceil(inputChars / 3.6);
+  const usd =
+    (inputTokens / 1_000_000) * GEMINI_USD_PER_M_INPUT +
+    (maxOutputTokens / 1_000_000) * GEMINI_USD_PER_M_OUTPUT;
+  return Math.max(EST_COST_PER_SUMMARY_USD, usd);
+}
 
 const app = express();
 // Native mobile clients send no Origin, so CORS is permissive — the real gate
@@ -115,6 +160,25 @@ app.post('/v1/register', (req, res) => {
   res.json({ token: issueToken(installId, PEPPER), model_hint: GEMINI_MODEL_ID });
 });
 
+// ---------------------------------------------------------------------------
+// Cloud summaries (Gemini). OPT-IN, and structurally unreachable on the Privacy
+// tier — the client never constructs a CloudBackend there. This route is the
+// ONLY network call the app makes for a summary.
+//
+// Request (all fields optional except `prompt`):
+//   prompt              string  — the instruction, or, for the rebuilt client,
+//                                 the whole composed single-pass prompt.
+//   transcript          string  — legacy split form; appended under "Transcript:".
+//                                 Omit it when `prompt` already contains the
+//                                 transcript. At least one of the two must carry it.
+//   system_instruction  string  — anti-hallucination preamble + glossary.
+//   max_output_tokens   number  — clamped to [256, 8192]; defaults to 2048.
+//   persona_key         string  — accepted and ignored; the client composes the
+//                                 persona lens into `prompt` itself.
+//
+// Response: { text, model_id, truncated? }. `truncated` is additive; clients
+// that predate it ignore it.
+// ---------------------------------------------------------------------------
 app.post(
   '/v1/summarize',
   requireInstallAuth(PEPPER),
@@ -124,29 +188,84 @@ app.post(
       res.status(429).json({ error: 'rate limited' });
       return;
     }
-    if (!budget.canSpend(EST_COST_PER_SUMMARY_USD)) {
+
+    const prompt = req.body?.prompt;
+    // Legacy clients send prompt + transcript separately. The rebuilt client
+    // composes the transcript into the prompt (its SummaryBackend.generate()
+    // takes one prompt string), so `transcript` may be absent or empty — but
+    // one of the two must actually carry the meeting, hence the prompt check.
+    const rawTranscript = req.body?.transcript;
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      res.status(400).json({ error: 'prompt required' });
+      return;
+    }
+    if (
+      rawTranscript !== undefined &&
+      rawTranscript !== null &&
+      typeof rawTranscript !== 'string'
+    ) {
+      res.status(400).json({ error: 'transcript must be a string' });
+      return;
+    }
+    const transcript = typeof rawTranscript === 'string' ? rawTranscript : '';
+
+    const rawSystem = req.body?.system_instruction;
+    if (rawSystem !== undefined && rawSystem !== null && typeof rawSystem !== 'string') {
+      res.status(400).json({ error: 'system_instruction must be a string' });
+      return;
+    }
+    const systemInstruction = typeof rawSystem === 'string' ? rawSystem.trim() : '';
+    if (systemInstruction.length > MAX_SYSTEM_INSTRUCTION_CHARS) {
+      res.status(400).json({
+        error: `system_instruction too long (max ${MAX_SYSTEM_INSTRUCTION_CHARS} chars)`,
+      });
+      return;
+    }
+
+    const rawMaxOut = req.body?.max_output_tokens;
+    if (
+      rawMaxOut !== undefined &&
+      rawMaxOut !== null &&
+      (typeof rawMaxOut !== 'number' || !Number.isFinite(rawMaxOut))
+    ) {
+      res.status(400).json({ error: 'max_output_tokens must be a number' });
+      return;
+    }
+    // Out-of-range is clamped rather than rejected: a client asking for more
+    // than we allow should still get its summary, just a shorter one.
+    const maxOutputTokens = clampOutputTokens(
+      typeof rawMaxOut === 'number' ? rawMaxOut : undefined,
+    );
+
+    // Priced AFTER validation so the charge reflects the real request size —
+    // an 8192-token single pass over a 3-hour transcript is not the same spend
+    // as the old 2048-token 4-section template.
+    const estUsd = estimateSummaryCostUsd(
+      prompt.length + transcript.length + systemInstruction.length,
+      maxOutputTokens,
+    );
+    if (!budget.canSpend(estUsd)) {
       res
         .status(503)
         .json({ error: 'daily budget exhausted; try later or use on-device' });
       return;
     }
 
-    const prompt = req.body?.prompt;
-    const transcript = req.body?.transcript;
-    if (
-      typeof prompt !== 'string' ||
-      typeof transcript !== 'string' ||
-      !prompt.trim() ||
-      !transcript.trim()
-    ) {
-      res.status(400).json({ error: 'prompt + transcript required' });
-      return;
-    }
-
     try {
-      const { text } = await summarizeWithGemini(GEMINI_API_KEY, prompt, transcript);
-      budget.record(EST_COST_PER_SUMMARY_USD);
-      res.json({ text, model_id: GEMINI_MODEL_ID });
+      const { text, truncated } = await summarizeWithGemini(
+        GEMINI_API_KEY,
+        prompt,
+        transcript,
+        { system: systemInstruction, maxOutputTokens },
+      );
+      budget.record(estUsd);
+      if (truncated) {
+        // Never pass a cut-off summary off as a complete one.
+        console.warn(
+          `summarize hit maxOutputTokens (${maxOutputTokens}) for install ${installId}`,
+        );
+      }
+      res.json({ text, model_id: GEMINI_MODEL_ID, truncated });
     } catch (err) {
       if (err instanceof UpstreamError) {
         res.status(502).json({ error: err.message, detail: err.detail });
@@ -302,7 +421,8 @@ app.use((_req, res) => res.status(404).json({ error: 'not found' }));
 app.listen(PORT, () => {
   console.log(
     `recap-proxy on :${PORT} — daily budget cap $${DAILY_BUDGET_USD}, ` +
-      `auth ${AUTH_PER_HOUR}/h, register ${UNAUTH_PER_HOUR}/h/IP`,
+      `auth ${AUTH_PER_HOUR}/h, register ${UNAUTH_PER_HOUR}/h/IP, ` +
+      `summary floor $${EST_COST_PER_SUMMARY_USD}/max ${MAX_OUTPUT_TOKENS} out-tokens`,
   );
 });
 

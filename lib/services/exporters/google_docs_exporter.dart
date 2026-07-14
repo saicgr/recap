@@ -33,6 +33,7 @@ class GoogleDocsExporter implements WorkflowExporter {
     //   On success: store access_token + refresh_token in secure storage.
     throw UnimplementedError('Google OAuth pending.');
   }
+
   @override
   Future<void> deauthorize() async {
     _accessToken = null;
@@ -59,7 +60,8 @@ class GoogleDocsExporter implements WorkflowExporter {
       body: jsonEncode({'title': meeting.title}),
     );
     if (createRes.statusCode != 200) {
-      return ExportResult.err('Google Docs create: HTTP ${createRes.statusCode}');
+      return ExportResult.err(
+          'Google Docs create: HTTP ${createRes.statusCode}');
     }
     final created = jsonDecode(createRes.body) as Map<String, dynamic>;
     final docId = created['documentId'] as String;
@@ -92,9 +94,11 @@ class GoogleDocsExporter implements WorkflowExporter {
       }),
     );
     if (updateRes.statusCode != 200) {
-      return ExportResult.err('Google Docs update: HTTP ${updateRes.statusCode}');
+      return ExportResult.err(
+          'Google Docs update: HTTP ${updateRes.statusCode}');
     }
 
-    return ExportResult.ok(url: 'https://docs.google.com/document/d/$docId/edit');
+    return ExportResult.ok(
+        url: 'https://docs.google.com/document/d/$docId/edit');
   }
 }

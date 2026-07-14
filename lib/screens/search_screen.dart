@@ -49,8 +49,7 @@ class _SearchScreenState extends State<SearchScreen> {
       }
       final all = await db.recentMeetings(limit: 1000);
       final byId = {for (final m in all) m.id: m};
-      final ordered =
-          ids.map((id) => byId[id]).whereType<Meeting>().toList();
+      final ordered = ids.map((id) => byId[id]).whereType<Meeting>().toList();
       setState(() => _results = ordered);
     } finally {
       if (mounted) setState(() => _searching = false);
@@ -122,8 +121,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           itemCount: _results.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 8),
-                          itemBuilder: (ctx, i) =>
-                              _row(t, _results[i]),
+                          itemBuilder: (ctx, i) => _row(t, _results[i]),
                         ),
             ),
           ],
@@ -155,8 +153,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   children: [
                     Text(m.title,
                         style: RT.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: t.textPrimary)),
+                            fontWeight: FontWeight.w600, color: t.textPrimary)),
                     const SizedBox(height: 2),
                     Text(
                       DateFormat('MMM d · h:mm a').format(m.createdAt),

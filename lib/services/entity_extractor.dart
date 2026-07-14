@@ -36,11 +36,25 @@ abstract class EntityExtractor {
 }
 
 /// Heuristic fallback. Always available, ~95% precision on the patterns
-/// it does catch (PERSON / MONEY / DATE) and ~10% recall — meaningfully
+/// it does catch (PERSON / ORG / MONEY / DATE) and ~10% recall — meaningfully
 /// useful for action items + speaker-name suggestions even without the
 /// ONNX model loaded.
 class HeuristicEntityExtractor implements EntityExtractor {
   static final _personRegex = RegExp(r'\b[A-Z][a-z]+ [A-Z][a-z]+\b');
+
+  /// Acronyms — RGM, APT, JBP, PTC, CRM. This is the ONE org-ish class a
+  /// case-sensitive heuristic can find in ASR output at high precision: an
+  /// all-caps token is never an English word Whisper capitalized by accident,
+  /// and acronyms are exactly what a small model garbles and what a glossary
+  /// therefore needs to pin down. Without this, `kind == 'ORG'` was requested by
+  /// SummaryGlossary._spellableKinds and emitted by nothing — a dead branch.
+  ///
+  /// Deliberately NOT a lowercase or fuzzy matcher: the glossary block tells the
+  /// model to "treat a near-miss as a mis-transcription of one of these terms",
+  /// so a noisy glossary manufactures the exact fabrications rule 2 forbids. A
+  /// bad transcript must yield an EMPTY glossary, not a wrong one.
+  static final _acronymRegex = RegExp(r'\b[A-Z]{2,6}\b');
+
   static final _moneyRegex =
       RegExp(r'\$\s?\d+(?:,\d{3})*(?:\.\d+)?(?:\s?[kKmMbB])?');
   static final _dateRegex = RegExp(
@@ -55,6 +69,15 @@ class HeuristicEntityExtractor implements EntityExtractor {
         text: m.group(0)!,
         kind: 'PERSON',
         confidence: 0.6,
+        startChar: m.start,
+        endChar: m.end,
+      ));
+    }
+    for (final m in _acronymRegex.allMatches(text)) {
+      out.add(Entity(
+        text: m.group(0)!,
+        kind: 'ORG',
+        confidence: 0.7,
         startChar: m.start,
         endChar: m.end,
       ));
@@ -153,8 +176,8 @@ class GlinerEntityExtractor implements EntityExtractor {
       // route through the heuristic path until the tokenizer + post-process
       // shim are wired — keeps the API consistent.
       // ignore: unused_local_variable
-      final session = _session ??= await OnnxRuntime()
-          .createSession(await _modelPath());
+      final session =
+          _session ??= await OnnxRuntime().createSession(await _modelPath());
       return _fallback.extract(text);
     } catch (e) {
       debugPrint('GLiNER extract failed, falling back: $e');

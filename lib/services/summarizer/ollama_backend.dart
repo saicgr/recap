@@ -5,8 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../../billing/persona.dart';
 import 'summary_backend.dart';
+import 'summary_types.dart';
 
 /// Desktop-only summarizer that talks to a locally-running Ollama daemon at
 /// `http://localhost:11434`. Same on-device semantics as Gemma — runs on the
@@ -21,8 +21,27 @@ import 'summary_backend.dart';
 /// Status is published via a [ChangeNotifier] so the Settings tile can show
 /// live detection state without ad-hoc polling everywhere.
 class OllamaBackend extends ChangeNotifier implements SummaryBackend {
-  OllamaBackend({String? baseUrl})
-      : baseUrl = baseUrl ?? _defaultUrl();
+  OllamaBackend({String? baseUrl}) : baseUrl = baseUrl ?? _defaultUrl();
+
+  /// Conservative, model-independent budget.
+  ///
+  /// The installed model may well offer 128K (see [_contextWindowFor], which is
+  /// what we actually ask the daemon to allocate), but [capabilities] is read
+  /// before we know which model will answer, and a desktop that has only a small
+  /// model pulled must not be handed a prompt it cannot hold. 8K is the
+  /// universal safe floor for modern open-weight models; over-chunking a desktop
+  /// summary costs a few seconds of local GPU time and nothing else.
+  static const _contextTokens = 8192;
+  static const _maxOutputTokens = 2048;
+
+  @override
+  String get modelId => 'ollama:${bestModel()?.name ?? 'unknown'}';
+
+  @override
+  BackendCapabilities get capabilities => const BackendCapabilities(
+        contextTokens: _contextTokens,
+        maxOutputTokens: _maxOutputTokens,
+      );
 
   static String _defaultUrl() {
     const fromEnv = String.fromEnvironment('RECAP_OLLAMA_URL');
@@ -54,8 +73,7 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
   /// because (a) the daemon doesn't run on iOS/Android, (b) no point loading
   /// HTTP clients pointed at localhost on a phone.
   static bool get isSupportedPlatform =>
-      !kIsWeb &&
-      (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
+      !kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux);
 
   /// Probe the daemon. Idempotent; safe to call from settings screen
   /// initState + on a periodic timer.
@@ -160,11 +178,15 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
   }
 
   @override
-  Future<SummaryResult> summarize({
-    required String transcript,
-    required Persona persona,
-    void Function(double progress)? onProgress,
+  Future<String> generate({
+    required String prompt,
+    String? system,
+    double temperature = 0.4,
+    int? maxOutputTokens,
+    CancelToken? cancel,
   }) async {
+    cancel?.throwIfCancelled();
+
     if (!isSupportedPlatform) {
       throw StateError('Ollama backend only runs on desktop platforms.');
     }
@@ -173,11 +195,13 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
       throw StateError(
           'No Ollama models installed. Run `ollama pull gemma3:27b` (or similar) first.');
     }
-    final stopwatch = Stopwatch()..start();
-    final prompt = '${persona.prompt.trim()}\n\nTranscript:\n$transcript';
 
     // Use the non-streaming /api/generate path for simplicity; the router
     // can switch to /api/chat streaming later if we want token-by-token UI.
+    //
+    // `system` goes in the daemon's own system field rather than being glued to
+    // the prompt: Ollama then renders it into the model's real system turn,
+    // which is where the anti-hallucination rules carry the most weight.
     final res = await http
         .post(
           Uri.parse('$baseUrl/api/generate'),
@@ -185,10 +209,17 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
           body: jsonEncode({
             'model': model.name,
             'prompt': prompt,
+            if (system != null && system.trim().isNotEmpty)
+              'system': system.trim(),
             'stream': false,
             'options': {
-              'temperature': 0.4,
+              'temperature': temperature,
+              // What the daemon allocates for this call. This is the model's
+              // real window, which is usually far larger than the conservative
+              // budget [capabilities] advertises — the extra headroom means a
+              // chunk sized for 8K can never clip its own response.
               'num_ctx': _contextWindowFor(model),
+              'num_predict': maxOutputTokens ?? _maxOutputTokens,
             },
           }),
         )
@@ -196,17 +227,16 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
     if (res.statusCode != 200) {
       throw StateError('Ollama returned HTTP ${res.statusCode}: ${res.body}');
     }
+
+    cancel?.throwIfCancelled();
+
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final text = (body['response'] as String? ?? '').trim();
     if (text.isEmpty) {
-      throw StateError('Ollama returned empty summary');
+      throw StateError(
+          'Ollama model "${model.name}" returned an empty response');
     }
-    stopwatch.stop();
-    return SummaryResult(
-      text: text,
-      modelId: 'ollama:${model.name}',
-      processingTime: stopwatch.elapsed,
-    );
+    return text;
   }
 
   /// Conservative per-family context windows. Anything we don't recognize

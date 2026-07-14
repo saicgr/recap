@@ -20,8 +20,7 @@ class SystemAudioCapture {
   static const _method = MethodChannel('recap.system_audio');
   static const _events = EventChannel('recap.system_audio.events');
 
-  static bool get isSupportedPlatform =>
-      Platform.isMacOS || Platform.isWindows;
+  static bool get isSupportedPlatform => Platform.isMacOS || Platform.isWindows;
 
   /// Are we allowed to capture system audio right now? macOS requires Screen
   /// Recording permission; first call prompts.

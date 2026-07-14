@@ -8,7 +8,8 @@ import 'package:flutter/material.dart';
 /// the design language survives because it's typography hierarchy + spacing
 /// + color, not the specific font.
 class RT {
-  static const _ui = null; // null = platform default; bundle 'Inter' to override
+  static const _ui =
+      null; // null = platform default; bundle 'Inter' to override
   static const _mono = null;
 
   static const display = TextStyle(

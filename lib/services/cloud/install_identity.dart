@@ -20,7 +20,8 @@ abstract class SecretStore {
 
 /// Production [SecretStore] — iOS Keychain / Android Keystore.
 class SecureStorageSecretStore implements SecretStore {
-  const SecureStorageSecretStore([this._storage = const FlutterSecureStorage()]);
+  const SecureStorageSecretStore(
+      [this._storage = const FlutterSecureStorage()]);
 
   final FlutterSecureStorage _storage;
 
@@ -161,7 +162,8 @@ class InstallIdentity {
 
     final String token;
     try {
-      token = (jsonDecode(resp.body) as Map<String, dynamic>)['token'] as String;
+      token =
+          (jsonDecode(resp.body) as Map<String, dynamic>)['token'] as String;
     } catch (_) {
       throw CloudError(CloudFailureKind.emptyResponse,
           'Cloud registration returned no token.');

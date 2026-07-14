@@ -148,8 +148,7 @@ class DriftEntitlementService implements EntitlementService {
           ..where((t) => t.month.equals(_monthKey(now))))
         .getSingleOrNull();
     final credits = await db.select(db.topUpCredits).get();
-    final totalCredits =
-        credits.fold<int>(0, (sum, c) => sum + c.remaining);
+    final totalCredits = credits.fold<int>(0, (sum, c) => sum + c.remaining);
     final totalMeetings = (await db.select(db.meetings).get()).length;
 
     return TierUsage(
@@ -214,8 +213,8 @@ class DriftEntitlementService implements EntitlementService {
               meetingsStarted: const Value(1),
             ));
       } else {
-        await (db.update(db.usageDays)..where((t) => t.day.equals(key)))
-            .write(UsageDaysCompanion(
+        await (db.update(db.usageDays)..where((t) => t.day.equals(key))).write(
+            UsageDaysCompanion(
                 meetingsStarted: Value(existing.meetingsStarted + 1)));
       }
     });
@@ -252,7 +251,8 @@ class DriftEntitlementService implements EntitlementService {
       } else {
         await (db.update(db.usageMonths)
               ..where((t) => t.month.equals(monthKey)))
-            .write(UsageMonthsCompanion(recordedMs: Value(month.recordedMs + ms)));
+            .write(
+                UsageMonthsCompanion(recordedMs: Value(month.recordedMs + ms)));
       }
     });
     await _emitUsage();
@@ -282,8 +282,8 @@ class DriftEntitlementService implements EntitlementService {
         } else {
           await (db.update(db.usageMonths)
                 ..where((t) => t.month.equals(monthKey)))
-              .write(UsageMonthsCompanion(
-                  cloudSummariesUsed: Value(current + 1)));
+              .write(
+                  UsageMonthsCompanion(cloudSummariesUsed: Value(current + 1)));
         }
       } else {
         // Burn one top-up credit. Take from the oldest pack with remaining > 0.
@@ -296,8 +296,7 @@ class DriftEntitlementService implements EntitlementService {
           throw StateError(
               'recordCloudSummaryUsed called with no quota and no credits');
         }
-        await (db.update(db.topUpCredits)
-              ..where((t) => t.id.equals(pack.id)))
+        await (db.update(db.topUpCredits)..where((t) => t.id.equals(pack.id)))
             .write(TopUpCreditsCompanion(remaining: Value(pack.remaining - 1)));
       }
     });

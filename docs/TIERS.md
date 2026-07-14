@@ -44,7 +44,7 @@ Recording, meetings/day, hours/month, and on-device summaries are **unlimited on
 | **Workflow exports (Notion / Slack / Obsidian / GDocs)** | ❌ | ❌ (cloud-only path) | offline-only path | all |
 | **Wake word (Hey Recap)** | ❌ | ✓ | local-only path | ✓ |
 | **MCP companion** | ❌ | ❌ | ❌ | ✓ |
-| **Custom personas** | ❌ | ❌ | ❌ | ✓ |
+| **Custom personas (summary templates)** | 1 | unlimited | unlimited | unlimited |
 | **Branded clip output (logo + colors on viral clips / PDFs)** | ❌ | ❌ | ❌ | ✓ |
 
 ## Top-up credits
@@ -88,7 +88,7 @@ Every row in the tables above is a real feature in the product, not a roadmap it
 - Background recording (foreground service on Android, background-audio mode on iOS)
 - On-device AI summaries (Apple Foundation Models on iPhone 15 Pro+/16+, Gemma 4 E2B/E4B elsewhere, Ollama on desktop, BYOK on Power)
 - Cloud summaries via Render proxy → Gemini Flash Lite (opt-in, hidden on Privacy)
-- All 7 persona templates + custom persona prompts (Power)
+- All 7 persona templates + custom persona prompts (1 on Free, unlimited on Pro+)
 - Speaker diarization (Pyannote via sherpa_onnx)
 - Voice ID / speaker enrollment — auto-label known speakers
 - Cross-meeting search (SQLite FTS5 + MiniLM embeddings)

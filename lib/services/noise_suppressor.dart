@@ -86,7 +86,8 @@ class NoiseSuppressor {
       final upsampled = _upsample3x(frame);
       // Process in 480-sample windows.
       final out48 = Float32List(upsampled.length);
-      for (var off = 0; off + rnnoiseFrameSize <= upsampled.length;
+      for (var off = 0;
+          off + rnnoiseFrameSize <= upsampled.length;
           off += rnnoiseFrameSize) {
         final win = Float32List(rnnoiseFrameSize);
         for (var i = 0; i < rnnoiseFrameSize; i++) {

@@ -36,8 +36,7 @@ class Exporter {
     final tier = entitlements.currentTier;
     final created = DateFormat('MMM d, y · h:mm a').format(m.createdAt);
     final header = '# ${m.title}\n\n_${created}_\n\n';
-    final footer =
-        tier.watermark ? '\n\n---\n_Made with Recap_' : '';
+    final footer = tier.watermark ? '\n\n---\n_Made with Recap_' : '';
     return '$header$body$footer';
   }
 
@@ -91,8 +90,7 @@ class Exporter {
     final exportsDir = Directory(p.join(dir.path, 'exports'));
     if (!await exportsDir.exists()) await exportsDir.create(recursive: true);
     final safeTitle = meeting.title.replaceAll(RegExp(r'[^\w\s-]'), '_').trim();
-    final filename =
-        '${safeTitle}_${meeting.id.substring(0, 8)}.md';
+    final filename = '${safeTitle}_${meeting.id.substring(0, 8)}.md';
     final file = File(p.join(exportsDir.path, filename));
     await file.writeAsString(body);
     return file.path;

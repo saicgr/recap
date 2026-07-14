@@ -133,7 +133,8 @@ class VadService {
         probs.add((probList.first as num).toDouble());
         final newState = await outputs['stateN']!.asList();
         // Re-pack flattened state into a fresh Float32List for the next call.
-        state = Float32List.fromList(newState.cast<num>().map((n) => n.toDouble()).toList());
+        state = Float32List.fromList(
+            newState.cast<num>().map((n) => n.toDouble()).toList());
       } catch (e) {
         // Per-frame failure — model schema mismatch with this Silero ONNX
         // variant (output names differ between v4 / v5 dumps). Fall back to

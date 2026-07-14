@@ -51,7 +51,8 @@ class _StorageScreenState extends State<StorageScreen> {
     if (!await dir.exists()) return 0;
     var total = 0;
     try {
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity
+          in dir.list(recursive: true, followLinks: false)) {
         if (entity is File) {
           try {
             total += await entity.length();
@@ -139,13 +140,11 @@ class _StorageScreenState extends State<StorageScreen> {
       child: Row(
         children: [
           Expanded(
-            child: Text(entry.key,
-                style: RT.body.copyWith(color: t.textPrimary)),
+            child:
+                Text(entry.key, style: RT.body.copyWith(color: t.textPrimary)),
           ),
           Text(_fmtBytes(entry.value),
-              style: RT.bodySm
-                  .copyWith(color: t.textSecondary)
-                  .merge(RT.num)),
+              style: RT.bodySm.copyWith(color: t.textSecondary).merge(RT.num)),
         ],
       ),
     );

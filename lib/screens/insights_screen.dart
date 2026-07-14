@@ -89,8 +89,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 'Talk-time per speaker · Words-per-minute breakdown · Meeting-series trends · Cross-meeting topic clustering. All local. All private.',
-                                style: RT.bodySm
-                                    .copyWith(color: t.textSecondary),
+                                style:
+                                    RT.bodySm.copyWith(color: t.textSecondary),
                               ),
                             ],
                           ),

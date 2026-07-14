@@ -123,15 +123,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(widget.reason!,
-                          style:
-                              RT.body.copyWith(color: t.textPrimary)),
+                          style: RT.body.copyWith(color: t.textPrimary)),
                     ),
                     const SizedBox(height: 16),
                   ],
                   RichText(
                     text: TextSpan(
-                      style: RT.titleLg.copyWith(
-                          color: t.textPrimary, height: 36 / 28),
+                      style: RT.titleLg
+                          .copyWith(color: t.textPrimary, height: 36 / 28),
                       children: [
                         const TextSpan(text: 'Lifetime. No account.\n'),
                         TextSpan(
@@ -163,8 +162,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                   color: t.accent,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(width: 4),
-                          Icon(Icons.arrow_forward,
-                              size: 14, color: t.accent),
+                          Icon(Icons.arrow_forward, size: 14, color: t.accent),
                         ],
                       ),
                     ),
@@ -186,8 +184,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          Icon(Icons.lock_outline,
-                              size: 14, color: t.accent),
+                          Icon(Icons.lock_outline, size: 14, color: t.accent),
                           const SizedBox(width: 8),
                           Text(
                             'What "no telemetry" means',
@@ -207,8 +204,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
-                    Text(_error!,
-                        style: RT.body.copyWith(color: t.recordRed)),
+                    Text(_error!, style: RT.body.copyWith(color: t.recordRed)),
                   ],
                 ],
               ),
@@ -242,14 +238,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Widget _tierCard(
-      RecapTheme t, ({
-    String id,
-    Tier tier,
-    String sub,
-    List<String> perks,
-    bool featured,
-    String pid,
-  }) entry) {
+      RecapTheme t,
+      ({
+        String id,
+        Tier tier,
+        String sub,
+        List<String> perks,
+        bool featured,
+        String pid,
+      }) entry) {
     final picked = entry.id == _picked;
     return GestureDetector(
       onTap: () => setState(() => _picked = entry.id),
@@ -271,8 +268,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 top: -22,
                 left: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: t.accent,
                     borderRadius: BorderRadius.circular(4),
@@ -297,8 +294,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                   fontWeight: FontWeight.w700)),
                           const SizedBox(height: 2),
                           Text(entry.sub,
-                              style:
-                                  RT.bodySm.copyWith(color: t.textMuted)),
+                              style: RT.bodySm.copyWith(color: t.textMuted)),
                         ],
                       ),
                     ),
@@ -325,8 +321,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           ],
                         ),
                         Text('once',
-                            style: RT.caption
-                                .copyWith(color: t.textMuted)),
+                            style: RT.caption.copyWith(color: t.textMuted)),
                       ],
                     ),
                   ],
@@ -339,8 +334,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(Icons.check,
-                            size: 14,
-                            color: picked ? t.accent : t.textMuted),
+                            size: 14, color: picked ? t.accent : t.textMuted),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(perk,

@@ -26,6 +26,18 @@ services:
         value: "600"
       - key: DAILY_BUDGET_USD
         value: "10"
+      # FLOOR for the per-summary circuit-breaker charge (safety backstop, not
+      # billing). Raised 0.005 -> 0.02 by the summarizer rebuild: the single-pass
+      # prompt asks for up to 8192 output tokens instead of 2048, and output is
+      # the expensive half. Must stay >= the code default in gemini.ts/server.ts —
+      # a value pinned here OVERRIDES that default, so an un-raised pin would
+      # silently reinstate the old under-count.
+      #
+      # Sizing note: at a $0.02 floor, DAILY_BUDGET_USD=10 trips the global
+      # breaker after ~500 summaries/day (it was ~2000 at $0.005). Real Flash Lite
+      # cost is nearer $0.001-0.004/summary, so this is deliberately pessimistic.
+      # If real usage ever approaches 500/day, raise DAILY_BUDGET_USD — do not
+      # lower this floor.
       - key: EST_COST_PER_SUMMARY_USD
-        value: "0.005"
+        value: "0.02"
     autoDeploy: true

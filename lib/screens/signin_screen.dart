@@ -84,7 +84,8 @@ class _SignInScreenState extends State<SignInScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Free+ doubles your meetings/day, extends per-meeting cap to 40 min, and unlocks Apple Reminders / Apple Notes exports.',
-                    style: RT.body.copyWith(color: t.textSecondary, height: 1.5),
+                    style:
+                        RT.body.copyWith(color: t.textSecondary, height: 1.5),
                   ),
                   const SizedBox(height: 18),
                   _bullets(t, const [

@@ -65,8 +65,7 @@ class HelpScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  for (final faq in _faqs)
-                    _faqTile(t, faq.$1, faq.$2),
+                  for (final faq in _faqs) _faqTile(t, faq.$1, faq.$2),
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -79,13 +78,11 @@ class HelpScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Still stuck?',
-                            style: RT.subtitle
-                                .copyWith(color: t.textPrimary)),
+                            style: RT.subtitle.copyWith(color: t.textPrimary)),
                         const SizedBox(height: 8),
                         Text(
                           'We don\'t track support tickets. Email us with what happened + any logs you want to share. We\'ll get back to you.',
-                          style: RT.bodySm
-                              .copyWith(color: t.textSecondary),
+                          style: RT.bodySm.copyWith(color: t.textSecondary),
                         ),
                         const SizedBox(height: 12),
                         Btn(
@@ -124,8 +121,8 @@ class HelpScreen extends StatelessWidget {
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(q,
-            style: RT.body.copyWith(
-                color: t.textPrimary, fontWeight: FontWeight.w600)),
+            style: RT.body
+                .copyWith(color: t.textPrimary, fontWeight: FontWeight.w600)),
         iconColor: t.textMuted,
         collapsedIconColor: t.textMuted,
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -133,8 +130,7 @@ class HelpScreen extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(a,
-                style: RT.bodySm.copyWith(
-                    color: t.textSecondary, height: 1.5)),
+                style: RT.bodySm.copyWith(color: t.textSecondary, height: 1.5)),
           ),
         ],
       ),

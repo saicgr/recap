@@ -30,8 +30,7 @@ class _ImportScreenState extends State<ImportScreen> {
     if (meeting == null || !mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-          builder: (_) => TranscriptScreen(meeting: meeting)),
+      MaterialPageRoute(builder: (_) => TranscriptScreen(meeting: meeting)),
     );
   }
 
@@ -128,8 +127,7 @@ class _ImportScreenState extends State<ImportScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.surface,
-        title: Text(title,
-            style: RT.subtitle.copyWith(color: t.textPrimary)),
+        title: Text(title, style: RT.subtitle.copyWith(color: t.textPrimary)),
         content: TextField(
           controller: c,
           autofocus: true,
@@ -199,8 +197,7 @@ class _ImportScreenState extends State<ImportScreen> {
                     t,
                     icon: Icons.smart_display_outlined,
                     title: 'From YouTube',
-                    subtitle:
-                        'Captions only — never downloads the video.',
+                    subtitle: 'Captions only — never downloads the video.',
                     onTap: _busy ? null : _runImportFromYoutube,
                   ),
                   const SizedBox(height: 24),
@@ -219,22 +216,20 @@ class _ImportScreenState extends State<ImportScreen> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 1.5,
-                              valueColor:
-                                  AlwaysStoppedAnimation(t.accent),
+                              valueColor: AlwaysStoppedAnimation(t.accent),
                               value: _progress > 0 ? _progress : null,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(_status,
-                                style: RT.bodySm
-                                    .copyWith(color: t.textPrimary)),
+                                style:
+                                    RT.bodySm.copyWith(color: t.textPrimary)),
                           ),
                           if (_progress > 0)
-                            Text(
-                                '${(_progress * 100).toStringAsFixed(0)}%',
-                                style: RT.bodySm
-                                    .copyWith(color: t.textSecondary)),
+                            Text('${(_progress * 100).toStringAsFixed(0)}%',
+                                style:
+                                    RT.bodySm.copyWith(color: t.textSecondary)),
                         ],
                       ),
                     ),
@@ -248,8 +243,7 @@ class _ImportScreenState extends State<ImportScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(_error!,
-                          style:
-                              RT.bodySm.copyWith(color: t.recordRed)),
+                          style: RT.bodySm.copyWith(color: t.recordRed)),
                     ),
                   ],
                 ],
@@ -287,10 +281,10 @@ class _ImportScreenState extends State<ImportScreen> {
           child: Icon(icon, color: t.accent, size: 20),
         ),
         title: Text(title,
-            style: RT.body.copyWith(
-                color: t.textPrimary, fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle,
-            style: RT.bodySm.copyWith(color: t.textSecondary)),
+            style: RT.body
+                .copyWith(color: t.textPrimary, fontWeight: FontWeight.w600)),
+        subtitle:
+            Text(subtitle, style: RT.bodySm.copyWith(color: t.textSecondary)),
         trailing: Icon(Icons.chevron_right, color: t.textMuted),
       ),
     );

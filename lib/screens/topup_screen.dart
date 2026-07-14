@@ -22,8 +22,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
   static const _packs = <(TopUpPack, String, String, String?)>[
     (TopUpPack.small, '25 cloud summaries', '\$2.99', null),
     (TopUpPack.medium, '100 cloud summaries', '\$9.99', '25% off'),
-    (TopUpPack.large, '500 cloud summaries', '\$39.99',
-        '40% off · best value'),
+    (TopUpPack.large, '500 cloud summaries', '\$39.99', '40% off · best value'),
   ];
 
   static const _pids = <TopUpPack, String>{
@@ -73,8 +72,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'One-time IAP. Credits never expire. Use only when you hit your monthly cloud quota.',
-                    style: RT.body.copyWith(
-                        color: t.textSecondary, height: 1.5),
+                    style:
+                        RT.body.copyWith(color: t.textSecondary, height: 1.5),
                   ),
                   const SizedBox(height: 18),
                   for (final entry in _packs) ...[
@@ -83,8 +82,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   ],
                   if (_error != null) ...[
                     const SizedBox(height: 8),
-                    Text(_error!,
-                        style: RT.body.copyWith(color: t.recordRed)),
+                    Text(_error!, style: RT.body.copyWith(color: t.recordRed)),
                   ],
                 ],
               ),
@@ -98,7 +96,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
               child: Column(
                 children: [
                   Btn(
-                    label: 'Buy ${pickEntry.$2.split(' ').first} for ${pickEntry.$3}',
+                    label:
+                        'Buy ${pickEntry.$2.split(' ').first} for ${pickEntry.$3}',
                     variant: BtnVariant.primary,
                     size: BtnSize.lg,
                     full: true,
@@ -116,8 +115,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
     );
   }
 
-  Widget _packCard(RecapTheme t,
-      (TopUpPack, String, String, String?) entry) {
+  Widget _packCard(RecapTheme t, (TopUpPack, String, String, String?) entry) {
     final picked = entry.$1 == _picked;
     return GestureDetector(
       onTap: () => setState(() => _picked = entry.$1),
@@ -153,8 +151,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 children: [
                   Text(entry.$2,
                       style: RT.subtitle.copyWith(
-                          color: t.textPrimary,
-                          fontWeight: FontWeight.w700)),
+                          color: t.textPrimary, fontWeight: FontWeight.w700)),
                   if (entry.$4 != null) ...[
                     const SizedBox(height: 3),
                     Text(entry.$4!,

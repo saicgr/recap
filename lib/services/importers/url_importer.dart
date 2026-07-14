@@ -68,8 +68,19 @@ class UrlImporter {
   static String _guessExtension(String path, String contentType) {
     final lower = path.toLowerCase();
     const exts = [
-      '.mp3', '.m4a', '.aac', '.wav', '.opus', '.ogg', '.flac',
-      '.mp4', '.mov', '.mkv', '.webm', '.aiff', '.amr',
+      '.mp3',
+      '.m4a',
+      '.aac',
+      '.wav',
+      '.opus',
+      '.ogg',
+      '.flac',
+      '.mp4',
+      '.mov',
+      '.mkv',
+      '.webm',
+      '.aiff',
+      '.amr',
     ];
     for (final e in exts) {
       if (lower.endsWith(e)) return e;

@@ -44,8 +44,7 @@ class WavUtils {
       final raf = await f.open();
       try {
         if (await raf.length() >= headerBytes) {
-          headerTemplate =
-              Uint8List.fromList(await raf.read(headerBytes));
+          headerTemplate = Uint8List.fromList(await raf.read(headerBytes));
           break;
         }
       } finally {

@@ -11,7 +11,7 @@ import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'billing/tier.dart';
 import 'services/background_recorder.dart';
-import 'services/custom_personas_service.dart';
+import 'services/template_service.dart';
 import 'services/diarizer.dart';
 import 'services/sherpa_diarizer.dart';
 import 'services/exporter.dart';
@@ -89,7 +89,7 @@ late final InstallIdentity installIdentity;
 late final CloudBackend cloudBackend;
 late final ByokBackend byokBackend;
 late final ThemeController themeController;
-late final CustomPersonasService customPersonas;
+late final TemplateService templateService;
 late final SherpaDiarizer diarizer;
 
 Future<void> main() async {
@@ -109,8 +109,8 @@ Future<void> main() async {
     buttonStyle: settings.buttonStyleRaw == 'glass'
         ? RecapButtonStyle.glass
         : RecapButtonStyle.flat,
-    accent: accentOptions[
-        settings.accentIndex.clamp(0, accentOptions.length - 1)],
+    accent:
+        accentOptions[settings.accentIndex.clamp(0, accentOptions.length - 1)],
   );
   themeController.addListener(() async {
     await settings.setThemeMode(
@@ -119,7 +119,8 @@ Future<void> main() async {
         themeController.buttonStyle == RecapButtonStyle.glass
             ? 'glass'
             : 'flat');
-    await settings.setAccentIndex(accentOptions.indexOf(themeController.accent));
+    await settings
+        .setAccentIndex(accentOptions.indexOf(themeController.accent));
   });
 
   // ── Service objects (constructors only — no I/O yet) ─────────────────────
@@ -161,7 +162,7 @@ Future<void> main() async {
   byokBackend = ByokBackend();
   exporter = Exporter(entitlements: entitlements);
   diarizer = SherpaDiarizer(fallback: HeuristicDiarizer());
-  customPersonas = CustomPersonasService();
+  templateService = TemplateService(db: db);
   iap = IapService(entitlements: entitlements);
 
   // Anonymous identity with the Render proxy. Constructing it touches nothing:
@@ -254,10 +255,10 @@ Future<void> _initDeferredServices() async {
     print('iap.init()/restore() failed: $e');
   }
   try {
-    await customPersonas.init();
+    await templateService.init();
   } catch (e) {
     // ignore: avoid_print
-    print('customPersonas.init() failed: $e');
+    print('templateService.init() failed: \$e');
   }
   // Extract any bundled models from the IPA/APK to app-private storage so
   // whisper.cpp can mmap them by path. Idempotent across launches. Logs
@@ -327,22 +328,19 @@ class RecapApp extends StatelessWidget {
           final t = themeController.theme;
           SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness: t.mode == RecapMode.dark
-                ? Brightness.light
-                : Brightness.dark,
+            statusBarIconBrightness:
+                t.mode == RecapMode.dark ? Brightness.light : Brightness.dark,
             systemNavigationBarColor: t.bg,
-            systemNavigationBarIconBrightness: t.mode == RecapMode.dark
-                ? Brightness.light
-                : Brightness.dark,
+            systemNavigationBarIconBrightness:
+                t.mode == RecapMode.dark ? Brightness.light : Brightness.dark,
           ));
           return MaterialApp(
             title: 'Recap',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               useMaterial3: true,
-              brightness: t.mode == RecapMode.dark
-                  ? Brightness.dark
-                  : Brightness.light,
+              brightness:
+                  t.mode == RecapMode.dark ? Brightness.dark : Brightness.light,
               scaffoldBackgroundColor: t.bg,
               canvasColor: t.bg,
               colorScheme: t.mode == RecapMode.dark

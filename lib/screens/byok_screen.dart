@@ -101,8 +101,7 @@ class _ByokScreenState extends State<ByokScreen> {
                           Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: () =>
-                                  setState(() => _provider = p.$1),
+                              onTap: () => setState(() => _provider = p.$1),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 14),
@@ -116,8 +115,8 @@ class _ByokScreenState extends State<ByokScreen> {
                                 child: Row(children: [
                                   Expanded(
                                     child: Text(p.$2,
-                                        style: RT.body.copyWith(
-                                            color: t.textPrimary)),
+                                        style: RT.body
+                                            .copyWith(color: t.textPrimary)),
                                   ),
                                   if (_provider == p.$1)
                                     Icon(Icons.check,

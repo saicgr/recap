@@ -54,17 +54,14 @@ class EmbeddingService {
   Future<bool> isModelInstalled() async {
     final m = File(await _modelPath());
     final v = File(await _vocabPath());
-    return await m.exists() &&
-        await v.exists() &&
-        (await m.length()) > 1024;
+    return await m.exists() && await v.exists() && (await m.length()) > 1024;
   }
 
   Future<void> ensureModelInstalled({
     void Function(double)? onProgress,
   }) async {
     if (await isModelInstalled()) return;
-    await _downloadOne(_modelUrl, await _modelPath(),
-        onProgress: onProgress);
+    await _downloadOne(_modelUrl, await _modelPath(), onProgress: onProgress);
     await _downloadOne(_vocabUrl, await _vocabPath());
   }
 
@@ -74,7 +71,8 @@ class EmbeddingService {
     final req = http.Request('GET', Uri.parse(url));
     final res = await http.Client().send(req);
     if (res.statusCode != 200) {
-      throw StateError('Embedding model download failed: HTTP ${res.statusCode}');
+      throw StateError(
+          'Embedding model download failed: HTTP ${res.statusCode}');
     }
     final total = res.contentLength ?? 0;
     var got = 0;
@@ -151,8 +149,7 @@ class EmbeddingService {
         'input_ids': await OrtValue.fromList(inputIds, [1, maxSeqLen]),
         'attention_mask':
             await OrtValue.fromList(attentionMask, [1, maxSeqLen]),
-        'token_type_ids':
-            await OrtValue.fromList(tokenTypeIds, [1, maxSeqLen]),
+        'token_type_ids': await OrtValue.fromList(tokenTypeIds, [1, maxSeqLen]),
       });
       // Mean-pool the last hidden state across non-padding tokens, then L2.
       final last = await outputs['last_hidden_state']!.asList();
@@ -205,9 +202,8 @@ class EmbeddingService {
         var j = word.length;
         int? piece;
         while (j > i) {
-          final candidate = firstPiece
-              ? word.substring(i, j)
-              : '##${word.substring(i, j)}';
+          final candidate =
+              firstPiece ? word.substring(i, j) : '##${word.substring(i, j)}';
           if (vocab.containsKey(candidate)) {
             piece = vocab[candidate];
             i = j;
@@ -227,7 +223,6 @@ class EmbeddingService {
     out.add(sep);
     return out;
   }
-
 
   /// Cosine similarity between two L2-normalized vectors (== dot product).
   static double cosineSim(Float32List a, Float32List b) {

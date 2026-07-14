@@ -57,8 +57,7 @@ class YoutubeImporter {
 
     final ttRes = await http.get(Uri.parse(captionTrackUrl));
     if (ttRes.statusCode != 200) {
-      throw StateError(
-          'Caption track fetch failed: HTTP ${ttRes.statusCode}');
+      throw StateError('Caption track fetch failed: HTTP ${ttRes.statusCode}');
     }
 
     final segments = _parseTimedText(ttRes.body);
@@ -125,9 +124,7 @@ class YoutubeImporter {
     for (final m in entries) {
       final urlEsc = m.group(1)!;
       final lang = m.group(2)!;
-      final decoded = urlEsc
-          .replaceAll(r'&', '&')
-          .replaceAll(r'\/', '/');
+      final decoded = urlEsc.replaceAll(r'&', '&').replaceAll(r'\/', '/');
       firstUrl ??= decoded;
       if (lang.startsWith('en')) englishUrl ??= decoded;
       if (lang.startsWith(preferredLang)) preferredUrl ??= decoded;

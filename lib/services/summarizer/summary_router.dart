@@ -9,6 +9,8 @@ import 'cloud_backend.dart';
 import 'gemma_backend.dart';
 import 'ollama_backend.dart';
 import 'summary_backend.dart';
+import 'summary_pipeline.dart';
+import 'summary_types.dart';
 
 enum SummaryRoute { ollama, appleFoundationModels, gemma, cloud, byok }
 
@@ -41,7 +43,14 @@ class SummaryFailed extends SummaryAttempt {
 }
 
 /// Picks the right backend based on (1) user's settings, (2) tier
-/// entitlements, (3) availability of each backend.
+/// entitlements, (3) availability of each backend — then hands it to
+/// [SummaryPipeline], which owns every prompt, the chunking and the critic pass.
+///
+/// The router decides WHERE the summary runs. It no longer decides anything
+/// about WHAT is generated: backends stopped owning `persona.prompt +
+/// transcript` (that is what made a 25-minute meeting overflow Gemma's window),
+/// so the router hands the pipeline a [SummaryInput] — segments with speaker
+/// labels and timestamps, not a flat body.
 ///
 /// Rules:
 ///  - Privacy tier: cloud is structurally unreachable. Apple FM → Gemma → fail.
@@ -49,6 +58,10 @@ class SummaryFailed extends SummaryAttempt {
 ///    failure to on-device if available.
 ///  - On-device requested OR cloud quota exhausted: Apple FM → Gemma.
 ///    If Gemma not downloaded, return `SummaryNeedsGemmaDownload`.
+///
+/// [SummaryCancelled] is never wrapped in a [SummaryFailed] and never triggers a
+/// fallback — a user who cancels must not silently get a second, slower attempt
+/// on another backend. It propagates out of [summarize] for the UI to swallow.
 class SummaryRouter {
   SummaryRouter({
     required this.entitlements,
@@ -57,7 +70,8 @@ class SummaryRouter {
     required this.cloud,
     required this.byok,
     required this.ollama,
-  });
+    SummaryPipeline pipeline = const SummaryPipeline(),
+  }) : _pipeline = pipeline;
 
   final EntitlementService entitlements;
   final AppleFoundationModelsBackend appleFm;
@@ -65,11 +79,14 @@ class SummaryRouter {
   final CloudBackend cloud;
   final ByokBackend byok;
   final OllamaBackend ollama;
+  final SummaryPipeline _pipeline;
 
   Future<SummaryAttempt> summarize({
-    required String transcript,
+    required SummaryInput input,
     required Persona persona,
     required SummaryMode requested,
+    void Function(SummaryProgress)? onProgress,
+    CancelToken? cancel,
   }) async {
     final tier = entitlements.currentTier;
 
@@ -98,15 +115,17 @@ class SummaryRouter {
     final mode = tier == Tier.privacy ? SummaryMode.onDevice : requested;
 
     if (mode == SummaryMode.cloud) {
-      // Power tier with a saved BYOK key bypasses the Worker proxy entirely.
+      // Power tier with a saved BYOK key bypasses the proxy entirely.
       if (tier.byok && await byok.isAvailable()) {
         try {
-          final r = await byok.summarize(
-              transcript: transcript, persona: persona);
+          final r = await _run(byok, input, persona, onProgress, cancel);
           return SummaryReady(r, SummaryRoute.byok);
+        } on SummaryCancelled {
+          rethrow;
         } catch (e, s) {
           // BYOK failed — fall through to the standard cloud-quota path.
-          final onDevice = await _tryOnDevice(transcript, persona);
+          final onDevice =
+              await _tryOnDevice(input, persona, onProgress, cancel);
           return onDevice ?? SummaryFailed(e, s);
         }
       }
@@ -114,33 +133,50 @@ class SummaryRouter {
       switch (decision) {
         case AllowSummary():
           try {
-            final r = await cloud.summarize(
-                transcript: transcript, persona: persona);
+            // The cloud window (1M tokens) makes this exactly ONE metered
+            // generate call — the pipeline takes the single-pass branch, with
+            // the self-check embedded in the prompt rather than issued as a
+            // second request.
+            final r = await _run(cloud, input, persona, onProgress, cancel);
             await entitlements.recordCloudSummaryUsed();
             return SummaryReady(r, SummaryRoute.cloud);
+          } on SummaryCancelled {
+            // Cancelled before the proxy answered: do not bill the user, do not
+            // start a slow on-device retry they did not ask for.
+            rethrow;
           } catch (e, s) {
-            // Transient cloud failure — try on-device fallback.
-            final onDevice = await _tryOnDevice(transcript, persona);
+            // Transient cloud failure (offline, 5xx, timeout) — try on-device
+            // fallback. The 401-retry lives inside CloudBackend and has already
+            // been exhausted by the time we see the error.
+            final onDevice =
+                await _tryOnDevice(input, persona, onProgress, cancel);
             return onDevice ?? SummaryFailed(e, s);
           }
         case BlockedCloudQuota(:final onDeviceAvailable):
           if (!onDeviceAvailable) return const SummaryBlockedByQuota();
-          final onDevice = await _tryOnDevice(transcript, persona);
+          final onDevice =
+              await _tryOnDevice(input, persona, onProgress, cancel);
           return onDevice ?? const SummaryBlockedByQuota();
         case BlockedCloudDisabled():
           // Shouldn't happen — we already coerced Privacy to onDevice above.
-          return _tryOnDevice(transcript, persona)
-              .then((v) => v ?? const SummaryBlockedByQuota());
+          final onDevice =
+              await _tryOnDevice(input, persona, onProgress, cancel);
+          return onDevice ?? const SummaryBlockedByQuota();
       }
     }
 
     // On-device path.
-    final r = await _tryOnDevice(transcript, persona);
+    final r = await _tryOnDevice(input, persona, onProgress, cancel);
     if (r != null) return r;
     return const SummaryNeedsGemmaDownload();
   }
 
-  Future<SummaryAttempt?> _tryOnDevice(String transcript, Persona persona) async {
+  Future<SummaryAttempt?> _tryOnDevice(
+    SummaryInput input,
+    Persona persona,
+    void Function(SummaryProgress)? onProgress,
+    CancelToken? cancel,
+  ) async {
     // Priority order on-device:
     //   1. Ollama (desktop only) — runs 27B+ models, biggest quality jump
     //   2. Apple Foundation Models (iOS 26+ / macOS 15+ with Apple Intelligence)
@@ -148,9 +184,10 @@ class SummaryRouter {
     // Each gracefully falls through to the next if isAvailable() returns false.
     if (await ollama.isAvailable()) {
       try {
-        final r =
-            await ollama.summarize(transcript: transcript, persona: persona);
+        final r = await _run(ollama, input, persona, onProgress, cancel);
         return SummaryReady(r, SummaryRoute.ollama);
+      } on SummaryCancelled {
+        rethrow;
       } catch (e, s) {
         // Ollama hard-failed (model OOM, daemon crash, etc.) — fall through
         // rather than surfacing the error so user still gets a summary.
@@ -161,22 +198,39 @@ class SummaryRouter {
     }
     if (await appleFm.isAvailable()) {
       try {
-        final r = await appleFm.summarize(
-            transcript: transcript, persona: persona);
+        final r = await _run(appleFm, input, persona, onProgress, cancel);
         return SummaryReady(r, SummaryRoute.appleFoundationModels);
+      } on SummaryCancelled {
+        rethrow;
       } catch (e, s) {
         return SummaryFailed(e, s);
       }
     }
     if (await gemma.isAvailable()) {
       try {
-        final r =
-            await gemma.summarize(transcript: transcript, persona: persona);
+        final r = await _run(gemma, input, persona, onProgress, cancel);
         return SummaryReady(r, SummaryRoute.gemma);
+      } on SummaryCancelled {
+        rethrow;
       } catch (e, s) {
         return SummaryFailed(e, s);
       }
     }
     return null;
   }
+
+  Future<SummaryResult> _run(
+    SummaryBackend backend,
+    SummaryInput input,
+    Persona persona,
+    void Function(SummaryProgress)? onProgress,
+    CancelToken? cancel,
+  ) =>
+      _pipeline.run(
+        backend: backend,
+        input: input,
+        persona: persona,
+        onProgress: onProgress,
+        cancel: cancel,
+      );
 }

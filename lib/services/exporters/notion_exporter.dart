@@ -59,15 +59,16 @@ class NotionExporter implements WorkflowExporter {
       return ExportResult.err('Connect to Notion first (Settings → Exports).');
     }
 
-    final summaryText = summaries.isEmpty
-        ? '(no summary yet)'
-        : summaries.first.body;
+    final summaryText =
+        summaries.isEmpty ? '(no summary yet)' : summaries.first.body;
     final body = {
       'parent': {'database_id': dbId},
       'properties': {
         'Name': {
           'title': [
-            {'text': {'content': meeting.title}}
+            {
+              'text': {'content': meeting.title}
+            }
           ]
         },
       },
@@ -77,7 +78,10 @@ class NotionExporter implements WorkflowExporter {
           'type': 'callout',
           'callout': {
             'rich_text': [
-              {'type': 'text', 'text': {'content': summaryText}}
+              {
+                'type': 'text',
+                'text': {'content': summaryText}
+              }
             ],
             'icon': {'emoji': '📝'},
           }
@@ -87,7 +91,10 @@ class NotionExporter implements WorkflowExporter {
           'type': 'heading_2',
           'heading_2': {
             'rich_text': [
-              {'type': 'text', 'text': {'content': 'Transcript'}}
+              {
+                'type': 'text',
+                'text': {'content': 'Transcript'}
+              }
             ],
           }
         },
@@ -96,7 +103,10 @@ class NotionExporter implements WorkflowExporter {
           'type': 'paragraph',
           'paragraph': {
             'rich_text': [
-              {'type': 'text', 'text': {'content': transcript?.body ?? '(empty)'}}
+              {
+                'type': 'text',
+                'text': {'content': transcript?.body ?? '(empty)'}
+              }
             ],
           }
         },

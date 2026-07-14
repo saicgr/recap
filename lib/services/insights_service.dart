@@ -13,8 +13,7 @@ class InsightsService {
     final start = end.subtract(const Duration(days: 7));
     final meetings = await db.select(db.meetings).get();
     final inRange = meetings
-        .where((m) =>
-            m.createdAt.isAfter(start) && m.createdAt.isBefore(end))
+        .where((m) => m.createdAt.isAfter(start) && m.createdAt.isBefore(end))
         .toList();
     final totalMs = inRange.fold<int>(0, (sum, m) => sum + m.durationMs);
     return WeeklySummary(

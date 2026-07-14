@@ -1,6 +1,14 @@
 enum AccountRequirement { none, required, optional }
 
-enum SummaryStyle { basic, oneOnOne, standup, salesCall, interview, lecture, doctorVisit }
+enum SummaryStyle {
+  basic,
+  oneOnOne,
+  standup,
+  salesCall,
+  interview,
+  lecture,
+  doctorVisit
+}
 
 enum ExportTarget {
   copy,
@@ -57,7 +65,8 @@ enum Tier {
     watermark: true,
   ),
   pro(
-    priceUsd: 49, // bumped 39→49 for sustainability buffer; still competitive with mobile Whisper-app market (Whisper Notes $6.99, MacWhisper App Store $99)
+    priceUsd:
+        49, // bumped 39→49 for sustainability buffer; still competitive with mobile Whisper-app market (Whisper Notes $6.99, MacWhisper App Store $99)
     account: AccountRequirement.optional,
     cloudSummariesPerMonth: 100, // bumped 50→100 — more competitive
     topUpsEnabled: true,
@@ -74,11 +83,14 @@ enum Tier {
     autoSegment: true,
   ),
   privacy(
-    priceUsd: 69, // slight premium over Pro — signals "this is the special SKU" for the verifiable-no-network buyer
+    priceUsd:
+        69, // slight premium over Pro — signals "this is the special SKU" for the verifiable-no-network buyer
     account: AccountRequirement.optional,
     cloudSummariesEnabled: false, // verifiable no-network
-    cloudExportsEnabled: false, // Notion / Slack / Google Docs are network calls
-    cloudTranscriptionEnabled: false, // no Deepgram — Whisper only, structurally
+    cloudExportsEnabled:
+        false, // Notion / Slack / Google Docs are network calls
+    cloudTranscriptionEnabled:
+        false, // no Deepgram — Whisper only, structurally
     personaTemplates: SummaryStyle.values,
     // Offline destinations only. Obsidian is a local vault file write, so it
     // stays. This list used to be ExportTarget.values, which silently shipped
@@ -98,7 +110,8 @@ enum Tier {
     autoSegment: true,
   ),
   power(
-    priceUsd: 99, // sustainability buffer for BYOK + MCP + workflow exports; matches MacWhisper Mac App Store lifetime price
+    priceUsd:
+        99, // sustainability buffer for BYOK + MCP + workflow exports; matches MacWhisper Mac App Store lifetime price
     account: AccountRequirement.optional,
     cloudSummariesPerMonth: null, // unlimited via BYOK
     byok: true,

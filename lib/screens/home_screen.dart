@@ -107,8 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
         section = 'Today';
       } else if (day == yesterday) {
         section = 'Yesterday';
-      } else if (day.isAfter(weekStart) ||
-          day.isAtSameMomentAs(weekStart)) {
+      } else if (day.isAfter(weekStart) || day.isAtSameMomentAs(weekStart)) {
         section = 'This week';
       } else {
         section = 'Earlier';
@@ -178,8 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.lock_outline,
-                        size: 13, color: t.textMuted),
+                    Icon(Icons.lock_outline, size: 13, color: t.textMuted),
                     const SizedBox(width: 6),
                     Text('Fully offline · No account',
                         style: RT.label.copyWith(color: t.textMuted)),
@@ -248,8 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final total = transcriber.bytesTotal > 0
             ? _formatBytes(transcriber.bytesTotal)
             : '~';
-        final pct =
-            p == null ? '' : '${(p * 100).toStringAsFixed(0)}% · ';
+        final pct = p == null ? '' : '${(p * 100).toStringAsFixed(0)}% · ';
         text = 'Downloading Whisper · $pct$received / $total';
         color = t.accent;
       case TranscriberStatus.failed:
@@ -392,8 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => TranscriptScreen(meeting: m)),
+          MaterialPageRoute(builder: (_) => TranscriptScreen(meeting: m)),
         ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -440,7 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               .copyWith(color: t.textMuted)
                               .merge(RT.num),
                         ),
-                        Text(' · ', style: RT.bodySm.copyWith(color: t.textMuted)),
+                        Text(' · ',
+                            style: RT.bodySm.copyWith(color: t.textMuted)),
                         Text(
                           DateFormat('h:mm a').format(m.createdAt),
                           style: RT.bodySm.copyWith(color: t.textMuted),

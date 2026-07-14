@@ -91,23 +91,19 @@ class RecapTheme {
       bgSubtle: isDark ? const Color(0xFF1B1B1E) : const Color(0xFFF3F0E9),
       surface: isDark ? const Color(0xFF212124) : const Color(0xFFFFFFFF),
       surfaceAlt: isDark ? const Color(0xFF26262A) : const Color(0xFFFBF9F5),
-      textPrimary:
-          isDark ? const Color(0xFFF4F2EC) : const Color(0xFF15140F),
-      textSecondary:
-          isDark ? const Color(0xFFA8A49A) : const Color(0xFF5A574F),
+      textPrimary: isDark ? const Color(0xFFF4F2EC) : const Color(0xFF15140F),
+      textSecondary: isDark ? const Color(0xFFA8A49A) : const Color(0xFF5A574F),
       textMuted: isDark ? const Color(0xFF6E6A60) : const Color(0xFF9A968B),
       accent: accent,
       accentSoft: Color.fromRGBO(r, g, b, softA),
       accentBorder: Color.fromRGBO(r, g, b, borderA),
-      recordRed:
-          isDark ? const Color(0xFFE76A55) : const Color(0xFFC9412E),
+      recordRed: isDark ? const Color(0xFFE76A55) : const Color(0xFFC9412E),
       border: isDark ? const Color(0xFF2A2A2E) : const Color(0xFFEBE6DC),
       divider: isDark ? const Color(0xFF232327) : const Color(0xFFF0ECE2),
       hairline: isDark
           ? const Color.fromRGBO(255, 253, 247, 0.06)
           : const Color.fromRGBO(20, 18, 12, 0.06),
-      positive:
-          isDark ? const Color(0xFF62B384) : const Color(0xFF3D8B5F),
+      positive: isDark ? const Color(0xFF62B384) : const Color(0xFF3D8B5F),
       warn: isDark ? const Color(0xFFD8A647) : const Color(0xFFB98315),
       overlay: isDark
           ? const Color.fromRGBO(0, 0, 0, 0.45)
@@ -132,15 +128,13 @@ class RecapThemeScope extends InheritedNotifier<ThemeController> {
   }) : super(notifier: controller);
 
   static RecapTheme of(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<RecapThemeScope>();
+    final scope = context.dependOnInheritedWidgetOfExactType<RecapThemeScope>();
     assert(scope != null, 'RecapThemeScope missing in widget tree');
     return scope!.notifier!.theme;
   }
 
   static ThemeController controllerOf(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<RecapThemeScope>();
+    final scope = context.dependOnInheritedWidgetOfExactType<RecapThemeScope>();
     assert(scope != null, 'RecapThemeScope missing in widget tree');
     return scope!.notifier!;
   }

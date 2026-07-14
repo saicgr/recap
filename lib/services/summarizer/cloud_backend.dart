@@ -4,21 +4,25 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../../billing/persona.dart';
 import '../cloud/cloud_proxy.dart';
 import '../cloud/install_identity.dart';
 import 'summary_backend.dart';
+import 'summary_types.dart';
 
 /// Cloud summaries via the Render proxy -> Gemini 3.1 Flash Lite.
 ///
-/// The app holds no Gemini key: it POSTs the transcript to the proxy, which
+/// The app holds no Gemini key: it POSTs the prompt to the proxy, which
 /// attaches the key server-side. Authentication is an install token issued by
 /// the proxy (see [InstallIdentity]) — the app cannot mint one itself, which is
 /// what closed the open-proxy hole in the retired Cloudflare Worker.
 ///
-/// The network is touched ONLY from [summarize], and only when the user has
+/// The network is touched ONLY from [generate], and only when the user has
 /// explicitly asked for a cloud summary. No pings, no warm-ups, no health
 /// checks — those would violate the Karpathy invariants.
+///
+/// Gemini's window (1M) dwarfs any meeting, so the pipeline always takes the
+/// SINGLE-PASS branch here: one composed prompt, one metered call, self-check
+/// embedded in the prompt rather than spent as a second request.
 class CloudBackend implements SummaryBackend {
   CloudBackend({
     required this.proxyUrlProvider,
@@ -42,33 +46,67 @@ class CloudBackend implements SummaryBackend {
   final http.Client _client;
   final Duration _timeout;
 
+  static const _fallbackModelId = 'gemini-3.1-flash-lite';
+
+  /// The proxy reports which model actually answered (`model_id`). We persist
+  /// that, not a guess, so a server-side model swap is visible in the meeting's
+  /// history. Before the first call there is nothing to report, so we fall back
+  /// to the model the proxy is pinned to today.
+  String? _lastServerModelId;
+
+  @override
+  String get modelId => _lastServerModelId ?? _fallbackModelId;
+
+  @override
+  BackendCapabilities get capabilities => const BackendCapabilities(
+        contextTokens: 1000000,
+        maxOutputTokens: 8192,
+      );
+
   @override
   Future<bool> isAvailable() async {
     if (!cloudEnabled()) return false;
     // Deliberately does not ping the proxy: a reachability check would be a
-    // background network call. We trust the URL and let summarize() report.
+    // background network call. We trust the URL and let generate() report.
     return isConfiguredProxyUrl(proxyUrlProvider());
   }
 
+  /// [temperature] is fixed at 0.4 server-side (`generationConfig` in
+  /// `render-proxy/src/gemini.ts`) and is accepted here only for interface
+  /// conformance. That is harmless in practice: the cloud path is always
+  /// single-pass, and 0.4 is exactly the temperature the reduce stage wants. If
+  /// the pipeline ever runs a low-temperature critic through the cloud, the
+  /// proxy must learn a `temperature` field first.
   @override
-  Future<SummaryResult> summarize({
-    required String transcript,
-    required Persona persona,
-    void Function(double progress)? onProgress,
+  Future<String> generate({
+    required String prompt,
+    String? system,
+    double temperature = 0.4,
+    int? maxOutputTokens,
+    CancelToken? cancel,
   }) async {
+    // The Privacy tier's promise is enforced HERE, at the socket, not in the
+    // widget that draws the button. Do not weaken this to a UI check.
     if (!cloudEnabled()) {
       throw CloudError(
         CloudFailureKind.disabled,
         'Cloud summaries are disabled on this tier.',
       );
     }
+    cancel?.throwIfCancelled();
+
     final base = requireConfiguredProxyUrl(proxyUrlProvider());
 
-    final stopwatch = Stopwatch()..start();
+    // The rebuilt client composes the ENTIRE prompt (instructions + transcript)
+    // and sends no `transcript` field. The proxy appends its own "Transcript:"
+    // block only when that field is present, so sending the transcript again
+    // here would duplicate it and double the metered input.
+    // See render-proxy/src/gemini.ts.
     final body = jsonEncode({
-      'persona_key': persona.key,
-      'prompt': persona.prompt.trim(),
-      'transcript': transcript,
+      'prompt': prompt,
+      if (system != null && system.trim().isNotEmpty)
+        'system_instruction': system,
+      'max_output_tokens': maxOutputTokens ?? capabilities.maxOutputTokens,
     });
 
     var resp = await _post(base, body, forceRefresh: false);
@@ -80,8 +118,6 @@ class CloudBackend implements SummaryBackend {
     if (resp.statusCode == 401) {
       resp = await _post(base, body, forceRefresh: true);
     }
-
-    stopwatch.stop();
 
     switch (resp.statusCode) {
       case 401:
@@ -120,11 +156,22 @@ class CloudBackend implements SummaryBackend {
           CloudFailureKind.emptyResponse, 'Cloud summary returned empty text.');
     }
 
-    return SummaryResult(
-      text: text,
-      modelId: json['model_id'] as String? ?? 'gemini-3.1-flash-lite',
-      processingTime: stopwatch.elapsed,
-    );
+    final serverModelId = (json['model_id'] as String?)?.trim();
+    if (serverModelId != null && serverModelId.isNotEmpty) {
+      _lastServerModelId = serverModelId;
+    }
+
+    cancel?.throwIfCancelled();
+
+    // Gemini stopped at maxOutputTokens rather than finishing. The notes are
+    // still worth showing, but we must not present a cut-off summary as a whole
+    // one (CLAUDE.md: never silently degrade), so we say so IN the output where
+    // the user will actually read it.
+    if (json['truncated'] == true) {
+      return '$text\n\n> ⚠️ This summary hit the cloud output limit and may be '
+          'cut off before the last sections.';
+    }
+    return text;
   }
 
   Future<http.Response> _post(

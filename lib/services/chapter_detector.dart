@@ -44,7 +44,8 @@ class ChapterDetector {
   });
 
   Future<List<Chapter>> detect(
-    List<({String id, int startMs, int endMs, String body, String? speaker})> segments,
+    List<({String id, int startMs, int endMs, String body, String? speaker})>
+        segments,
   ) async {
     if (segments.length <= 1) {
       return [
@@ -104,8 +105,8 @@ class ChapterDetector {
     for (final entry in indexed) {
       if (entry.score < 0.6) break; // threshold for "real" break
       final startMs = segments[entry.i].startMs;
-      final tooClose = breakPoints.any((p) =>
-          (segments[p].startMs - startMs).abs() < minChapterDurationMs);
+      final tooClose = breakPoints.any(
+          (p) => (segments[p].startMs - startMs).abs() < minChapterDurationMs);
       if (tooClose) continue;
       breakPoints.add(entry.i);
       // Cap chapter count at ~6 for usability.

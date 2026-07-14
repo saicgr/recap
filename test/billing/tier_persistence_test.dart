@@ -74,7 +74,8 @@ void main() {
       expect((await relaunch()).currentTier, Tier.free);
     });
 
-    test('the purchase date is preserved for lifetime grandfathering', () async {
+    test('the purchase date is preserved for lifetime grandfathering',
+        () async {
       final svc = await relaunch();
       await svc.recordPurchase(
         purchaseId: 'txn-1',

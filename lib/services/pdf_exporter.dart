@@ -21,6 +21,7 @@ class PdfExporter {
     required List<Summary> summaries,
     PdfTemplate template = PdfTemplate.minimal,
     bool watermark = true,
+
     /// The user's custom templates, so a `custom:<id>` key resolves to its real
     /// name instead of being printed raw as a heading.
     Iterable<Persona> customPersonas = const [],
@@ -45,7 +46,8 @@ class PdfExporter {
       // resolvePersona, not the raw key: a custom template would otherwise be
       // exported as the heading "### custom:1752438…".
       buf
-        ..writeln('### ${resolvePersona(s.personaKey, customPersonas).displayName}')
+        ..writeln(
+            '### ${resolvePersona(s.personaKey, customPersonas).displayName}')
         ..writeln(s.body)
         ..writeln('');
     }

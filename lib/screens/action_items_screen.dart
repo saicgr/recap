@@ -114,9 +114,7 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                done
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
+                done ? Icons.check_circle : Icons.radio_button_unchecked,
                 color: done ? t.positive : t.textMuted,
                 size: 22,
               ),
@@ -141,8 +139,7 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
                                 size: 13, color: t.textMuted),
                             const SizedBox(width: 3),
                             Text(item.assignee!,
-                                style: RT.caption
-                                    .copyWith(color: t.textMuted)),
+                                style: RT.caption.copyWith(color: t.textMuted)),
                             const SizedBox(width: 12),
                           ],
                           if (item.dueDate != null) ...[
@@ -151,8 +148,7 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
                             const SizedBox(width: 3),
                             Text(
                               DateFormat.MMMd().format(item.dueDate!),
-                              style: RT.caption
-                                  .copyWith(color: t.textMuted),
+                              style: RT.caption.copyWith(color: t.textMuted),
                             ),
                           ],
                         ],

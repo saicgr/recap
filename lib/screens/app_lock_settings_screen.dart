@@ -63,12 +63,11 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.lock_outline,
-                                color: t.accent, size: 20),
+                            Icon(Icons.lock_outline, color: t.accent, size: 20),
                             const SizedBox(width: 8),
                             Text('Require biometric to open',
-                                style: RT.subtitle
-                                    .copyWith(color: t.textPrimary)),
+                                style:
+                                    RT.subtitle.copyWith(color: t.textPrimary)),
                             const Spacer(),
                             RecapToggle(
                               value: appLock.enabled,
@@ -81,13 +80,11 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Face ID / Touch ID / device passcode is required on app launch and after the timeout below.',
-                          style: RT.bodySm
-                              .copyWith(color: t.textSecondary),
+                          style: RT.bodySm.copyWith(color: t.textSecondary),
                         ),
                         const SizedBox(height: 18),
                         Text('Lock after',
-                            style: RT.subtitle
-                                .copyWith(color: t.textPrimary)),
+                            style: RT.subtitle.copyWith(color: t.textPrimary)),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
@@ -102,8 +99,7 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                                 selected: appLock.timeoutMinutes == m,
                                 selectedColor: t.accent,
                                 backgroundColor: t.bgSubtle,
-                                onSelected: (_) =>
-                                    appLock.setTimeoutMinutes(m),
+                                onSelected: (_) => appLock.setTimeoutMinutes(m),
                               ),
                           ],
                         ),

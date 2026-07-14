@@ -35,11 +35,12 @@ class McpExportService {
     Map<String, dynamic> state = {};
     if (await stateFile.exists()) {
       try {
-        state = jsonDecode(await stateFile.readAsString())
-            as Map<String, dynamic>;
+        state =
+            jsonDecode(await stateFile.readAsString()) as Map<String, dynamic>;
       } catch (_) {/* corrupt; reset */}
     }
-    final synced = (state['synced'] as Map<String, dynamic>? ?? {}).cast<String, String>();
+    final synced =
+        (state['synced'] as Map<String, dynamic>? ?? {}).cast<String, String>();
 
     final meetings = await db.select(db.meetings).get();
     for (final m in meetings) {
@@ -79,14 +80,14 @@ class McpExportService {
             .toList(),
       };
       final outFile = File(p.join(syncFolder, '${m.id}.json'));
-      await outFile.writeAsString(
-          const JsonEncoder.withIndent('  ').convert(blob));
+      await outFile
+          .writeAsString(const JsonEncoder.withIndent('  ').convert(blob));
       synced[m.id] = updatedAt;
     }
 
     state['synced'] = synced;
     state['lastSync'] = DateTime.now().toIso8601String();
-    await stateFile.writeAsString(
-        const JsonEncoder.withIndent('  ').convert(state));
+    await stateFile
+        .writeAsString(const JsonEncoder.withIndent('  ').convert(state));
   }
 }

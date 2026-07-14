@@ -27,8 +27,7 @@ class BundledModels {
   /// present in this build (CI may not have run fetch_bundled_models.sh).
   static Future<Map<String, String>> ensureAll() async {
     final docs = await getApplicationSupportDirectory();
-    final outDir =
-        Directory(p.join(docs.path, 'bundled_models'));
+    final outDir = Directory(p.join(docs.path, 'bundled_models'));
     if (!await outDir.exists()) await outDir.create(recursive: true);
 
     final out = <String, String>{};
@@ -41,16 +40,15 @@ class BundledModels {
       }
       try {
         final data = await rootBundle.load(entry.key);
-        final bytes = data.buffer.asUint8List(
-            data.offsetInBytes, data.lengthInBytes);
+        final bytes =
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
         await destFile.writeAsBytes(bytes, flush: true);
         out[entry.key] = destPath;
       } catch (e) {
         // Asset wasn't bundled in this build (CI didn't run the fetch
         // script, or this is a dev build). The TranscriberService falls back
         // to the download path; no fatal error.
-        debugPrint(
-            'BundledModels: ${entry.key} not in this build ($e). '
+        debugPrint('BundledModels: ${entry.key} not in this build ($e). '
             'Whisper will download on first record.');
       }
     }

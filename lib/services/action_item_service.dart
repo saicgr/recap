@@ -61,8 +61,7 @@ class ActionItem {
         dueDate: m['dueDate'] == null
             ? null
             : DateTime.parse(m['dueDate'] as String),
-        status: ActionItemStatus.values.firstWhere(
-            (s) => s.name == m['status'],
+        status: ActionItemStatus.values.firstWhere((s) => s.name == m['status'],
             orElse: () => ActionItemStatus.open),
         createdAt: DateTime.parse(m['createdAt'] as String),
         completedAt: m['completedAt'] == null
@@ -130,6 +129,7 @@ class ActionItemService {
 
   Future<void> _save(List<ActionItem> list) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(list.map((a) => a.toJson()).toList()));
+    await prefs.setString(
+        _key, jsonEncode(list.map((a) => a.toJson()).toList()));
   }
 }

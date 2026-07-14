@@ -15,8 +15,7 @@ class SettingsService extends ChangeNotifier {
   // ---- Audio / transcription ----
   String get audioLanguage => _prefs.getString('audioLanguage') ?? 'auto';
   bool get showTimestamps => _prefs.getBool('showTimestamps') ?? false;
-  bool get restoreLastTranscription =>
-      _prefs.getBool('restoreLast') ?? true;
+  bool get restoreLastTranscription => _prefs.getBool('restoreLast') ?? true;
   bool get autoDeleteOldRecordings => _prefs.getBool('autoDelete') ?? false;
   int get autoDeleteDays => _prefs.getInt('autoDeleteDays') ?? 7;
   String get whisperModel => _prefs.getString('whisperModel') ?? 'small';
@@ -77,7 +76,8 @@ class SettingsService extends ChangeNotifier {
   /// users to a dead host and silently break cloud summaries for exactly the
   /// people who used the feature first.
   String get proxyUrl {
-    final stored = _prefs.getString('proxyUrl') ?? _prefs.getString('workerUrl');
+    final stored =
+        _prefs.getString('proxyUrl') ?? _prefs.getString('workerUrl');
     if (stored != null &&
         stored.isNotEmpty &&
         !stored.contains(kRetiredWorkerHostFragment)) {

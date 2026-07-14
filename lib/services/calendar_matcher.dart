@@ -63,11 +63,9 @@ class CalendarMatcher {
       // Single closest event by start time.
       matches.sort((a, b) {
         final aDist =
-            (a.start?.millisecondsSinceEpoch ?? 0) -
-                t.millisecondsSinceEpoch;
+            (a.start?.millisecondsSinceEpoch ?? 0) - t.millisecondsSinceEpoch;
         final bDist =
-            (b.start?.millisecondsSinceEpoch ?? 0) -
-                t.millisecondsSinceEpoch;
+            (b.start?.millisecondsSinceEpoch ?? 0) - t.millisecondsSinceEpoch;
         return aDist.abs().compareTo(bDist.abs());
       });
       final best = matches.first;

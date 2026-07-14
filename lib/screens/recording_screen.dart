@@ -308,8 +308,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
       // Now the heavy step — Whisper transcription + diarization.
       await _runFinalTranscription(meetingId, mergedPath, elapsed);
     } catch (e) {
-      await (db.update(db.meetings)
-            ..where((t) => t.id.equals(meetingId)))
+      await (db.update(db.meetings)..where((t) => t.id.equals(meetingId)))
           .write(MeetingsCompanion(
         status: const Value(MeetingStatus.failed),
         failureReason: Value(e.toString()),
@@ -406,7 +405,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
     final hh = d.inHours;
     final mm = d.inMinutes.remainder(60);
     final ss = d.inSeconds.remainder(60);
-    return hh > 0 ? '${two(hh)}:${two(mm)}:${two(ss)}' : '${two(mm)}:${two(ss)}';
+    return hh > 0
+        ? '${two(hh)}:${two(mm)}:${two(ss)}'
+        : '${two(mm)}:${two(ss)}';
   }
 
   @override
@@ -485,8 +486,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.cloud_off,
-                            size: 13, color: t.textMuted),
+                        Icon(Icons.cloud_off, size: 13, color: t.textMuted),
                         const SizedBox(width: 6),
                         Text(
                             'On-device · Whisper ${transcriber.model.modelName}',
@@ -522,8 +522,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                       children: [
                         Row(children: [
                           Text('LIVE CAPTIONS',
-                              style: RT.caption
-                                  .copyWith(color: t.textMuted)),
+                              style: RT.caption.copyWith(color: t.textMuted)),
                           if (_bookmarkCount > 0) ...[
                             const SizedBox(width: 8),
                             Container(
@@ -535,8 +534,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                               ),
                               child: Text(
                                 '$_bookmarkCount bookmark${_bookmarkCount == 1 ? "" : "s"}',
-                                style:
-                                    RT.caption.copyWith(color: t.accent),
+                                style: RT.caption.copyWith(color: t.accent),
                               ),
                             ),
                           ],
@@ -553,8 +551,8 @@ class _RecordingScreenState extends State<RecordingScreen> {
                                 padding: const EdgeInsets.only(top: 40),
                                 child: Center(
                                   child: Text('Listening…',
-                                      style: RT.body
-                                          .copyWith(color: t.textMuted)),
+                                      style:
+                                          RT.body.copyWith(color: t.textMuted)),
                                 ),
                               )
                             : Text(
@@ -630,8 +628,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
         color: _paused ? t.accent : t.recordRed,
         boxShadow: [
           BoxShadow(
-            color: (_paused ? t.accent : t.recordRed)
-                .withValues(alpha: 0.25),
+            color: (_paused ? t.accent : t.recordRed).withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -711,13 +708,11 @@ class _RecordingScreenState extends State<RecordingScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Keep recording',
-                style: TextStyle(color: t.textMuted)),
+            child: Text('Keep recording', style: TextStyle(color: t.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Discard',
-                style: TextStyle(color: t.recordRed)),
+            child: Text('Discard', style: TextStyle(color: t.recordRed)),
           ),
         ],
       ),

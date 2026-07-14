@@ -65,8 +65,7 @@ class _WaveformMeterState extends State<WaveformMeter> {
         children: [
           Container(
             width: 56,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: t.bgSubtle,
               border: Border.all(
@@ -152,5 +151,6 @@ class _BarsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BarsPainter old) => old.bars != bars || old.color != color;
+  bool shouldRepaint(_BarsPainter old) =>
+      old.bars != bars || old.color != color;
 }

@@ -147,8 +147,7 @@ class PrivacyDashboardScreen extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(item,
-                        style:
-                            RT.bodySm.copyWith(color: t.textSecondary)),
+                        style: RT.bodySm.copyWith(color: t.textSecondary)),
                   ),
                 ],
               ),

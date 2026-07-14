@@ -73,7 +73,8 @@ class AppLockService extends ChangeNotifier {
   // prompt.
   Set<String> _confidentialMeetingIds = {};
 
-  Set<String> get confidentialMeetingIds => Set.unmodifiable(_confidentialMeetingIds);
+  Set<String> get confidentialMeetingIds =>
+      Set.unmodifiable(_confidentialMeetingIds);
 
   Future<void> loadConfidentials() async {
     final prefs = await SharedPreferences.getInstance();

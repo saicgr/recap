@@ -61,7 +61,8 @@ void main() {
 
       // A legitimate move still works.
       await svc.moveFolder(c.id, a.id);
-      expect((await svc.childrenOf(a.id)).map((f) => f.id), containsAll([b.id, c.id]));
+      expect((await svc.childrenOf(a.id)).map((f) => f.id),
+          containsAll([b.id, c.id]));
     });
 
     test('deleting a folder promotes its children instead of destroying them',

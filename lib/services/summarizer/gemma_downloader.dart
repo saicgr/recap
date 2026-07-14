@@ -5,7 +5,13 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 
 import 'gemma_backend.dart';
 
-enum GemmaDownloadStatus { unknown, notInstalled, downloading, installed, failed }
+enum GemmaDownloadStatus {
+  unknown,
+  notInstalled,
+  downloading,
+  installed,
+  failed
+}
 
 /// ChangeNotifier wrapper around [GemmaBackend] for the UI. Tracks install
 /// state + download progress so a Settings tile / transcript empty-state card

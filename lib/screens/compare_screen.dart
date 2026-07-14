@@ -94,8 +94,8 @@ class CompareScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Recap is a meeting recorder built around a single idea: your conversations are yours. Here is how that plays out — point by point.',
-                    style: RT.body
-                        .copyWith(color: t.textSecondary, height: 1.5),
+                    style:
+                        RT.body.copyWith(color: t.textSecondary, height: 1.5),
                   ),
                   const SizedBox(height: 20),
                   for (final p in _pillars) _pillar(t, p.$1, p.$2, p.$3, p.$4),
@@ -221,8 +221,7 @@ class CompareScreen extends StatelessWidget {
             trailing: Icons.arrow_forward,
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const PrivacyDashboardScreen()),
+              MaterialPageRoute(builder: (_) => const PrivacyDashboardScreen()),
             ),
           ),
         ],

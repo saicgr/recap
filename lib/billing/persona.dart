@@ -1,13 +1,27 @@
 import 'tier.dart';
 
-/// A persona template = a stable prompt that instructs the summarizer how to
-/// structure output for a specific kind of meeting. Free tier gets `basic`
-/// only; Starter unlocks 3; Pro+/Privacy unlocks all.
+/// A persona = a LENS, not a template.
+///
+/// Personas used to be whole prompts ("Output sections: Overview / Key points /
+/// Decisions / Action items"), which meant every meeting got the same four
+/// buckets regardless of what was said — the single biggest cap on summary
+/// quality, and the thing Granola beats us on. The shared contract now lives in
+/// `lib/services/summarizer/prompts.dart` (topic sections derived from content,
+/// [mm:ss] citations, mandatory People & continuity, mandatory Low confidence);
+/// [prompt] is appended to it and may only ADD a lens and extra sections on top.
+///
+/// A persona must never redefine the base sections, and must never relax the
+/// anti-hallucination rules.
+///
+/// [key] and [style] are persisted (`summaries.personaKey`) and gated by
+/// `tier.dart` — they are frozen. Only [prompt] is free to change.
 class Persona {
   final SummaryStyle style;
   final String key;
   final String displayName;
   final String emoji;
+
+  /// The lens, appended verbatim to the shared reduce/single-pass contract.
   final String prompt;
 
   const Persona({
@@ -19,7 +33,7 @@ class Persona {
   });
 }
 
-/// The full prompt library. Keys are stable; safe to persist in the DB.
+/// The full lens library. Keys are stable; safe to persist in the DB.
 const personas = <Persona>[
   Persona(
     style: SummaryStyle.basic,
@@ -27,14 +41,7 @@ const personas = <Persona>[
     displayName: 'Meeting notes',
     emoji: '📝',
     prompt: '''
-Summarize this meeting transcript. Output sections:
-- Overview (2-3 sentences)
-- Key points (bullets)
-- Decisions made (bullets, or "none")
-- Action items (bullets with assignee in [brackets] when clear from the transcript)
-
-Stay faithful to what was said. Do not invent attendees, decisions, or commitments. If something is unclear or speculative, say so.
-''',
+LENS: general meeting notes. Add no extra sections beyond the shape above.''',
   ),
   Persona(
     style: SummaryStyle.oneOnOne,
@@ -42,15 +49,15 @@ Stay faithful to what was said. Do not invent attendees, decisions, or commitmen
     displayName: '1:1',
     emoji: '🤝',
     prompt: '''
-Summarize this 1:1 conversation. Output sections:
-- Topics discussed (bullets)
-- Wins / progress (bullets)
-- Concerns / blockers (bullets)
-- Action items for each person (clearly attributed)
-- Follow-ups for next 1:1
+LENS: a 1:1. ALSO add, before "## Next steps":
 
-Tone: neutral, factual. Do not add coaching advice or interpretation that wasn't in the conversation.
-''',
+## Wins & blockers
+- Progress claimed, and blockers raised — each attributed to the person who said
+  it [mm:ss]
+
+Under "## Next steps", attribute every action to a specific person; a 1:1 with
+unowned actions is a 1:1 that produced nothing. Stay neutral and factual: add no
+coaching, no interpretation, and no advice that was not spoken.''',
   ),
   Persona(
     style: SummaryStyle.standup,
@@ -58,17 +65,17 @@ Tone: neutral, factual. Do not add coaching advice or interpretation that wasn't
     displayName: 'Standup',
     emoji: '🏃',
     prompt: '''
-Summarize this standup. Output as a table per person:
+LENS: a standup. ALSO add, in place of the topic sections:
 
-**[Name]**
-- Yesterday: ...
-- Today: ...
-- Blockers: ...
+## <Person>
+- Yesterday: ... [mm:ss]
+- Today: ... [mm:ss]
+- Blockers: ... [mm:ss]
+(One per person who actually spoke. Omit anyone who did not, and omit any of the
+three lines they did not give. Never invent an update.)
 
-End with a "Team blockers" section listing anything cross-cutting.
-
-If a person didn't speak, omit them. Do not invent updates.
-''',
+Cross-cutting blockers — anything blocking more than one person — go under
+"## Next steps" with an owner.''',
   ),
   Persona(
     style: SummaryStyle.salesCall,
@@ -76,18 +83,18 @@ If a person didn't speak, omit them. Do not invent updates.
     displayName: 'Sales call',
     emoji: '💼',
     prompt: '''
-Summarize this sales call as a CRM-ready entry. Output:
-- Account / prospect name (from transcript or "unknown")
-- Attendees (name + role if mentioned)
-- Pain points raised
-- Use cases discussed
-- Objections + how they were addressed
-- Budget / timeline signals (only if explicitly stated)
-- Next steps (with owner + date when mentioned)
-- Risk flags (anything that suggests the deal is in trouble)
+LENS: a sales call, written to be pasted into a CRM. ALSO add, before
+"## Next steps":
 
-Be strict about not inventing budget numbers, timelines, or commitments.
-''',
+## Deal signals
+- Pain points raised, in the prospect's own words [mm:ss]
+- Objections, and exactly how each was handled (or that it was not) [mm:ss]
+- Budget / timeline signals — ONLY if explicitly stated [mm:ss]
+- Risk flags: anything suggesting the deal is in trouble [mm:ss]
+
+Never infer a budget number, a close date, or a commitment. An enthusiastic noise
+is not a commitment. Name the account and the attendees only if the transcript
+does.''',
   ),
   Persona(
     style: SummaryStyle.interview,
@@ -95,17 +102,16 @@ Be strict about not inventing budget numbers, timelines, or commitments.
     displayName: 'Interview',
     emoji: '🎤',
     prompt: '''
-Summarize this interview. Output:
-- Candidate (or interviewee) name
-- Key topics covered
-- Notable answers (quote-style when distinctive)
-- Strengths demonstrated
-- Concerns / gaps
-- Open questions for next round
-- Recommendation cues from the interviewer (if any)
+LENS: an interview. ALSO add, before "## Next steps":
 
-Do not score the candidate. Surface evidence, not judgment.
-''',
+## Evidence
+- Notable answers, quoted as heard [mm:ss]
+- Strengths actually demonstrated (with the answer that demonstrates them) [mm:ss]
+- Gaps and unanswered probes [mm:ss]
+
+Surface evidence, not judgment. Do not score the candidate and do not recommend an
+outcome unless the interviewer explicitly stated one — in which case attribute it
+to them.''',
   ),
   Persona(
     style: SummaryStyle.lecture,
@@ -113,17 +119,18 @@ Do not score the candidate. Surface evidence, not judgment.
     displayName: 'Lecture notes',
     emoji: '🎓',
     prompt: '''
-Convert this lecture into study notes. Output:
-- Topic + lecturer (if introduced)
-- Core concepts (with definitions in your own words)
-- Examples given
-- Equations / formulas (preserve original form)
-- Things flagged as "important" / "on the exam" / "remember this"
-- Questions raised by students (and how they were answered)
-- Suggested follow-up readings (if mentioned)
+LENS: a lecture, written as study notes. ALSO add, before "## Next steps":
 
-Format with clear headings. Use markdown.
-''',
+## Concepts
+- Term — the definition as given [mm:ss]
+  - the example used, if one was [mm:ss]
+
+## Flagged as important
+- Anything called out as "on the exam" / "remember this" / "important" [mm:ss]
+
+Preserve equations, formulas and notation in their original form — an ASR-mangled
+formula goes to Low confidence as heard, never "corrected" into a plausible one.
+Student questions and the answers given belong under "## Open questions".''',
   ),
   Persona(
     style: SummaryStyle.doctorVisit,
@@ -131,17 +138,19 @@ Format with clear headings. Use markdown.
     displayName: 'Doctor visit',
     emoji: '🩺',
     prompt: '''
-Summarize this medical appointment for the patient's own records (not a medical record). Output:
-- Reason for visit
-- Symptoms discussed
-- Doctor's assessment (as stated)
-- Recommended tests or referrals
-- Medications mentioned (name, dosage, frequency — only as stated)
-- Next steps + follow-up date
-- Questions the patient asked + answers
+LENS: a medical appointment, written for the patient's own records. ALSO add,
+before "## Next steps":
 
-⚠️ This is a personal note, not a medical record. Do not interpret beyond what was explicitly said. Flag anything ambiguous as "unclear — ask doctor to confirm."
-''',
+## Medications & tests
+- Medication — dosage — frequency, EXACTLY as stated (never normalized, never
+  completed from your own knowledge) [mm:ss]
+- Tests, referrals and imaging ordered [mm:ss]
+
+⚠️ These are personal notes, not a medical record. Do not interpret, diagnose, or
+extend beyond what was explicitly said. Anything ambiguous — a drug name, a dose, a
+number — goes to "## ⚠️ Low confidence" as heard, phrased as "unclear — ask the
+doctor to confirm". A wrong dose here is the most dangerous line this app can
+produce; when in doubt, mark it uncertain.''',
   ),
 ];
 

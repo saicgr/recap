@@ -109,15 +109,9 @@ class HeuristicDiarizer implements Diarizer {
     final rms = math.sqrt(sumSq / n) / 32768.0;
     final peakNorm = peak / 32768.0;
     final zcr = zc / n;
-    final b0 = math.sqrt(
-            buckets[0] / math.max(1, bucketCounts[0])) /
-        32768.0;
-    final b1 = math.sqrt(
-            buckets[1] / math.max(1, bucketCounts[1])) /
-        32768.0;
-    final b2 = math.sqrt(
-            buckets[2] / math.max(1, bucketCounts[2])) /
-        32768.0;
+    final b0 = math.sqrt(buckets[0] / math.max(1, bucketCounts[0])) / 32768.0;
+    final b1 = math.sqrt(buckets[1] / math.max(1, bucketCounts[1])) / 32768.0;
+    final b2 = math.sqrt(buckets[2] / math.max(1, bucketCounts[2])) / 32768.0;
     return [rms, peakNorm, zcr, b0, b1, b2];
   }
 
@@ -155,8 +149,7 @@ class HeuristicDiarizer implements Diarizer {
     return assignments;
   }
 
-  (List<List<double>>, List<int>) _runKMeans(
-      List<List<double>> fps, int k) {
+  (List<List<double>>, List<int>) _runKMeans(List<List<double>> fps, int k) {
     if (fps.isEmpty || k <= 0) {
       return (const [], const []);
     }
@@ -165,9 +158,7 @@ class HeuristicDiarizer implements Diarizer {
     final centroids = <List<double>>[fps[rng.nextInt(fps.length)]];
     while (centroids.length < k) {
       final dists = fps
-          .map((p) => centroids
-              .map((c) => _dist2(p, c))
-              .reduce(math.min))
+          .map((p) => centroids.map((c) => _dist2(p, c)).reduce(math.min))
           .toList();
       final sum = dists.fold<double>(0, (a, b) => a + b);
       if (sum == 0) {

@@ -148,8 +148,7 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
     final req = http.Request('GET', Uri.parse(url));
     final res = await http.Client().send(req);
     if (res.statusCode != 200) {
-      throw StateError(
-          'Download failed: HTTP ${res.statusCode} for $url');
+      throw StateError('Download failed: HTTP ${res.statusCode} for $url');
     }
     _bytesReceived = 0;
     _bytesTotal = res.contentLength ?? 0;
@@ -258,9 +257,8 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
         out.add(null);
         continue;
       }
-      final best = overlap.entries
-          .reduce((a, b) => a.value >= b.value ? a : b)
-          .key;
+      final best =
+          overlap.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
       out.add('Speaker ${firstSeenOrder[best]}');
     }
     return out;

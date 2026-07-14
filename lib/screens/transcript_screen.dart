@@ -8,9 +8,12 @@ import '../billing/tier.dart';
 import '../data/database.dart';
 import '../main.dart';
 import '../services/audio_player_service.dart';
-import '../services/custom_personas_service.dart';
+import '../services/summary_glossary.dart';
+import '../services/template_service.dart';
 import '../services/summarizer/gemma_downloader.dart';
 import '../services/summarizer/summary_router.dart';
+import '../services/summarizer/summary_types.dart';
+import '../services/summarizer/transcript_formatter.dart';
 import '../ui/components.dart';
 import '../ui/theme.dart';
 import '../ui/type.dart';
@@ -34,6 +37,15 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   List<TranscriptSegment> _segments = const [];
   bool _summarizing = false;
   String? _error;
+
+  /// Live stage of the summarizer ("Reading part 3 of 7…"). Null when idle.
+  /// A map-reduce over a 25-min meeting is many on-device generations; a bare
+  /// spinner with no stage would read as a hang.
+  SummaryProgress? _progress;
+
+  /// Cooperative cancellation for the in-flight summary. The user must be able
+  /// to walk away from minutes of GPU work.
+  CancelToken? _cancel;
   // settings.defaultPersonaKey has existed with zero readers; this screen just
   // hardcoded 'basic', so setting a default persona did nothing.
   late String _personaKey = settings.defaultPersonaKey;
@@ -91,17 +103,52 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   }
 
   Future<void> _summarize() async {
-    if (_transcript == null) return;
+    final transcript = _transcript;
+    if (transcript == null || _summarizing) return;
     final persona = _resolvePersona(_personaKey);
+    final cancel = CancelToken();
     setState(() {
       _summarizing = true;
       _error = null;
+      _cancel = cancel;
+      _progress = const SummaryProgress(
+        stage: SummaryStage.preparing,
+        step: 0,
+        totalSteps: 0,
+        label: 'Preparing…',
+      );
     });
     try {
+      // The glossary is what lets the model REPAIR ASR damage instead of
+      // guessing at it: the user's curated terms, the names of enrolled
+      // speakers, and proper nouns that recur in this transcript.
+      final glossary = await SummaryGlossary(db: db, voiceprints: voiceprints)
+          .build(transcriptBody: transcript.body, segments: _segments);
+      cancel.throwIfCancelled();
+
+      // Segments — not `transcripts.body`. Speaker labels and timings live on
+      // the segments and never used to reach the prompt; feeding the flat body
+      // is the bug this rebuild exists to fix. Throws StateError (rather than
+      // silently summarizing nothing) when there is no transcript at all.
+      final promptSegments = buildPromptSegments(
+        segments: _segments,
+        fallbackBody: transcript.body,
+        speakerAliases: glossary.speakerAliases,
+      );
+      cancel.throwIfCancelled();
+
       final res = await summaryRouter.summarize(
-        transcript: _transcript!.body,
+        input: SummaryInput(
+          segments: promptSegments,
+          meetingTitle: _title,
+          glossary: glossary.terms,
+        ),
         persona: persona,
         requested: settings.summaryMode,
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+        cancel: cancel,
       );
       switch (res) {
         case SummaryReady(:final result, :final route):
@@ -124,22 +171,37 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               ));
           await _load();
         case SummaryNeedsGemmaDownload():
+          // A summary can now take minutes; the user may well have left the
+          // screen by the time it lands. Guard every setState past the await.
+          if (!mounted) return;
           setState(() => _error = '__needs_model__');
         case SummaryBlockedByQuota():
           if (!mounted) return;
           await _showQuotaSheet();
         case SummaryFailed(:final error):
-          setState(() => _error = error.toString());
+          // A cancellation that comes back wrapped as a failure is still a
+          // cancellation, not an error the user needs to see.
+          if (mounted && error is! SummaryCancelled) {
+            setState(() => _error = error.toString());
+          }
       }
+    } on SummaryCancelled {
+      // User-initiated. Not an error state — leave the screen as it was.
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _summarizing = false);
+      if (mounted) {
+        setState(() {
+          _summarizing = false;
+          _cancel = null;
+          _progress = null;
+        });
+      }
     }
   }
 
   Persona _resolvePersona(String key) =>
-      resolvePersona(key, customPersonas.personas);
+      resolvePersona(key, templateService.personas);
 
   /// Translate the given summary to [targetLocale]. If a translation is
   /// already cached for that target, this is a no-op visually. Tap again
@@ -249,8 +311,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                     return ListTile(
                       dense: true,
                       onTap: () => Navigator.pop(ctx, code),
-                      title: Text(label,
-                          style: TextStyle(color: t.textPrimary)),
+                      title:
+                          Text(label, style: TextStyle(color: t.textPrimary)),
                       trailing: Text(code,
                           style: RT.caption.copyWith(color: t.textMuted)),
                     );
@@ -279,23 +341,20 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           cursorColor: t.accent,
           style: RT.body.copyWith(color: t.textPrimary),
           decoration: InputDecoration(
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: t.border)),
-            focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: t.accent)),
+            enabledBorder:
+                UnderlineInputBorder(borderSide: BorderSide(color: t.border)),
+            focusedBorder:
+                UnderlineInputBorder(borderSide: BorderSide(color: t.accent)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child:
-                Text('Cancel', style: TextStyle(color: t.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: t.textMuted)),
           ),
           TextButton(
-            onPressed: () =>
-                Navigator.pop(ctx, controller.text.trim()),
-            child:
-                Text('Save', style: TextStyle(color: t.accent)),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text('Save', style: TextStyle(color: t.accent)),
           ),
         ],
       ),
@@ -316,11 +375,10 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
     final t = RecapThemeScope.of(context);
     final tier = entitlements.currentTier;
     final allowed = tier.personaTemplates;
-    final available =
-        personas.where((p) => allowed.contains(p.style)).toList();
-    final customs = CustomPersonasService.isAvailableFor(tier)
-        ? customPersonas.personas
-        : const <Persona>[];
+    final available = personas.where((p) => allowed.contains(p.style)).toList();
+    // Templates are visible on EVERY tier now (they were Power-only). Only
+    // CREATION is capped — Free gets 1.
+    final customs = templateService.personas;
     final pick = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -333,7 +391,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
         customs: customs,
         selectedKey: _personaKey,
         lockedCount: personas.length - available.length,
-        canAddCustom: CustomPersonasService.isAvailableFor(tier),
+        canAddCustom:
+            TemplateService.canCreate(tier, templateService.personas.length),
       ),
     );
     if (pick != null) {
@@ -365,13 +424,11 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                       child: Text(
                         _title,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            RT.subtitle.copyWith(color: t.textPrimary),
+                        style: RT.subtitle.copyWith(color: t.textPrimary),
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.edit_outlined,
-                        size: 14, color: t.textMuted),
+                    Icon(Icons.edit_outlined, size: 14, color: t.textMuted),
                   ],
                 ),
               ),
@@ -387,12 +444,10 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                 children: [
                   Text(DateFormat('MMM d · h:mm a').format(m.createdAt),
                       style: RT.bodySm.copyWith(color: t.textMuted)),
-                  Text('  ·  ',
-                      style: RT.bodySm.copyWith(color: t.textMuted)),
+                  Text('  ·  ', style: RT.bodySm.copyWith(color: t.textMuted)),
                   Text(_formatDuration(m.durationMs),
-                      style: RT.bodySm
-                          .copyWith(color: t.textMuted)
-                          .merge(RT.num)),
+                      style:
+                          RT.bodySm.copyWith(color: t.textMuted).merge(RT.num)),
                 ],
               ),
             ),
@@ -403,16 +458,15 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                 TabItem(
                     label: 'Bookmarks',
                     value: 'bookmarks',
-                    count:
-                        _bookmarks.isEmpty ? null : _bookmarks.length),
+                    count: _bookmarks.isEmpty ? null : _bookmarks.length),
               ],
               value: _tab,
               onChanged: (v) => setState(() => _tab = v),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(
-                    20, 20, 20, _audio.hasSource ? 96 : 32),
+                padding:
+                    EdgeInsets.fromLTRB(20, 20, 20, _audio.hasSource ? 96 : 32),
                 child: switch (_tab) {
                   'summary' => _summaryTab(t),
                   'bookmarks' => _bookmarksTab(t),
@@ -442,7 +496,9 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
         children: [
           IconButton(
             icon: Icon(
-              _audio.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+              _audio.isPlaying
+                  ? Icons.pause_circle_filled
+                  : Icons.play_circle_fill,
               size: 36,
               color: t.accent,
             ),
@@ -460,14 +516,13 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                     thumbColor: t.accent,
                     overlayColor: t.accent.withValues(alpha: 0.15),
                     trackHeight: 2.5,
-                    thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 6),
+                    thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 6),
                   ),
                   child: Slider(
                     value: dur > 0 ? pos : 0,
                     max: dur > 0 ? dur : 1,
-                    onChanged: (v) =>
-                        _audio.seekMs(v.round()),
+                    onChanged: (v) => _audio.seekMs(v.round()),
                   ),
                 ),
                 Padding(
@@ -492,8 +547,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           GestureDetector(
             onTap: _audio.cycleSpeed,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: t.bgSubtle,
                 borderRadius: BorderRadius.circular(8),
@@ -502,8 +556,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               child: Text(
                 '${_audio.speed.toStringAsFixed(_audio.speed == _audio.speed.truncate() ? 0 : 1)}x',
                 style: RT.caption.copyWith(
-                    color: t.textPrimary,
-                    fontWeight: FontWeight.w600),
+                    color: t.textPrimary, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -548,8 +601,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           },
           child: SelectableText(
             _transcript?.body ?? '(empty)',
-            style: RT.bodyLg
-                .copyWith(color: t.textPrimary, height: 26 / 16),
+            style: RT.bodyLg.copyWith(color: t.textPrimary, height: 26 / 16),
           ),
         );
       }
@@ -586,9 +638,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                           fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
                   Text(_fmtMs(group.startMs),
-                      style: RT.bodySm
-                          .copyWith(color: t.textMuted)
-                          .merge(RT.num)),
+                      style:
+                          RT.bodySm.copyWith(color: t.textMuted).merge(RT.num)),
                 ],
               ),
             ),
@@ -659,28 +710,16 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
             _personaBar(t),
             const SizedBox(height: 28),
             if (_summarizing)
-              Row(children: [
-                SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        valueColor: AlwaysStoppedAnimation(t.accent))),
-                const SizedBox(width: 10),
-                Text('Generating…',
-                    style: RT.body.copyWith(color: t.textMuted)),
-              ])
+              _progressBlock(t)
             else
               Center(
                 child: Column(children: [
-                  Icon(Icons.auto_awesome,
-                      size: 36, color: t.textMuted),
+                  Icon(Icons.auto_awesome, size: 36, color: t.textMuted),
                   const SizedBox(height: 12),
                   Text('No summary yet',
                       style: RT.subtitle.copyWith(color: t.textPrimary)),
                   const SizedBox(height: 6),
-                  Text(
-                      'Pick a style above and tap Generate.',
+                  Text('Pick a style above and tap Generate.',
                       style: RT.body.copyWith(color: t.textMuted)),
                 ]),
               ),
@@ -699,6 +738,18 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _personaBar(t),
+        // Re-generating over an existing summary must show the same stage +
+        // Cancel affordance, and must surface its failure — the previous build
+        // rendered neither once a summary already existed, so a second attempt
+        // that broke looked like it had simply done nothing.
+        if (_summarizing) ...[
+          const SizedBox(height: 20),
+          _progressBlock(t),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          _errorBlock(t, _error!),
+        ],
         const SizedBox(height: 24),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -759,8 +810,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
             onTap: _pickPersona,
             borderRadius: BorderRadius.circular(8),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -770,8 +820,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                       style: RT.label.copyWith(
                           color: t.accent, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down,
-                      size: 13, color: t.accent),
+                  Icon(Icons.keyboard_arrow_down, size: 13, color: t.accent),
                 ],
               ),
             ),
@@ -787,6 +836,80 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           onPressed: _summarizing ? null : _summarize,
         ),
       ],
+    );
+  }
+
+  /// Live summarizer stage + a Cancel button.
+  ///
+  /// On-device map-reduce over a long meeting is a sequence of generations, not
+  /// one call: "Reading part 3 of 7…", "Organizing…", "Checking for invented
+  /// details…". Naming the stage is the difference between "it's working" and
+  /// "it's hung", and Cancel is what makes minutes of GPU work acceptable.
+  Widget _progressBlock(RecapTheme t) {
+    final p = _progress;
+    final label = p?.label ?? 'Generating…';
+    final showBar = p != null && p.totalSteps > 0;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: t.bgSubtle,
+        border: Border.all(color: t.border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  valueColor: AlwaysStoppedAnimation(t.accent),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: RT.body.copyWith(color: t.textSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: _cancel == null
+                    ? null
+                    : () {
+                        _cancel?.cancel();
+                        setState(() => _progress = const SummaryProgress(
+                              stage: SummaryStage.preparing,
+                              step: 0,
+                              totalSteps: 0,
+                              label: 'Cancelling…',
+                            ));
+                      },
+                child: Text('Cancel',
+                    style: RT.label.copyWith(
+                      color: t.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    )),
+              ),
+            ],
+          ),
+          if (showBar) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: p.fraction.clamp(0.0, 1.0),
+                minHeight: 3,
+                backgroundColor: t.border,
+                valueColor: AlwaysStoppedAnimation(t.accent),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -811,8 +934,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               const SizedBox(height: 8),
               Text(
                 'Buy a top-up to keep using cloud summaries this month, or upgrade your tier for a bigger monthly allowance.',
-                style: RT.body
-                    .copyWith(color: t.textSecondary, height: 1.5),
+                style: RT.body.copyWith(color: t.textSecondary, height: 1.5),
               ),
               const SizedBox(height: 18),
               if (tier.topUpsEnabled)
@@ -827,8 +949,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                       Navigator.pop(ctx);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const TopUpScreen()),
+                        MaterialPageRoute(builder: (_) => const TopUpScreen()),
                       );
                     },
                   ),
@@ -888,8 +1009,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               builder: (_, __) {
                 final s = gemmaDownloader.status;
                 if (s == GemmaDownloadStatus.downloading) {
-                  final pct = (gemmaDownloader.progress * 100)
-                      .toStringAsFixed(0);
+                  final pct =
+                      (gemmaDownloader.progress * 100).toStringAsFixed(0);
                   return Row(
                     children: [
                       SizedBox(
@@ -957,8 +1078,8 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Center(
-          child: Text('No bookmarks',
-              style: RT.body.copyWith(color: t.textMuted)),
+          child:
+              Text('No bookmarks', style: RT.body.copyWith(color: t.textMuted)),
         ),
       );
     }
@@ -999,8 +1120,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
                         if (_bookmarks[i].note != null) ...[
                           const SizedBox(height: 4),
                           Text(_bookmarks[i].note!,
-                              style: RT.body
-                                  .copyWith(color: t.textPrimary)),
+                              style: RT.body.copyWith(color: t.textPrimary)),
                         ],
                       ],
                     ),
@@ -1081,8 +1201,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   onPressed: () => Navigator.pop(context),
                   child: Text('Cancel',
                       style: RT.label.copyWith(
-                          color: t.textSecondary,
-                          fontWeight: FontWeight.w600)),
+                          color: t.textSecondary, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -1096,22 +1215,18 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                 for (final p in widget.available)
                   _personaCard(t, p,
                       selected: _selected == p.key,
-                      onTap: () =>
-                          setState(() => _selected = p.key)),
+                      onTap: () => setState(() => _selected = p.key)),
                 if (widget.customs.isNotEmpty) ...[
                   Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
                     child: Text('CUSTOM',
-                        style:
-                            RT.caption.copyWith(color: t.textMuted)),
+                        style: RT.caption.copyWith(color: t.textMuted)),
                   ),
                   for (final p in widget.customs)
                     _personaCard(t, p,
                         selected: _selected == p.key,
                         custom: true,
-                        onTap: () =>
-                            setState(() => _selected = p.key)),
+                        onTap: () => setState(() => _selected = p.key)),
                 ],
                 if (widget.canAddCustom)
                   Padding(
@@ -1136,8 +1251,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                               horizontal: 14, vertical: 14),
                           child: Row(
                             children: [
-                              Icon(Icons.add,
-                                  size: 18, color: t.accent),
+                              Icon(Icons.add, size: 18, color: t.accent),
                               const SizedBox(width: 10),
                               Text('Add custom persona',
                                   style: RT.body.copyWith(
@@ -1151,8 +1265,8 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   ),
                 if (widget.lockedCount > 0)
                   Container(
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 4, vertical: 4),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       border: Border.all(color: t.border),
@@ -1160,8 +1274,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.lock_outline,
-                            size: 16, color: t.textMuted),
+                        Icon(Icons.lock_outline, size: 16, color: t.textMuted),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -1241,21 +1354,21 @@ class _PersonaSheetState extends State<_PersonaSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child:
-                Text('Cancel', style: TextStyle(color: t.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: t.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child:
-                Text('Save', style: TextStyle(color: t.accent)),
+            child: Text('Save', style: TextStyle(color: t.accent)),
           ),
         ],
       ),
     );
     if (ok != true) return null;
     if (name.text.trim().isEmpty || prompt.text.trim().isEmpty) return null;
-    await customPersonas.add(name: name.text.trim(), prompt: prompt.text.trim());
-    final created = customPersonas.personas.last;
+    // Use the returned Persona — `.personas.last` relied on insertion order and
+    // the list is now sorted by name, so "last" was the wrong template.
+    final created = await templateService.create(
+        name: name.text.trim(), prompt: prompt.text.trim());
     return created.key;
   }
 
@@ -1266,16 +1379,14 @@ class _PersonaSheetState extends State<_PersonaSheet> {
     return Material(
       color: selected ? t.accentSoft : Colors.transparent,
       shape: RoundedRectangleBorder(
-        side: BorderSide(
-            color: selected ? t.accentBorder : Colors.transparent),
+        side: BorderSide(color: selected ? t.accentBorder : Colors.transparent),
         borderRadius: BorderRadius.circular(10),
       ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
               Container(
@@ -1286,8 +1397,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   borderRadius: BorderRadius.circular(9),
                 ),
                 alignment: Alignment.center,
-                child: Text(p.emoji,
-                    style: const TextStyle(fontSize: 18)),
+                child: Text(p.emoji, style: const TextStyle(fontSize: 18)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1296,12 +1406,10 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                   children: [
                     Text(p.displayName,
                         style: RT.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: t.textPrimary)),
+                            fontWeight: FontWeight.w600, color: t.textPrimary)),
                     const SizedBox(height: 2),
                     Text(_personaDesc(p.style),
-                        style:
-                            RT.bodySm.copyWith(color: t.textMuted)),
+                        style: RT.bodySm.copyWith(color: t.textMuted)),
                   ],
                 ),
               ),
@@ -1315,8 +1423,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
                       color: selected ? t.accent : t.border, width: 1.5),
                 ),
                 child: selected
-                    ? const Icon(Icons.check,
-                        size: 12, color: Colors.white)
+                    ? const Icon(Icons.check, size: 12, color: Colors.white)
                     : null,
               ),
             ],
@@ -1333,8 +1440,7 @@ class _PersonaSheetState extends State<_PersonaSheet> {
         SummaryStyle.salesCall => 'BANT, objections, next steps.',
         SummaryStyle.interview => 'Signal by competency, hire/no-hire notes.',
         SummaryStyle.lecture => 'Outline, key terms, study questions.',
-        SummaryStyle.doctorVisit =>
-          'Symptoms, instructions, prescriptions.',
+        SummaryStyle.doctorVisit => 'Symptoms, instructions, prescriptions.',
       };
 }
 
@@ -1376,9 +1482,7 @@ class _SegmentTile extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 1),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: active
-              ? t.accent.withValues(alpha: 0.10)
-              : Colors.transparent,
+          color: active ? t.accent.withValues(alpha: 0.10) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: active
               ? Border.all(color: t.accent.withValues(alpha: 0.35), width: 1)
@@ -1446,8 +1550,7 @@ class _TranslateToggle extends StatelessWidget {
     return Material(
       color: isTranslated ? t.accentSoft : Colors.transparent,
       shape: RoundedRectangleBorder(
-        side: BorderSide(
-            color: isTranslated ? t.accentBorder : t.border),
+        side: BorderSide(color: isTranslated ? t.accentBorder : t.border),
         borderRadius: BorderRadius.circular(8),
       ),
       child: InkWell(
@@ -1458,8 +1561,7 @@ class _TranslateToggle extends StatelessWidget {
                 ? onRevert
                 : onPickLanguage,
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1474,9 +1576,7 @@ class _TranslateToggle extends StatelessWidget {
                 )
               else
                 Icon(
-                  isTranslated
-                      ? Icons.translate
-                      : Icons.translate_outlined,
+                  isTranslated ? Icons.translate : Icons.translate_outlined,
                   size: 13,
                   color: isTranslated ? t.accent : t.textMuted,
                 ),

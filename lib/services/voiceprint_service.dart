@@ -70,7 +70,8 @@ class VoiceprintService {
 
   Future<void> _save(List<Voiceprint> list) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(list.map((v) => v.toJson()).toList()));
+    await prefs.setString(
+        _key, jsonEncode(list.map((v) => v.toJson()).toList()));
   }
 
   double _cosineSim(Float32List a, Float32List b) {
@@ -122,7 +123,8 @@ class Voiceprint {
     return Voiceprint(
       id: m['id'] as String,
       name: m['name'] as String,
-      embedding: Float32List.view(base64Decode(m['embedding'] as String).buffer),
+      embedding:
+          Float32List.view(base64Decode(m['embedding'] as String).buffer),
       avatarPath: m['avatarPath'] as String?,
       createdAt: DateTime.parse(m['createdAt'] as String),
     );

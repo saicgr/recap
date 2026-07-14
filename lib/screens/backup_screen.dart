@@ -99,8 +99,7 @@ class _BackupScreenState extends State<BackupScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text('Last backup: $_lastBackupPath',
-                          style:
-                              RT.bodySm.copyWith(color: t.textSecondary)),
+                          style: RT.bodySm.copyWith(color: t.textSecondary)),
                     ),
                   ],
                   if (_lastError != null) ...[
@@ -146,13 +145,11 @@ class _BackupScreenState extends State<BackupScreen> {
             children: [
               Icon(icon, color: t.accent, size: 20),
               const SizedBox(width: 8),
-              Text(title,
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              Text(title, style: RT.subtitle.copyWith(color: t.textPrimary)),
             ],
           ),
           const SizedBox(height: 8),
-          Text(subtitle,
-              style: RT.bodySm.copyWith(color: t.textSecondary)),
+          Text(subtitle, style: RT.bodySm.copyWith(color: t.textSecondary)),
           const SizedBox(height: 14),
           child,
         ],

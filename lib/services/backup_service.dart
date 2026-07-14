@@ -73,9 +73,8 @@ class BackupService {
           'durationMs': m.durationMs,
           'status': m.status.name,
         },
-        'transcript': tr == null
-            ? null
-            : {'body': tr.body, 'modelId': tr.modelId},
+        'transcript':
+            tr == null ? null : {'body': tr.body, 'modelId': tr.modelId},
         'segments': [
           for (final s in segs)
             {

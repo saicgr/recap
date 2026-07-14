@@ -6,13 +6,16 @@ import '../../main.dart';
 
 /// Common result shape from any importer.
 class ImportedAudio {
-  final String wavPath; // 16 kHz mono PCM WAV path, ready for transcribe pipeline
+  final String
+      wavPath; // 16 kHz mono PCM WAV path, ready for transcribe pipeline
   final Duration duration;
   final String title;
   final DateTime sourceDate;
+
   /// Optional pre-existing transcript (e.g. YouTube captions); when non-null
   /// the transcribe pipeline skips Whisper and persists this directly.
   final String? precomputedTranscript;
+
   /// Optional pre-existing segments (start/end ms + body) for precomputed
   /// transcripts that have timing.
   final List<({int startMs, int endMs, String body})>? precomputedSegments;

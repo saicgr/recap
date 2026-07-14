@@ -34,6 +34,7 @@ class SlackExporter implements WorkflowExporter {
     //   4. Show channel picker (conversations.list)
     throw UnimplementedError('Slack OAuth pending.');
   }
+
   @override
   Future<void> deauthorize() async {
     _accessToken = null;
@@ -51,9 +52,8 @@ class SlackExporter implements WorkflowExporter {
     if (token == null || channel == null) {
       return ExportResult.err('Connect Slack first (Settings → Exports).');
     }
-    final summaryText = summaries.isEmpty
-        ? '(no summary)'
-        : summaries.first.body;
+    final summaryText =
+        summaries.isEmpty ? '(no summary)' : summaries.first.body;
     final res = await http.post(
       Uri.parse('https://slack.com/api/chat.postMessage'),
       headers: {

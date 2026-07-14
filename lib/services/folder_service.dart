@@ -40,13 +40,12 @@ class FolderService {
           .watch();
 
   /// Direct children of [parentId] (top-level when null).
-  Future<List<Folder>> childrenOf(String? parentId) =>
-      (db.select(db.folders)
-            ..where((f) => parentId == null
-                ? f.parentId.isNull()
-                : f.parentId.equals(parentId))
-            ..orderBy([(f) => OrderingTerm.asc(f.name)]))
-          .get();
+  Future<List<Folder>> childrenOf(String? parentId) => (db.select(db.folders)
+        ..where((f) => parentId == null
+            ? f.parentId.isNull()
+            : f.parentId.equals(parentId))
+        ..orderBy([(f) => OrderingTerm.asc(f.name)]))
+      .get();
 
   Future<Folder> createFolder({
     required String name,
@@ -182,10 +181,7 @@ class FolderService {
   }
 
   Future<void> setTagsForMeeting(String meetingId, Set<String> tags) async {
-    final clean = tags
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toSet();
+    final clean = tags.map((t) => t.trim()).where((t) => t.isNotEmpty).toSet();
     await db.transaction(() async {
       await (db.delete(db.meetingTags)
             ..where((t) => t.meetingId.equals(meetingId)))
@@ -223,9 +219,8 @@ class FolderService {
       return;
     }
 
-    final liveMeetingIds = (await db.select(db.meetings).get())
-        .map((m) => m.id)
-        .toSet();
+    final liveMeetingIds =
+        (await db.select(db.meetings).get()).map((m) => m.id).toSet();
 
     await db.transaction(() async {
       final knownFolderIds = <String>{};
@@ -241,8 +236,9 @@ class FolderService {
                   name: m['name'] as String,
                   parentId: Value(m['parentId'] as String?),
                   colorIndex: Value((m['colorIndex'] as num?)?.toInt() ?? 0),
-                  createdAt: DateTime.tryParse(m['createdAt'] as String? ?? '') ??
-                      DateTime.now(),
+                  createdAt:
+                      DateTime.tryParse(m['createdAt'] as String? ?? '') ??
+                          DateTime.now(),
                 ),
                 mode: InsertMode.insertOrIgnore,
               );

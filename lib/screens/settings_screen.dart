@@ -190,8 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 FutureBuilder<({int total, int thisMonth, int totalMs})>(
                   future: db.meetingStats(),
                   builder: (ctx, snap) {
-                    final s = snap.data ??
-                        (total: 0, thisMonth: 0, totalMs: 0);
+                    final s = snap.data ?? (total: 0, thisMonth: 0, totalMs: 0);
                     return Row(
                       children: [
                         _stat(t, 'Recordings', '${s.total}'),
@@ -212,8 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     trailing: Icons.arrow_forward,
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (_) => const PaywallScreen()),
+                      MaterialPageRoute(builder: (_) => const PaywallScreen()),
                     ),
                   ),
                   if (tier.topUpsEnabled) ...[
@@ -224,8 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       size: BtnSize.sm,
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const TopUpScreen()),
+                        MaterialPageRoute(builder: (_) => const TopUpScreen()),
                       ),
                     ),
                   ],
@@ -306,8 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             icon: Icons.vpn_key_outlined,
             title: 'Bring your own key',
             value: 'Not set',
-            trailing:
-                Icon(Icons.chevron_right, color: t.textMuted, size: 18),
+            trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ByokScreen()),
@@ -389,8 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         SettingsRow(
           icon: Icons.delete_outline,
-          title:
-              'Auto-delete after ${settings.autoDeleteDays} days',
+          title: 'Auto-delete after ${settings.autoDeleteDays} days',
           trailing: RecapToggle(
             value: settings.autoDeleteOldRecordings,
             onChanged: (v) async {
@@ -415,8 +410,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const ActionItemsScreen()),
+            MaterialPageRoute(builder: (_) => const ActionItemsScreen()),
           ),
         ),
         SettingsRow(
@@ -426,8 +420,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const VoiceEnrollmentScreen()),
+            MaterialPageRoute(builder: (_) => const VoiceEnrollmentScreen()),
           ),
         ),
         SettingsRow(
@@ -456,8 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const PrivacyDashboardScreen()),
+            MaterialPageRoute(builder: (_) => const PrivacyDashboardScreen()),
           ),
         ),
         SettingsRow(
@@ -467,8 +459,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const AppLockSettingsScreen()),
+            MaterialPageRoute(builder: (_) => const AppLockSettingsScreen()),
           ),
           last: true,
         ),
@@ -554,8 +545,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           accentIcon: true,
           title: 'Switch tier',
           value: _capitalize(entitlements.currentTier.name),
-          trailing:
-              Icon(Icons.chevron_right, color: t.textMuted, size: 18),
+          trailing: Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: _pickTier,
           last: true,
         ),
@@ -589,8 +579,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => Navigator.pop(ctx, tier),
                   title: Text(_capitalize(tier.name),
                       style: RT.body.copyWith(
-                          color: t.textPrimary,
-                          fontWeight: FontWeight.w500)),
+                          color: t.textPrimary, fontWeight: FontWeight.w500)),
                   subtitle: Text(_tierDesc(tier),
                       style: RT.bodySm.copyWith(color: t.textMuted)),
                   trailing: entitlements.currentTier == tier
@@ -669,9 +658,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final p = diarizer.downloadProgress;
         final pct = p == null ? '' : ' · ${(p * 100).toStringAsFixed(0)}%';
         final received = _formatBytes(diarizer.bytesReceived);
-        final total = diarizer.bytesTotal > 0
-            ? _formatBytes(diarizer.bytesTotal)
-            : '~';
+        final total =
+            diarizer.bytesTotal > 0 ? _formatBytes(diarizer.bytesTotal) : '~';
         return 'Downloading$pct · $received / $total';
       case SherpaDiarizerStatus.ready:
         return 'Pyannote + WeSpeaker · ready';
@@ -687,8 +675,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _gemmaStatusLabel() {
     final variant = entitlements.currentTier.gemmaVariant;
-    final sizeGb = (variant.approxBytes / (1000 * 1000 * 1000))
-        .toStringAsFixed(1);
+    final sizeGb =
+        (variant.approxBytes / (1000 * 1000 * 1000)).toStringAsFixed(1);
     switch (gemmaDownloader.status) {
       case GemmaDownloadStatus.unknown:
         return 'Checking…';
@@ -733,7 +721,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       builder: (ctx) {
         final options = <(WhisperModel, String, String)>[
-          (WhisperModel.tinyEn, 'Tiny · English', '~75 MB · fastest, lower accuracy'),
+          (
+            WhisperModel.tinyEn,
+            'Tiny · English',
+            '~75 MB · fastest, lower accuracy'
+          ),
           (WhisperModel.baseEn, 'Base · English', '~140 MB · balanced'),
           (WhisperModel.smallEn, 'Small · English', '~466 MB · most accurate'),
         ];
@@ -754,11 +746,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () => Navigator.pop(ctx, model),
                     title: Text(name,
                         style: RT.body.copyWith(
-                            color: t.textPrimary,
-                            fontWeight: FontWeight.w500)),
+                            color: t.textPrimary, fontWeight: FontWeight.w500)),
                     subtitle: Text(sub,
-                        style:
-                            RT.bodySm.copyWith(color: t.textMuted)),
+                        style: RT.bodySm.copyWith(color: t.textMuted)),
                     trailing: transcriber.model == model
                         ? Icon(Icons.check, color: t.accent)
                         : null,
@@ -864,23 +854,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           decoration: InputDecoration(
             hintText: 'https://…',
             hintStyle: TextStyle(color: t.textMuted),
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: t.border)),
-            focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: t.accent)),
+            enabledBorder:
+                UnderlineInputBorder(borderSide: BorderSide(color: t.border)),
+            focusedBorder:
+                UnderlineInputBorder(borderSide: BorderSide(color: t.accent)),
           ),
           keyboardType: TextInputType.url,
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel',
-                  style: TextStyle(color: t.textMuted))),
+              child: Text('Cancel', style: TextStyle(color: t.textMuted))),
           TextButton(
-              onPressed: () =>
-                  Navigator.pop(ctx, controller.text.trim()),
-              child: Text('Save',
-                  style: TextStyle(color: t.accent))),
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: Text('Save', style: TextStyle(color: t.accent))),
         ],
       ),
     );

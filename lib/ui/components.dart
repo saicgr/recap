@@ -494,8 +494,7 @@ class SettingsRow extends StatelessWidget {
                 ),
               ),
               if (value != null) ...[
-                Text(value!,
-                    style: RT.body.copyWith(color: t.textMuted)),
+                Text(value!, style: RT.body.copyWith(color: t.textMuted)),
                 if (trailing != null) const SizedBox(width: 6),
               ],
               if (trailing != null) trailing!,
@@ -622,7 +621,6 @@ class Segmented<T> extends StatelessWidget {
 
 // Alias to avoid colliding with the type parameter `T` above.
 
-
 // ─── Accent picker swatches ─────────────────────────────────────────────────
 
 class AccentSwatches extends StatelessWidget {
@@ -730,8 +728,7 @@ class TabsBar extends StatelessWidget {
                       item.label,
                       style: RT.subtitle.copyWith(
                         color: active ? t.textPrimary : t.textMuted,
-                        fontWeight:
-                            active ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                       ),
                     ),
                     if (item.count != null) ...[
@@ -786,7 +783,9 @@ class _RecordFabState extends State<RecordFab> {
         curve: Curves.easeOutCubic,
         width: widget.size,
         height: widget.size,
-        transform: Matrix4.identity()..scaleByDouble(_pressed ? 0.97 : 1.0, _pressed ? 0.97 : 1.0, 1.0, 1.0),
+        transform: Matrix4.identity()
+          ..scaleByDouble(
+              _pressed ? 0.97 : 1.0, _pressed ? 0.97 : 1.0, 1.0, 1.0),
         transformAlignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -827,8 +826,7 @@ class RecDot extends StatefulWidget {
   State<RecDot> createState() => _RecDotState();
 }
 
-class _RecDotState extends State<RecDot>
-    with SingleTickerProviderStateMixin {
+class _RecDotState extends State<RecDot> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1400),
@@ -909,8 +907,7 @@ class _WaveformState extends State<Waveform>
         children: List.generate(widget.bars, (i) {
           final s1 = math.sin(_t * 4 + i * 0.6) * 0.5 + 0.5;
           final s2 = math.cos(_t * 2 + i * 1.1) * 0.5 + 0.5;
-          final h =
-              widget.active ? (4 + s1 * s2 * (widget.height - 4)) : 3.0;
+          final h = widget.active ? (4 + s1 * s2 * (widget.height - 4)) : 3.0;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 1.5),
             child: AnimatedContainer(

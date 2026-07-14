@@ -72,7 +72,8 @@ class Summaries extends Table {
   TextColumn get personaKey => text()(); // see lib/billing/persona.dart
   TextColumn get body => text()();
   TextColumn get backend => textEnum<SummaryBackendKind>()();
-  TextColumn get modelId => text()(); // e.g. "gemini-3.1-flash-lite" / "gemma-4-e2b-it" / "apple-fm-3b"
+  TextColumn get modelId =>
+      text()(); // e.g. "gemini-3.1-flash-lite" / "gemma-4-e2b-it" / "apple-fm-3b"
   IntColumn get processingMs => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
 
@@ -125,6 +126,30 @@ class TopUpCredits extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// User-created summary templates ("custom personas").
+///
+/// Previously a JSON array in SharedPreferences: unqueryable, unsyncable, and
+/// gated to the $99 Power tier. Granola gives custom templates away on its free
+/// plan, so gating ours behind the top SKU was simply the wrong call.
+class Templates extends Table {
+  /// `custom:<uuid>`. The `custom:` prefix is load-bearing — [resolvePersona]
+  /// keys off it to tell a user template from one of the 7 built-ins.
+  TextColumn get id => text()();
+  TextColumn get name => text().withLength(min: 1, max: 60)();
+  TextColumn get emoji => text().withDefault(const Constant('✨'))();
+  TextColumn get prompt => text()();
+
+  /// Set when this template was created by duplicating a built-in, so the
+  /// editor can show what it was forked from.
+  TextColumn get builtinKey => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Persisted store purchases — the source of truth for the user's tier across
 /// restarts. Before this table existed the tier lived only in a memory field on
 /// DriftEntitlementService, so every relaunch silently dropped a paying
@@ -155,8 +180,7 @@ class Purchases extends Table {
   /// for a real purchase.
   TextColumn get source => text().withDefault(const Constant('store'))();
 
-  DateTimeColumn get recordedAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get recordedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -290,6 +314,7 @@ class GlossaryTerms extends Table {
   TranslationCache,
   GlossaryTerms,
   Purchases,
+  Templates,
 ])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
@@ -300,7 +325,7 @@ class AppDb extends _$AppDb {
   AppDb.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -358,6 +383,11 @@ class AppDb extends _$AppDb {
           // the next launch.
           if (from < 3) {
             await m.createTable(purchases);
+          }
+          // v3 → v4: Templates. Custom personas move off SharedPreferences so
+          // they can be queried, joined, and eventually synced.
+          if (from < 4) {
+            await m.createTable(templates);
           }
         },
         beforeOpen: (details) async {
@@ -428,8 +458,7 @@ class AppDb extends _$AppDb {
   }
 
   Future<Meeting?> meetingById(String id) {
-    return (select(meetings)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (select(meetings)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<Transcript?> transcriptFor(String meetingId) {

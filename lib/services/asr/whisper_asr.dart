@@ -44,8 +44,7 @@ class WhisperAsrEngine implements AsrEngine {
   @override
   Future<String> transcribeFile(String wavPath, {String lang = 'en'}) async {
     if (!await transcriber.isModelInstalled) {
-      throw const AsrUnavailableException(
-          AsrUnavailableReason.notInstalled,
+      throw const AsrUnavailableException(AsrUnavailableReason.notInstalled,
           'Whisper model not downloaded yet.');
     }
     return transcriber.transcribe(wavPath, lang: lang);
