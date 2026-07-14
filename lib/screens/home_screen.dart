@@ -6,10 +6,12 @@ import 'package:intl/intl.dart';
 import '../billing/entitlement_service.dart';
 import '../data/database.dart';
 import '../main.dart';
+import '../services/calendar_matcher.dart';
 import '../services/transcriber.dart';
 import '../ui/components.dart';
 import '../ui/theme.dart';
 import '../ui/type.dart';
+import '../widgets/folder_drawer.dart';
 import 'import_screen.dart';
 import 'paywall_screen.dart';
 import 'recording_screen.dart';
@@ -24,24 +26,47 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   TierUsage? _usage;
   StreamSubscription<TierUsage>? _usageSub;
+
+  /// null == "All recordings". Otherwise the folder we are filtered to.
+  Folder? _folder;
+
+  List<UpcomingEvent> _upcoming = const [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     transcriber.addListener(_onTranscriber);
     _usageSub = entitlements.watchUsage().listen((u) {
       if (mounted) setState(() => _usage = u);
     });
+    _loadUpcoming();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     transcriber.removeListener(_onTranscriber);
     _usageSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh on resume — never on a timer. Polling the calendar in the
+    // background would be a background wake-up; the app does work when the user
+    // asks, not on a schedule.
+    if (state == AppLifecycleState.resumed) _loadUpcoming();
+  }
+
+  Future<void> _loadUpcoming() async {
+    final events = await calendarMatcher.listUpcoming(
+      window: Duration(hours: settings.upcomingWindowHours),
+    );
+    if (mounted) setState(() => _upcoming = events);
   }
 
   void _onTranscriber() {
@@ -122,11 +147,30 @@ class _HomeScreenState extends State<HomeScreen> {
     final t = RecapThemeScope.of(context);
     return Scaffold(
       backgroundColor: t.bg,
+      // Granola's mobile app cannot do this: it shows "Folders will appear here
+      // after they are synced", because its folders live on a server. Ours are
+      // local-first, so they work offline and with no account.
+      drawer: FolderDrawer(
+        selected: _folder,
+        onSelect: (f) {
+          setState(() => _folder = f);
+          Navigator.pop(context);
+        },
+      ),
       body: SafeArea(
         child: StreamBuilder<List<Meeting>>(
-          stream: db.watchRecentMeetings(limit: 200),
+          // Single filter point: swap the source stream when a folder is picked.
+          stream: _folder == null
+              ? db.watchRecentMeetings(limit: 200)
+              : folderService.watchMeetingsInFolder(_folder!.id),
           builder: (ctx, snap) {
             final meetings = snap.data ?? const [];
+            // An empty FOLDER is not an empty APP — showing the first-run
+            // illustration here would tell the user they have no recordings at
+            // all, which is false and alarming.
+            if (meetings.isEmpty && _folder != null) {
+              return _emptyFolder(t);
+            }
             if (meetings.isEmpty) return _empty(t);
             return _list(t, meetings);
           },
@@ -310,12 +354,12 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         TopBar(
           large: true,
-          leading: Text('Recap',
-              style: RT.subtitle.copyWith(
-                color: t.textPrimary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
-              )),
+          leading: Builder(
+            builder: (ctx) => IconBtn(
+              icon: Icons.folder_outlined,
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+            ),
+          ),
           trailing: [
             IconBtn(icon: Icons.search, onPressed: _openSearch),
             const SizedBox(width: 4),
@@ -329,8 +373,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('All recordings',
-                      style: RT.titleLg.copyWith(color: t.textPrimary)),
+                  Flexible(
+                    child: Text(_folder?.name ?? 'All recordings',
+                        overflow: TextOverflow.ellipsis,
+                        style: RT.titleLg.copyWith(color: t.textPrimary)),
+                  ),
                   const SizedBox(width: 10),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
@@ -350,6 +397,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ListView(
             padding: const EdgeInsets.only(bottom: 120),
             children: [
+              // "Coming up" — only on the unfiltered list, where it belongs.
+              if (_folder == null && _upcoming.isNotEmpty) _upcomingStrip(t),
               for (final entry in grouped.entries) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
@@ -464,6 +513,132 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// "Coming up" — the next calendar events, each one tap from being recorded.
+  ///
+  /// Granola's mobile list is short and fixed; ours honours
+  /// settings.upcomingWindowHours. Shown only when calendar permission has
+  /// already been granted — merely opening the home screen must never trigger a
+  /// permission prompt.
+  Widget _upcomingStrip(RecapTheme t) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('COMING UP',
+                style: RT.caption.copyWith(
+                    color: t.textMuted, fontWeight: FontWeight.w600)),
+          ),
+          for (final e in _upcoming.take(5))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: SurfaceCard(
+                onTap: _startRecording,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      e.isNow ? Icons.radio_button_checked : Icons.event_outlined,
+                      size: 18,
+                      color: e.isNow ? t.accent : t.textMuted,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(e.title,
+                              overflow: TextOverflow.ellipsis,
+                              style: RT.body.copyWith(color: t.textPrimary)),
+                          const SizedBox(height: 2),
+                          Text(
+                            _whenLabel(e),
+                            style: RT.caption.copyWith(color: t.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Chip2(label: e.isNow ? 'Record now' : 'Record'),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _whenLabel(UpcomingEvent e) {
+    if (e.isNow) return 'Happening now';
+    final mins = e.minutesAway;
+    if (mins < 1) return 'Starting now';
+    if (mins < 60) return 'In $mins min';
+    final time = DateFormat('EEE h:mm a').format(e.start);
+    if (e.attendees.isEmpty) return time;
+    return '$time · ${e.attendees.length} attendee'
+        '${e.attendees.length == 1 ? '' : 's'}';
+  }
+
+  /// An empty FOLDER is not an empty APP. Showing the first-run illustration
+  /// here would tell the user they have no recordings at all — false, and
+  /// alarming.
+  Widget _emptyFolder(RecapTheme t) {
+    return Column(
+      children: [
+        TopBar(
+          large: true,
+          leading: Builder(
+            builder: (ctx) => IconBtn(
+              icon: Icons.folder_outlined,
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+            ),
+          ),
+          trailing: [
+            IconBtn(icon: Icons.search, onPressed: _openSearch),
+            const SizedBox(width: 4),
+            IconBtn(icon: Icons.settings_outlined, onPressed: _openSettings),
+          ],
+          largeTitle: Text(_folder?.name ?? '',
+              overflow: TextOverflow.ellipsis,
+              style: RT.titleLg.copyWith(color: t.textPrimary)),
+        ),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.folder_open_outlined,
+                      size: 40, color: t.textMuted),
+                  const SizedBox(height: 16),
+                  Text('Nothing in this folder yet',
+                      textAlign: TextAlign.center,
+                      style: RT.subtitle.copyWith(color: t.textPrimary)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Open a recording and use "Move to folder" to file it here.',
+                    textAlign: TextAlign.center,
+                    style: RT.bodySm.copyWith(color: t.textMuted),
+                  ),
+                  const SizedBox(height: 20),
+                  Btn(
+                    label: 'Show all recordings',
+                    onPressed: () => setState(() => _folder = null),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

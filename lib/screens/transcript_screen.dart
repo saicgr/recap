@@ -17,6 +17,7 @@ import '../services/summarizer/transcript_formatter.dart';
 import '../ui/components.dart';
 import '../ui/theme.dart';
 import '../ui/type.dart';
+import '../widgets/folder_drawer.dart';
 import 'paywall_screen.dart';
 import 'settings_screen.dart';
 import 'topup_screen.dart';
@@ -202,6 +203,144 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
 
   Persona _resolvePersona(String key) =>
       resolvePersona(key, templateService.personas);
+
+  /// The "…" menu. It was an IconBtn with an empty `onPressed: () {}` — a
+  /// button that looked live and did nothing.
+  Future<void> _meetingActions() async {
+    final t = RecapThemeScope.of(context);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: t.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Icon(Icons.folder_outlined, color: t.textPrimary),
+              title: Text('Move to folder',
+                  style: RT.body.copyWith(color: t.textPrimary)),
+              onTap: () => Navigator.pop(ctx, 'folder'),
+            ),
+            ListTile(
+              leading: Icon(Icons.label_outline, color: t.textPrimary),
+              title:
+                  Text('Tags', style: RT.body.copyWith(color: t.textPrimary)),
+              onTap: () => Navigator.pop(ctx, 'tags'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'folder') {
+      await _moveToFolder();
+    } else if (action == 'tags') {
+      await _editTags();
+    }
+  }
+
+  Future<void> _moveToFolder() async {
+    final folders = await folderService.allFolders();
+    final current = await folderService.foldersForMeeting(widget.meeting.id);
+    if (!mounted) return;
+    final t = RecapThemeScope.of(context);
+
+    final selected = Set<String>.of(current);
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: t.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setSheet) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('Move to folder',
+                          style:
+                              RT.subtitle.copyWith(color: t.textPrimary)),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx2, true),
+                      child: Text('Save',
+                          style: RT.label.copyWith(color: t.accent)),
+                    ),
+                  ],
+                ),
+              ),
+              if (folders.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  child: Text(
+                    'No folders yet. Create one from the folder menu on the '
+                    'home screen.',
+                    style: RT.bodySm.copyWith(color: t.textMuted),
+                  ),
+                ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    // A meeting can live in several folders — this is a
+                    // multi-select, not a single "move".
+                    for (final f in folders)
+                      CheckboxListTile(
+                        value: selected.contains(f.id),
+                        onChanged: (v) => setSheet(() {
+                          if (v == true) {
+                            selected.add(f.id);
+                          } else {
+                            selected.remove(f.id);
+                          }
+                        }),
+                        title: Text(f.name,
+                            style: RT.body.copyWith(color: t.textPrimary)),
+                        activeColor: t.accent,
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (saved == true) {
+      await folderService.setFoldersForMeeting(widget.meeting.id, selected);
+    }
+  }
+
+  Future<void> _editTags() async {
+    final current = await folderService.tagsForMeeting(widget.meeting.id);
+    if (!mounted) return;
+    final text = await promptForText(
+      context,
+      title: 'Tags',
+      initial: current.join(', '),
+      hint: 'comma, separated, tags',
+      confirmLabel: 'Save',
+    );
+    if (text == null) return;
+    // setTagsForMeeting trims, drops blanks and dedupes.
+    await folderService.setTagsForMeeting(
+      widget.meeting.id,
+      text.split(',').toSet(),
+    );
+  }
 
   /// Translate the given summary to [targetLocale]. If a translation is
   /// already cached for that target, this is a no-op visually. Tap again
@@ -435,7 +574,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
               trailing: [
                 IconBtn(icon: Icons.ios_share, onPressed: () {}),
                 const SizedBox(width: 4),
-                IconBtn(icon: Icons.more_horiz, onPressed: () {}),
+                IconBtn(icon: Icons.more_horiz, onPressed: _meetingActions),
               ],
             ),
             Padding(

@@ -64,6 +64,17 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---- Home: upcoming events ----
+
+  /// How far ahead the home-screen "coming up" strip looks. Granola's mobile
+  /// list is short and fixed; ours is configurable.
+  int get upcomingWindowHours => _prefs.getInt('upcomingWindowHours') ?? 24;
+
+  Future<void> setUpcomingWindowHours(int hours) async {
+    await _prefs.setInt('upcomingWindowHours', hours);
+    notifyListeners();
+  }
+
   // ---- Cloud proxy config ----
 
   /// URL of the Render proxy (the app's only backend; it holds the API keys).

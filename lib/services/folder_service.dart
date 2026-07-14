@@ -144,6 +144,32 @@ class FolderService {
     return rows.map((r) => r.readTable(db.meetings)).toList();
   }
 
+  /// Reactive counterpart of [meetingsInFolder] — the home list needs a Stream
+  /// so adding a meeting to the selected folder updates without a manual reload.
+  Stream<List<Meeting>> watchMeetingsInFolder(String folderId) {
+    final q = db.select(db.meetings).join([
+      innerJoin(db.meetingFolders,
+          db.meetingFolders.meetingId.equalsExp(db.meetings.id)),
+    ])
+      ..where(db.meetingFolders.folderId.equals(folderId))
+      ..orderBy([OrderingTerm.desc(db.meetings.createdAt)]);
+    return q.watch().map(
+          (rows) => rows.map((r) => r.readTable(db.meetings)).toList(),
+        );
+  }
+
+  /// How many meetings sit in each folder, for the drawer's counts.
+  Stream<Map<String, int>> watchFolderCounts() => db
+      .customSelect(
+        'SELECT folder_id, COUNT(*) AS n FROM meeting_folders GROUP BY folder_id',
+        readsFrom: {db.meetingFolders},
+      )
+      .watch()
+      .map((rows) => {
+            for (final r in rows)
+              r.read<String>('folder_id'): r.read<int>('n'),
+          });
+
   Future<void> setFoldersForMeeting(
     String meetingId,
     Set<String> folderIds,
