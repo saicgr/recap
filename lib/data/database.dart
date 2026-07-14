@@ -150,6 +150,39 @@ class Templates extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// The change-tracking outbox for sync.
+///
+/// Every syncable local write also inserts a row here IN THE SAME TRANSACTION.
+/// That atomicity is the whole point: if the app is killed between "save the
+/// note" and "remember to sync it", either both happened or neither did — the
+/// change can never be silently stranded locally, unsynced, forever.
+///
+/// Rows are drained by the sync engine (push) and deleted once the server
+/// acknowledges them. This is local-only and never itself syncs.
+class SyncOutbox extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The table + primary key of the row that changed.
+  TextColumn get entityTable => text()();
+  TextColumn get entityId => text()();
+
+  /// 'upsert' | 'delete'. Deletes are tombstones (a soft-delete on the row plus
+  /// this marker), never a destructive DELETE that a peer could never learn of.
+  TextColumn get op => text()();
+
+  /// The HLC stamped on the change — the server orders and conflict-resolves by
+  /// this, not by arrival time.
+  TextColumn get hlc => text()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  /// Bumped each failed attempt, for backoff and to surface a stuck change.
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Persisted store purchases — the source of truth for the user's tier across
 /// restarts. Before this table existed the tier lived only in a memory field on
 /// DriftEntitlementService, so every relaunch silently dropped a paying
@@ -326,6 +359,7 @@ class GlossaryTerms extends Table {
   GlossaryTerms,
   Purchases,
   Templates,
+  SyncOutbox,
 ])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
@@ -336,7 +370,7 @@ class AppDb extends _$AppDb {
   AppDb.forTesting(super.e);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -426,6 +460,12 @@ class AppDb extends _$AppDb {
                 FROM transcripts t WHERE t.meeting_id = new.id;
               END;
             ''');
+          }
+          // v5 -> v6: the sync outbox. Local-first sync tracks every syncable
+          // write here so a crash between "save" and "sync" cannot strand a
+          // change. Purely additive; existing rows are untouched.
+          if (from < 6) {
+            await m.createTable(syncOutbox);
           }
         },
         beforeOpen: (details) async {
