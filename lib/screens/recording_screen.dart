@@ -341,6 +341,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
       if (entitlements.currentTier.speakerLabels) {
         await _runDiarization(id, path);
       }
+      // Index for search + chat. After diarization, so speaker labels are on the
+      // segments before they are embedded.
+      await _indexEmbeddings(id);
       await (db.update(db.meetings)..where((t) => t.id.equals(id))).write(
         MeetingsCompanion(
           status: const Value(MeetingStatus.ready),
@@ -356,6 +359,21 @@ class _RecordingScreenState extends State<RecordingScreen> {
           updatedAt: Value(DateTime.now()),
         ),
       );
+    }
+  }
+
+  /// Build the vector index for this meeting so it is searchable and
+  /// chat-answerable.
+  ///
+  /// Runs AFTER diarization, so the speaker labels are already on the segments.
+  /// Best-effort: the recording and its transcript are the product, and a
+  /// missing optional embedding model must never fail a meeting the user just
+  /// finished. Returns 0 silently when MiniLM is not installed.
+  Future<void> _indexEmbeddings(String id) async {
+    try {
+      await embeddingIndexer.indexMeeting(id);
+    } catch (_) {
+      // Search degrades to keyword-only. Not worth surfacing.
     }
   }
 

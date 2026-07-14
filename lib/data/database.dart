@@ -207,6 +207,17 @@ class SegmentEmbeddings extends Table {
   TextColumn get meetingId =>
       text().references(Meetings, #id, onDelete: KeyAction.cascade)();
   BlobColumn get vec => blob()(); // Float32List.buffer.asUint8List()
+
+  /// Vector width, and the model that produced it.
+  ///
+  /// Without these, swapping the embedding model silently mixes two different
+  /// vector spaces in one index: cosine similarity between them is meaningless,
+  /// and search quietly returns nonsense with no error anywhere. The retriever
+  /// filters on both.
+  IntColumn get dim => integer().withDefault(const Constant(384))();
+  TextColumn get model =>
+      text().withDefault(const Constant('all-MiniLM-L6-v2'))();
+
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -325,7 +336,7 @@ class AppDb extends _$AppDb {
   AppDb.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -361,6 +372,14 @@ class AppDb extends _$AppDb {
               DELETE FROM meeting_search WHERE meeting_id = old.id;
             END;
           ''');
+          await customStatement('''
+            CREATE TRIGGER meetings_au AFTER UPDATE OF title ON meetings BEGIN
+              DELETE FROM meeting_search WHERE meeting_id = new.id;
+              INSERT INTO meeting_search(meeting_id, title, body)
+              SELECT new.id, new.title, t.body
+              FROM transcripts t WHERE t.meeting_id = new.id;
+            END;
+          ''');
         },
         onUpgrade: (m, from, to) async {
           // v1 → v2: added Voiceprints, SegmentEmbeddings, ActionItems,
@@ -388,6 +407,25 @@ class AppDb extends _$AppDb {
           // they can be queried, joined, and eventually synced.
           if (from < 4) {
             await m.createTable(templates);
+          }
+          // v4 -> v5: vector-space guards on SegmentEmbeddings, and the FTS
+          // trigger that was missing all along.
+          if (from < 5) {
+            await m.addColumn(segmentEmbeddings, segmentEmbeddings.dim);
+            await m.addColumn(segmentEmbeddings, segmentEmbeddings.model);
+            // Renaming a meeting never re-indexed it: there were AFTER INSERT /
+            // AFTER UPDATE triggers on transcripts and an AFTER DELETE on
+            // meetings, but nothing on meetings UPDATE. So a renamed meeting
+            // stayed searchable only under its OLD title, forever.
+            await customStatement('DROP TRIGGER IF EXISTS meetings_au');
+            await customStatement('''
+              CREATE TRIGGER meetings_au AFTER UPDATE OF title ON meetings BEGIN
+                DELETE FROM meeting_search WHERE meeting_id = new.id;
+                INSERT INTO meeting_search(meeting_id, title, body)
+                SELECT new.id, new.title, t.body
+                FROM transcripts t WHERE t.meeting_id = new.id;
+              END;
+            ''');
           }
         },
         beforeOpen: (details) async {
@@ -510,13 +548,58 @@ class AppDb extends _$AppDb {
 
   /// FTS5 search across transcripts + titles. Returns meeting IDs.
   Future<List<String>> searchMeetingIds(String query, {int limit = 50}) async {
-    if (query.trim().isEmpty) return const [];
+    final match = escapeFts5(query);
+    if (match.isEmpty) return const [];
+    // ORDER BY bm25: results were previously returned in rowid order, i.e. the
+    // most relevant meeting could sit below an incidental keyword match.
     final rows = await customSelect(
-      'SELECT meeting_id FROM meeting_search WHERE meeting_search MATCH ? LIMIT ?',
-      variables: [Variable<String>(query), Variable<int>(limit)],
+      'SELECT meeting_id FROM meeting_search WHERE meeting_search MATCH ? '
+      'ORDER BY bm25(meeting_search) LIMIT ?',
+      variables: [Variable<String>(match), Variable<int>(limit)],
     ).get();
     return rows.map((r) => r.read<String>('meeting_id')).toList();
   }
+
+  /// Ranked snippets for RAG retrieval: which meetings matched, and how well.
+  Future<List<({String meetingId, double score})>> searchRanked(
+    String query, {
+    int limit = 30,
+  }) async {
+    final match = escapeFts5(query);
+    if (match.isEmpty) return const [];
+    final rows = await customSelect(
+      'SELECT meeting_id, bm25(meeting_search) AS score FROM meeting_search '
+      'WHERE meeting_search MATCH ? ORDER BY score LIMIT ?',
+      variables: [Variable<String>(match), Variable<int>(limit)],
+    ).get();
+    return rows
+        .map((r) => (
+              meetingId: r.read<String>('meeting_id'),
+              // bm25 returns a NEGATIVE score, best first. Flip it so callers
+              // can treat "higher is better" like every other ranker.
+              score: -r.read<double>('score'),
+            ))
+        .toList();
+  }
+}
+
+/// Make arbitrary user text safe for an FTS5 MATCH.
+///
+/// Raw text went straight into MATCH, so a query containing a quote, a hyphen,
+/// or a bare `AND`/`NEAR` threw an FTS5 syntax error and the search screen just
+/// broke. Searching for `budget - Q3` or `O'Brien` crashed.
+///
+/// Each token is wrapped in double quotes (with embedded quotes doubled), which
+/// makes it a literal phrase and neutralises every FTS5 operator. Tokens are
+/// ANDed, which is FTS5's default.
+String escapeFts5(String raw) {
+  final tokens = raw
+      .split(RegExp(r'\s+'))
+      .map((t) => t.replaceAll(RegExp(r'''["'`]'''), ''))
+      .map((t) => t.trim())
+      .where((t) => t.isNotEmpty)
+      .map((t) => '"$t"');
+  return tokens.join(' ');
 }
 
 LazyDatabase _open() {

@@ -72,7 +72,7 @@ Market-size figures vary by firm and definition; below we prefer the higher-conf
 | **Samsung (Transcript Assist)** | Free (basic Galaxy AI) | Hybrid (cloud by default; on-device opt-in) | **Yes — for Summary** | Galaxy only (S22–S26, Z Fold/Flip; A-series excluded) | Partly (voice recorder + calls) | Account-gated AI; Galaxy-only; mid-range lockout; future paid tier reserved |
 | **Apple (Voice Memos + on-device)** | Free (bundled) | On-device | No | iPhone only | No (voice recorder) | iPhone-only; not meeting-first; no diarization/personas/integrations |
 | **Otter.ai** | Subscription ($8.33–$30/user/mo) | Cloud | Yes | Web, iOS, Android, bot | Yes | Federal privacy class actions; trains AI on recordings; tight free caps |
-| **Granola** | Subscription (~$14/user/mo Business) | Hybrid (local capture, cloud transcribe/store on AWS US) | Yes | macOS, Windows, iOS — **no Android** | Yes | Bot-free ≠ on-device; cloud storage; free tier cut to 25 notes lifetime; no Android |
+| **Granola** | Free tier + subscription ($14/user/mo Business, $35+ Enterprise) | Hybrid (local capture, cloud transcribe/store on AWS US) | Yes | macOS, Windows, iOS, **Android** | Yes | Bot-free ≠ on-device (audio → Deepgram/Assembly, transcripts → OpenAI/Anthropic); **trains on your data by default**; free tier locks history to 30 days |
 | **Fathom** | Subscription ($16–$25/user/mo) | Cloud | Yes | Web, macOS/Windows, iOS (rolling out), bot + bot-free | Yes | Cloud-processed; once-unlimited free AI summaries now 5/mo |
 | **Fireflies.ai** | Subscription ($10–$39/user/mo) | Cloud | Yes | Web, iOS, Android, bot | Yes | Cloud bot; Illinois BIPA voiceprint class actions; AI-credit metering |
 | **Jamie** | Subscription (€25–€47/mo) | Cloud | Yes | macOS, Windows — no native mobile parity | Yes | Bot-free but still cloud; desktop-only; relatively expensive |
@@ -88,7 +88,17 @@ Market-size figures vary by firm and definition; below we prefer the higher-conf
 
 **Otter.ai — the privacy cautionary tale.** Market incumbent (35M+ users, 1B+ meetings — *note: the research's "15M+" was refuted as outdated; Otter's own 2025 release cites 35M+*). Hit with **four consolidated federal class actions** ([In re Otter.AI Privacy Litigation](https://natlawreview.com/article/take-note-new-wave-privacy-litigation-targets-ai-notetaker-otterai), N.D. Cal., MTD hearing May 20, 2026) alleging recording without all-party consent and training its AI on those recordings. This is the single strongest external validation of an on-device, no-cloud-training posture.
 
-**Granola — the privacy benchmark among cloud rivals, and the bot-free pioneer.** SOC 2 Type II, contractually blocks OpenAI/Anthropic from training on customer data, deletes audio after transcription. But it is still cloud: transcripts/notes are stored in AWS US, sign-in is required, **there is no Android**, and the Feb 2026 rebrand cut the free tier to a 25-note lifetime cap. "Bot-free is not on-device" is the precise wedge against Granola. ([Granola security](https://www.granola.ai/security))
+**Granola — the bot-free pioneer, and now the most dangerous competitor.** Re-researched July 2026; two claims previously in this doc were **wrong and have been removed** (see §10.2).
+
+- **It is no longer Apple-only — Android shipped.** Mobile capture is microphone-based room audio with an iOS Live Activity / Dynamic Island and an Android foreground notification + Quick Settings tile. This kills the "no Android" half of moat (b); what survives is the *on-device* half.
+- **The mobile apps are free, with no in-app purchase.** They are a capture surface at the top of a per-seat funnel: **Basic $0 / Business $14 / Enterprise $35+ per user per month**, no lifetime SKU. The free tier does **not** cap meetings (the old "25-note lifetime cap" is dead) — it caps *retrievable history to 30 days*. Older notes "aren't deleted, they're stored, but they aren't accessible inside Granola until you upgrade." **That is a retention paywall, and it is the single most attackable thing they do.**
+- **It is subsidized, not sustainable-by-itself.** $125M Series C at a **$1.5bn** valuation (March 2026, Index Ventures leading, Kleiner participating; ~$192M raised total). Assume mobile stays free indefinitely; do not plan on them blinking.
+- **Bot-free ≠ on-device, and this is now documented in their own words.** Their security page: *"Granola uses best-in-class transcription providers (like **Deepgram** and **Assembly**) and AI providers (like **OpenAI** and **Anthropic**)."* Desktop streams audio in real time; **iOS caches audio and uploads it after the meeting.** Transcripts persist in a US AWS VPC.
+- **They train on user data by default.** Security page: *"Granola trains on your anonymized data… You can opt out of this in your Settings."* Be precise: individual opt-out **is** free on every tier — what $35/seat Enterprise buys is a *flipped default* and org-wide enforcement. No anonymization methodology is published, and their docs concede the opt-out is prospective only ("cannot guarantee that anonymised data wasn't used before you changed the setting"). Third-party providers are contractually barred from training; that is a vendor self-report.
+- **Raw audio is not retained** — corroborated *against interest*: reviewers list the absence of audio playback as a limitation, and a competitor markets "Saved Audio" as a differentiator against Granola. But "not retained" ≠ "not transmitted," and the assurance is SOC 2 Type 2 process attestation, not a structural guarantee.
+- **Custom note templates are free on Basic.** Gating ours behind a paid tier was losing a comparison to a $0 plan; Recap now ships 1 custom template on Free, unlimited on Pro+.
+
+The wedge against Granola is unchanged in substance but sharper in wording: **bot-free is not on-device.** Their guarantees are contractual promises about a pipeline you cannot inspect; ours are structural and readable in `lib/`. ([security](https://www.granola.ai/security) · [pricing](https://www.granola.ai/pricing) · [model training](https://docs.granola.ai/help-center/consent-security-privacy/model-training) · [Series C](https://www.granola.ai/blog/series-c) · [TechCrunch](https://techcrunch.com/2026/03/25/granola-raises-125m-hits-1-5b-valuation-as-it-expands-from-meeting-notetaker-to-enterprise-ai-app/))
 
 **Fathom — the incumbent chasing the bot-free model.** On April 15, 2026 Fathom shipped bot-free capture (plus desktop/iOS roadmap) explicitly to take on Granola. ([TechCrunch](https://techcrunch.com/2026/04/15/fathom-adds-a-bot-less-meeting-mode-in-a-bid-to-take-on-granola/)) — *note: verification clarified the iOS and Windows apps were announced as "coming soon," not shipped on that date.* Still cloud, still account-required; free AI summaries now capped at 5/mo.
 
@@ -139,7 +149,7 @@ Each pillar is tied to a named competitor's documented gap.
 | # | Moat pillar | The competitor gap it exploits |
 |---|---|---|
 | **a** | **Meeting-first, not recorder-with-AI** | MacWhisper, SuperWhisper, Aiko are dictation/file utilities — no meeting flow, no corpus, no cross-meeting search ([gap analysis](https://x.com/karpathy/status/1889036923655860247)) |
-| **b** | **Truly cross-platform (iOS + Android + desktop)** | Granola/SuperWhisper/MacWhisper/Aiko all **lack Android**; Samsung is Galaxy-only; Apple is iPhone-only; Jamie is desktop-only |
+| **b** | **Truly cross-platform (iOS + Android + desktop)** | ⚠️ **WEAKENED July 2026 — Granola shipped Android.** SuperWhisper/MacWhisper/Aiko still lack it; Samsung is Galaxy-only; Apple is iPhone-only; Jamie is desktop-only. Do **not** lead with "we have Android and Granola doesn't" — that line is now false. The surviving claim is on-device ∧ cross-platform, which no one else holds |
 | **c** | **No account, ever** | Samsung *requires* a Samsung Account for Summary ([Samsung](https://www.samsung.com/sg/support/mobile-devices/how-to-use-transcribe-assist-on-the-galaxy-s24/)); every commercial SaaS rival (Otter, Granola, Fathom, Fireflies, Jamie, Plaud, Notta) requires sign-up |
 | **d** | **Runs on devices Samsung/Apple lock out** | Samsung excludes A56/A36/A26/A17 and pre-S22 entirely ([Samsung](https://www.samsung.com/us/support/answer/ANS10004613/)); Apple is iPhone-only |
 | **e** | **Lifetime, not subscription** | Otter/Granola/Fathom/Fireflies/Jamie are all recurring; productivity subs churn (~60% first-renewal retention) — a churn problem lifetime sidesteps ([Adapty](https://adapty.io/blog/productivity-app-subscription-benchmarks/)) |
@@ -180,6 +190,29 @@ Lifetime pricing normally fails for AI because **revenue happens once but infere
 **On-device compute is the structural fix.** Pushing Whisper + Gemma/Apple-FM summaries to the device makes marginal inference cost ≈ $0 — the on-device equivalent of "usage bounded at sale." This is empirically validated: **MacWhisper sustains a solo dev at ~$69 lifetime precisely because transcription is on-device** ([MacWhisper](https://www.getvoibe.com/resources/macwhisper-pricing/)). And it explains the contrast with the AppSumo lifetime-deal collapse (AppSumo revenue down ~50% over two years, confirmed directly by founder Noah Kagan): those products carried recurring *cloud/server* cost with no recurring revenue. ([Kagan/LinkedIn](https://www.linkedin.com/posts/noahkagan_appsumo-revenue-is-down-50-in-the-past-2-activity-7427012878395777024-0S4-)) Lifetime pricing fails when there's ongoing cloud cost; on-device compute removes it.
 
 The small opt-in cloud-summary path is funded by **consumable top-up packs** (25/$2.99, 100/$9.99, 500/$39.99), an established pattern that pairs cleanly with a no-subscription base and segments by willingness-to-pay without gating core functionality.
+
+#### 6.4.1 "How do we compete with free?" — the cost-to-serve gap (July 2026)
+
+Granola's mobile app is free. The instinct is to match it. The numbers say we should **out-give them instead**, because a free Granola user costs Granola real money and a free Recap user costs us **nothing**.
+
+**Their cost to serve a free user.** Every Granola meeting hits cloud ASR (Deepgram/Assembly) plus a cloud LLM (OpenAI/Anthropic). At streaming-ASR list rates (~$0.0043–$0.0077/min), a single 1-hour meeting costs **~$0.26–$0.46 in transcription alone**, before summarization. A free user doing 20 hour-long meetings a month costs them on the order of **$6/user/month**, forever, with no revenue attached. That is what the $125M Series C is for.
+
+**Our cost to serve a free user.** Recording, Whisper transcription and Gemma/Apple-FM summaries all run **on the handset**: marginal cost **$0.00**. Our only variable cost is the *opt-in* cloud summary. At Gemini 3.1 Flash Lite list pricing (**$0.25/M input, $1.50/M output** — [pricing](https://devtk.ai/en/models/gemini-3-1-flash-lite/)), a 25-minute meeting is ~6k input + ~2k output tokens ⇒ **~$0.005 per cloud summary**. Half a cent.
+
+| | Granola free user | Recap free user |
+|---|---|---|
+| Transcription | Cloud, ~$0.26–0.46/hr-meeting | **On-device, $0.00** |
+| Summarization | Cloud, per meeting | **On-device, $0.00** |
+| Cloud summary (opt-in) | n/a — always cloud | ~$0.005 each |
+| **Cost to serve, 20 meetings/mo** | **~$6.00** | **$0.00**, or ~$0.10 if *every* summary is sent to cloud |
+
+**This is ~60× cheaper to serve, and it dictates the strategy:**
+
+1. **Give away, without limit, everything that costs $0.** Unlimited recording, unlimited transcription, unlimited on-device summaries, and — the direct counter to their 30-day retention paywall — **unlimited history, forever, on Free.** Their notes live on someone else's server and get locked; ours live on your phone and never expire. They *cannot* match this on a free tier without eating storage and egress; we get it for free because storage is local. **This should be the #1 line on the Free tier, not a footnote.**
+2. **Be generous, but metered, on the one thing that costs money.** Free's 5 cloud summaries/mo is stingy against a rival offering unlimited cloud AI notes for $0. Raising Free to ~25–50/mo costs at most **$0.13–$0.25 per fully-active free user per month**, and most free users never leave the on-device default. One $49 Pro sale funds **~9,800** cloud summaries, so paid conversion subsidizes free generosity comfortably.
+3. **Never promise *unlimited* cloud.** It is the only line item with real marginal cost and we have no venture subsidy to burn. The proxy's `DAILY_BUDGET_USD` guard already caps the downside — but a cap that fires returns 503 to *everyone*, so an unlimited promise we can't honour is worse than a generous number we can.
+
+**The strategic linchpin — and the honest risk.** Granola's free tier gives unlimited **cloud** AI notes. Ours gives unlimited **on-device** AI notes. We only win that comparison if Gemma 4 E2B genuinely produces good summaries on a real handset. **That is not yet verified** (see the summarizer pipeline work, July 2026: all quality evaluation to date used frontier models standing in for a 2B). If on-device summary quality is thin, no amount of free cloud quota rescues the free tier — we would just be paying cash to paper over the core product bet. *The business question and the engineering question are the same question.*
 
 ---
 
@@ -314,5 +347,11 @@ Annualized individual subscription spend, verified against official pricing page
 - Otter "15M users" → **35M+** (Otter's own 2025 release).
 - SuperWhisper lifetime "$849 hike" → **refuted** (single competitor blog); actual lifetime $249.99.
 - Granola "Individual ~$168/yr" → no Individual plan; Business $14/mo. Jamie "Pro €47/€564" → €39/€470.
+
+**Refuted in the July 2026 Granola re-research (both were load-bearing — read this before repeating an old pitch):**
+- ~~"Granola has **no Android**"~~ → **FALSE. Granola shipped Android** (foreground "Taking notes" notification + Quick Settings tile). Moat (b) is weakened accordingly; never pitch "we have Android, they don't."
+- ~~"Granola's free tier is capped at **25 notes lifetime**"~~ → **FALSE.** Recording on Basic is unlimited; the cap is on *retrievable history* (30-day window, older notes stored-but-locked). This is a better attack surface than the one it replaces — it's a **retention paywall on notes you already made**.
+- Granola mobile capture is **microphone room audio**, not a bot and not a system-audio tap. Granola concedes "phones don't let apps capture audio from other apps," so Zoom/Teams capture is **desktop-only for them too**. Recap is *not* at a mobile-capture disadvantage — the constraint is universal. Do not build a roadmap item to "close" this gap; it cannot be closed by anyone.
+- Lower confidence (secondary/aggregator sources only; primaries never fetched): an April 2026 news cycle over share-links making notes "public by default"; a reported hard-coded API key in a TestFlight build exposing transcripts (scope later retracted); a local-cache episode Granola answered by encrypting the local DB. Recording disclosure is documented but **off by default and left to the user** — live exposure in all-party-consent states and the EU. Treat as directional, not citable.
 - "OmniFocus/Typinator $49.99" price anchors → incorrect; Things 3 ($49.99) and CleanShot ($29) are the verified anchors.
 - Fathom iOS/Windows apps "launched April 15, 2026" → announced as coming soon, not shipped.

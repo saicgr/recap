@@ -3077,6 +3077,20 @@ class $SegmentEmbeddingsTable extends SegmentEmbeddings
   late final GeneratedColumn<Uint8List> vec = GeneratedColumn<Uint8List>(
       'vec', aliasedName, false,
       type: DriftSqlType.blob, requiredDuringInsert: true);
+  static const VerificationMeta _dimMeta = const VerificationMeta('dim');
+  @override
+  late final GeneratedColumn<int> dim = GeneratedColumn<int>(
+      'dim', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(384));
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+      'model', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('all-MiniLM-L6-v2'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -3084,7 +3098,8 @@ class $SegmentEmbeddingsTable extends SegmentEmbeddings
       'created_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns => [segmentId, meetingId, vec, createdAt];
+  List<GeneratedColumn> get $columns =>
+      [segmentId, meetingId, vec, dim, model, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3113,6 +3128,14 @@ class $SegmentEmbeddingsTable extends SegmentEmbeddings
     } else if (isInserting) {
       context.missing(_vecMeta);
     }
+    if (data.containsKey('dim')) {
+      context.handle(
+          _dimMeta, dim.isAcceptableOrUnknown(data['dim']!, _dimMeta));
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+          _modelMeta, model.isAcceptableOrUnknown(data['model']!, _modelMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -3134,6 +3157,10 @@ class $SegmentEmbeddingsTable extends SegmentEmbeddings
           .read(DriftSqlType.string, data['${effectivePrefix}meeting_id'])!,
       vec: attachedDatabase.typeMapping
           .read(DriftSqlType.blob, data['${effectivePrefix}vec'])!,
+      dim: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}dim'])!,
+      model: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}model'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -3150,11 +3177,22 @@ class SegmentEmbedding extends DataClass
   final String segmentId;
   final String meetingId;
   final Uint8List vec;
+
+  /// Vector width, and the model that produced it.
+  ///
+  /// Without these, swapping the embedding model silently mixes two different
+  /// vector spaces in one index: cosine similarity between them is meaningless,
+  /// and search quietly returns nonsense with no error anywhere. The retriever
+  /// filters on both.
+  final int dim;
+  final String model;
   final DateTime createdAt;
   const SegmentEmbedding(
       {required this.segmentId,
       required this.meetingId,
       required this.vec,
+      required this.dim,
+      required this.model,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3162,6 +3200,8 @@ class SegmentEmbedding extends DataClass
     map['segment_id'] = Variable<String>(segmentId);
     map['meeting_id'] = Variable<String>(meetingId);
     map['vec'] = Variable<Uint8List>(vec);
+    map['dim'] = Variable<int>(dim);
+    map['model'] = Variable<String>(model);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3171,6 +3211,8 @@ class SegmentEmbedding extends DataClass
       segmentId: Value(segmentId),
       meetingId: Value(meetingId),
       vec: Value(vec),
+      dim: Value(dim),
+      model: Value(model),
       createdAt: Value(createdAt),
     );
   }
@@ -3182,6 +3224,8 @@ class SegmentEmbedding extends DataClass
       segmentId: serializer.fromJson<String>(json['segmentId']),
       meetingId: serializer.fromJson<String>(json['meetingId']),
       vec: serializer.fromJson<Uint8List>(json['vec']),
+      dim: serializer.fromJson<int>(json['dim']),
+      model: serializer.fromJson<String>(json['model']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3192,6 +3236,8 @@ class SegmentEmbedding extends DataClass
       'segmentId': serializer.toJson<String>(segmentId),
       'meetingId': serializer.toJson<String>(meetingId),
       'vec': serializer.toJson<Uint8List>(vec),
+      'dim': serializer.toJson<int>(dim),
+      'model': serializer.toJson<String>(model),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3200,11 +3246,15 @@ class SegmentEmbedding extends DataClass
           {String? segmentId,
           String? meetingId,
           Uint8List? vec,
+          int? dim,
+          String? model,
           DateTime? createdAt}) =>
       SegmentEmbedding(
         segmentId: segmentId ?? this.segmentId,
         meetingId: meetingId ?? this.meetingId,
         vec: vec ?? this.vec,
+        dim: dim ?? this.dim,
+        model: model ?? this.model,
         createdAt: createdAt ?? this.createdAt,
       );
   SegmentEmbedding copyWithCompanion(SegmentEmbeddingsCompanion data) {
@@ -3212,6 +3262,8 @@ class SegmentEmbedding extends DataClass
       segmentId: data.segmentId.present ? data.segmentId.value : this.segmentId,
       meetingId: data.meetingId.present ? data.meetingId.value : this.meetingId,
       vec: data.vec.present ? data.vec.value : this.vec,
+      dim: data.dim.present ? data.dim.value : this.dim,
+      model: data.model.present ? data.model.value : this.model,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3222,14 +3274,16 @@ class SegmentEmbedding extends DataClass
           ..write('segmentId: $segmentId, ')
           ..write('meetingId: $meetingId, ')
           ..write('vec: $vec, ')
+          ..write('dim: $dim, ')
+          ..write('model: $model, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      segmentId, meetingId, $driftBlobEquality.hash(vec), createdAt);
+  int get hashCode => Object.hash(segmentId, meetingId,
+      $driftBlobEquality.hash(vec), dim, model, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3237,6 +3291,8 @@ class SegmentEmbedding extends DataClass
           other.segmentId == this.segmentId &&
           other.meetingId == this.meetingId &&
           $driftBlobEquality.equals(other.vec, this.vec) &&
+          other.dim == this.dim &&
+          other.model == this.model &&
           other.createdAt == this.createdAt);
 }
 
@@ -3244,12 +3300,16 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
   final Value<String> segmentId;
   final Value<String> meetingId;
   final Value<Uint8List> vec;
+  final Value<int> dim;
+  final Value<String> model;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const SegmentEmbeddingsCompanion({
     this.segmentId = const Value.absent(),
     this.meetingId = const Value.absent(),
     this.vec = const Value.absent(),
+    this.dim = const Value.absent(),
+    this.model = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3257,6 +3317,8 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
     required String segmentId,
     required String meetingId,
     required Uint8List vec,
+    this.dim = const Value.absent(),
+    this.model = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   })  : segmentId = Value(segmentId),
@@ -3267,6 +3329,8 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
     Expression<String>? segmentId,
     Expression<String>? meetingId,
     Expression<Uint8List>? vec,
+    Expression<int>? dim,
+    Expression<String>? model,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -3274,6 +3338,8 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
       if (segmentId != null) 'segment_id': segmentId,
       if (meetingId != null) 'meeting_id': meetingId,
       if (vec != null) 'vec': vec,
+      if (dim != null) 'dim': dim,
+      if (model != null) 'model': model,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3283,12 +3349,16 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
       {Value<String>? segmentId,
       Value<String>? meetingId,
       Value<Uint8List>? vec,
+      Value<int>? dim,
+      Value<String>? model,
       Value<DateTime>? createdAt,
       Value<int>? rowid}) {
     return SegmentEmbeddingsCompanion(
       segmentId: segmentId ?? this.segmentId,
       meetingId: meetingId ?? this.meetingId,
       vec: vec ?? this.vec,
+      dim: dim ?? this.dim,
+      model: model ?? this.model,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3306,6 +3376,12 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
     if (vec.present) {
       map['vec'] = Variable<Uint8List>(vec.value);
     }
+    if (dim.present) {
+      map['dim'] = Variable<int>(dim.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3321,6 +3397,8 @@ class SegmentEmbeddingsCompanion extends UpdateCompanion<SegmentEmbedding> {
           ..write('segmentId: $segmentId, ')
           ..write('meetingId: $meetingId, ')
           ..write('vec: $vec, ')
+          ..write('dim: $dim, ')
+          ..write('model: $model, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -8651,6 +8729,8 @@ typedef $$SegmentEmbeddingsTableCreateCompanionBuilder
   required String segmentId,
   required String meetingId,
   required Uint8List vec,
+  Value<int> dim,
+  Value<String> model,
   required DateTime createdAt,
   Value<int> rowid,
 });
@@ -8659,6 +8739,8 @@ typedef $$SegmentEmbeddingsTableUpdateCompanionBuilder
   Value<String> segmentId,
   Value<String> meetingId,
   Value<Uint8List> vec,
+  Value<int> dim,
+  Value<String> model,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -8710,6 +8792,12 @@ class $$SegmentEmbeddingsTableFilterComposer
   });
   ColumnFilters<Uint8List> get vec => $composableBuilder(
       column: $table.vec, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get dim => $composableBuilder(
+      column: $table.dim, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get model => $composableBuilder(
+      column: $table.model, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -8767,6 +8855,12 @@ class $$SegmentEmbeddingsTableOrderingComposer
   ColumnOrderings<Uint8List> get vec => $composableBuilder(
       column: $table.vec, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get dim => $composableBuilder(
+      column: $table.dim, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get model => $composableBuilder(
+      column: $table.model, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -8822,6 +8916,12 @@ class $$SegmentEmbeddingsTableAnnotationComposer
   });
   GeneratedColumn<Uint8List> get vec =>
       $composableBuilder(column: $table.vec, builder: (column) => column);
+
+  GeneratedColumn<int> get dim =>
+      $composableBuilder(column: $table.dim, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -8896,6 +8996,8 @@ class $$SegmentEmbeddingsTableTableManager extends RootTableManager<
             Value<String> segmentId = const Value.absent(),
             Value<String> meetingId = const Value.absent(),
             Value<Uint8List> vec = const Value.absent(),
+            Value<int> dim = const Value.absent(),
+            Value<String> model = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -8903,6 +9005,8 @@ class $$SegmentEmbeddingsTableTableManager extends RootTableManager<
             segmentId: segmentId,
             meetingId: meetingId,
             vec: vec,
+            dim: dim,
+            model: model,
             createdAt: createdAt,
             rowid: rowid,
           ),
@@ -8910,6 +9014,8 @@ class $$SegmentEmbeddingsTableTableManager extends RootTableManager<
             required String segmentId,
             required String meetingId,
             required Uint8List vec,
+            Value<int> dim = const Value.absent(),
+            Value<String> model = const Value.absent(),
             required DateTime createdAt,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -8917,6 +9023,8 @@ class $$SegmentEmbeddingsTableTableManager extends RootTableManager<
             segmentId: segmentId,
             meetingId: meetingId,
             vec: vec,
+            dim: dim,
+            model: model,
             createdAt: createdAt,
             rowid: rowid,
           ),

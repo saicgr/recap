@@ -39,6 +39,9 @@ import 'services/calendar_matcher.dart';
 import 'services/clip_studio_service.dart';
 import 'services/folder_service.dart';
 import 'services/embedding_service.dart';
+import 'services/rag/chat_service.dart';
+import 'services/rag/embedding_indexer.dart';
+import 'services/rag/segment_retriever.dart';
 import 'services/insights_service.dart';
 import 'services/mcp_export_service.dart';
 import 'services/notification_service.dart';
@@ -78,6 +81,9 @@ late final PdfExporter pdfExporter;
 late final RecallBuffer recallBuffer;
 late final CalendarMatcher calendarMatcher;
 late final EmbeddingService embeddings;
+late final EmbeddingIndexer embeddingIndexer;
+late final SegmentRetriever segmentRetriever;
+late final ChatService chatService;
 late final ClipStudioService clipStudio;
 late final McpExportService mcpExport;
 late final VadService vad;
@@ -203,6 +209,20 @@ Future<void> main() async {
   recallBuffer = RecallBuffer();
   calendarMatcher = CalendarMatcher();
   embeddings = EmbeddingService();
+  // RAG: the SegmentEmbeddings table has existed since the first commit and has
+  // NEVER been written to, so "search over embeddings" and "chat over your
+  // notes" had no index to search. These build and query it.
+  embeddingIndexer = EmbeddingIndexer(db: db, embeddings: embeddings);
+  segmentRetriever = SegmentRetriever(db: db, embeddings: embeddings);
+  chatService = ChatService(
+    db: db,
+    retriever: segmentRetriever,
+    // On-device only: chat is free, offline, and works on the Privacy tier.
+    // Cloud chat is a later opt-in with its OWN meter — it must never spend
+    // cloud-summary credits.
+    backends: [ollamaBackend, appleFmBackend, gemmaBackend],
+    tierProvider: () => entitlements.currentTier,
+  );
   clipStudio = ClipStudioService();
   mcpExport = McpExportService();
   vad = VadService();

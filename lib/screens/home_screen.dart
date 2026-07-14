@@ -12,6 +12,7 @@ import '../ui/components.dart';
 import '../ui/theme.dart';
 import '../ui/type.dart';
 import '../widgets/folder_drawer.dart';
+import 'chat_screen.dart';
 import 'import_screen.dart';
 import 'paywall_screen.dart';
 import 'recording_screen.dart';
@@ -98,6 +99,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _openImport() => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ImportScreen()),
+      );
+
+  /// Chat over the whole corpus. On-device, so every tier gets it — including
+  /// Privacy, where Granola's cloud-only chat simply cannot go.
+  void _openChat() => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ChatScreen()),
       );
 
   void _openSearch() {
@@ -361,6 +369,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
           trailing: [
+            IconBtn(icon: Icons.auto_awesome_outlined, onPressed: _openChat),
+            const SizedBox(width: 4),
             IconBtn(icon: Icons.search, onPressed: _openSearch),
             const SizedBox(width: 4),
             IconBtn(icon: Icons.file_upload_outlined, onPressed: _openImport),
