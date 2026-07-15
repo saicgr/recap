@@ -67,8 +67,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Settings',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Settings',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -158,22 +160,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Your plan',
-                        style: RT.caption.copyWith(color: t.textMuted)),
-                    Row(children: [
-                      Icon(Icons.check_circle, size: 14, color: t.accent),
-                      const SizedBox(width: 4),
-                      Text('Active',
-                          style: RT.caption.copyWith(color: t.accent)),
-                    ]),
+                    Text(
+                      'Your plan',
+                      style: RT.caption.copyWith(color: t.textMuted),
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, size: 14, color: t.accent),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Active',
+                          style: RT.caption.copyWith(color: t.accent),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Recap ${_capitalize(tier.name)}',
-                        style: RT.title.copyWith(color: t.textPrimary)),
+                    Text(
+                      'Recap ${_capitalize(tier.name)}',
+                      style: RT.title.copyWith(color: t.textPrimary),
+                    ),
                     const SizedBox(width: 10),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
@@ -203,30 +213,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                Row(children: [
-                  Btn(
-                    label: 'Upgrade',
-                    variant: BtnVariant.accentSoft,
-                    size: BtnSize.sm,
-                    trailing: Icons.arrow_forward,
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PaywallScreen()),
-                    ),
-                  ),
-                  if (tier.topUpsEnabled) ...[
-                    const SizedBox(width: 8),
+                Row(
+                  children: [
                     Btn(
-                      label: 'Top up cloud',
-                      variant: BtnVariant.ghost,
+                      label: 'Upgrade',
+                      variant: BtnVariant.accentSoft,
                       size: BtnSize.sm,
+                      trailing: Icons.arrow_forward,
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const TopUpScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const PaywallScreen(),
+                        ),
                       ),
                     ),
+                    if (tier.topUpsEnabled) ...[
+                      const SizedBox(width: 8),
+                      Btn(
+                        label: 'Top up cloud',
+                        variant: BtnVariant.ghost,
+                        size: BtnSize.sm,
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TopUpScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ]),
+                ),
               ],
             ),
           ),
@@ -250,8 +266,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 2),
-        Text(label.toUpperCase(),
-            style: RT.caption.copyWith(color: t.textMuted)),
+        Text(
+          label.toUpperCase(),
+          style: RT.caption.copyWith(color: t.textMuted),
+        ),
       ],
     );
   }
@@ -294,8 +312,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 )
               : gemmaDownloader.status == GemmaDownloadStatus.failed
-                  ? Icon(Icons.refresh, color: t.recordRed, size: 18)
-                  : Icon(Icons.chevron_right, color: t.textMuted, size: 18),
+              ? Icon(Icons.refresh, color: t.recordRed, size: 18)
+              : Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: _onGemmaTap,
         ),
         if (tier == Tier.power)
@@ -343,8 +361,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 )
               : transcriber.status == TranscriberStatus.failed
-                  ? Icon(Icons.refresh, color: t.recordRed, size: 18)
-                  : Icon(Icons.chevron_right, color: t.textMuted, size: 18),
+              ? Icon(Icons.refresh, color: t.recordRed, size: 18)
+              : Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: _pickModel,
         ),
         SettingsRow(
@@ -368,8 +386,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 )
               : diarizer.status == SherpaDiarizerStatus.failed
-                  ? Icon(Icons.refresh, color: t.recordRed, size: 18)
-                  : Icon(Icons.chevron_right, color: t.textMuted, size: 18),
+              ? Icon(Icons.refresh, color: t.recordRed, size: 18)
+              : Icon(Icons.chevron_right, color: t.textMuted, size: 18),
           onTap: _onSpeakerModelTap,
         ),
         SettingsRow(
@@ -571,17 +589,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: Text('Debug: switch tier',
-                    style: RT.title.copyWith(color: t.textPrimary)),
+                child: Text(
+                  'Debug: switch tier',
+                  style: RT.title.copyWith(color: t.textPrimary),
+                ),
               ),
               for (final tier in Tier.values)
                 ListTile(
                   onTap: () => Navigator.pop(ctx, tier),
-                  title: Text(_capitalize(tier.name),
-                      style: RT.body.copyWith(
-                          color: t.textPrimary, fontWeight: FontWeight.w500)),
-                  subtitle: Text(_tierDesc(tier),
-                      style: RT.bodySm.copyWith(color: t.textMuted)),
+                  title: Text(
+                    _capitalize(tier.name),
+                    style: RT.body.copyWith(
+                      color: t.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    _tierDesc(tier),
+                    style: RT.bodySm.copyWith(color: t.textMuted),
+                  ),
                   trailing: entitlements.currentTier == tier
                       ? Icon(Icons.check, color: t.accent)
                       : null,
@@ -602,9 +628,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // here is the cloud-summary allowance.
     final parts = <String>['\$${tier.priceUsd}', 'unlimited recording'];
     if (tier.cloudSummariesEnabled) {
-      parts.add(tier.byok
-          ? 'BYOK cloud'
-          : '${tier.cloudSummariesPerMonth ?? 0} cloud/mo');
+      parts.add(
+        tier.byok
+            ? 'BYOK cloud'
+            : '${tier.cloudSummariesPerMonth ?? 0} cloud/mo',
+      );
     } else {
       parts.add('no cloud');
     }
@@ -625,10 +653,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ─── Bottom-sheet pickers ─────────────────────────────────────────────────
 
   String _summaryModeLabel(String raw) => switch (raw) {
-        'cloud' => 'Cloud (Gemini)',
-        'onDevice' => 'On-device',
-        _ => 'Auto',
-      };
+    'cloud' => 'Cloud (Gemini)',
+    'onDevice' => 'On-device',
+    _ => 'Auto',
+  };
 
   String _modelStatusLabel() {
     final model = transcriber.model.modelName;
@@ -658,8 +686,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final p = diarizer.downloadProgress;
         final pct = p == null ? '' : ' · ${(p * 100).toStringAsFixed(0)}%';
         final received = _formatBytes(diarizer.bytesReceived);
-        final total =
-            diarizer.bytesTotal > 0 ? _formatBytes(diarizer.bytesTotal) : '~';
+        final total = diarizer.bytesTotal > 0
+            ? _formatBytes(diarizer.bytesTotal)
+            : '~';
         return 'Downloading$pct · $received / $total';
       case SherpaDiarizerStatus.ready:
         return 'Pyannote + WeSpeaker · ready';
@@ -675,8 +704,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _gemmaStatusLabel() {
     final variant = entitlements.currentTier.gemmaVariant;
-    final sizeGb =
-        (variant.approxBytes / (1000 * 1000 * 1000)).toStringAsFixed(1);
+    final sizeGb = (variant.approxBytes / (1000 * 1000 * 1000)).toStringAsFixed(
+      1,
+    );
     switch (gemmaDownloader.status) {
       case GemmaDownloadStatus.unknown:
         return 'Checking…';
@@ -692,12 +722,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _onGemmaTap() {
+  Future<void> _onGemmaTap() async {
     if (gemmaDownloader.status == GemmaDownloadStatus.downloading) return;
-    if (gemmaDownloader.status == GemmaDownloadStatus.installed) {
-      // Future: model-management sheet (delete, switch URL). For now, no-op.
-      return;
-    }
+    final t = RecapThemeScope.of(context);
+    final builtinAvailable = await builtinAiBackend.isAvailable();
+    if (!mounted) return;
+    final current = settings.effectiveGemmaVariant(
+      entitlements.currentTier.gemmaVariant,
+    );
+    final picked = await showModalBottomSheet<GemmaVariant>(
+      context: context,
+      backgroundColor: t.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Text(
+                  'On-device summary model',
+                  style: RT.title.copyWith(color: t.textPrimary),
+                ),
+              ),
+              if (builtinAvailable)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Text(
+                    'Your device can use Gemini Nano / Apple Intelligence — '
+                    'used automatically, no download. Pick a Gemma below as the '
+                    'offline fallback.',
+                    style: RT.body.copyWith(color: t.textMuted),
+                  ),
+                ),
+              for (final v in GemmaVariant.values)
+                ListTile(
+                  onTap: () => Navigator.pop(ctx, v),
+                  title: Text(
+                    v.displayName,
+                    style: RT.body.copyWith(color: t.textPrimary),
+                  ),
+                  subtitle: Text(
+                    v == GemmaVariant.e2b
+                        ? '~2.4 GB · runs on almost any phone'
+                        : '~4.3 GB · sharper summaries, best for long meetings; '
+                              'needs ~6 GB RAM',
+                    style: RT.body.copyWith(color: t.textMuted),
+                  ),
+                  trailing: current == v
+                      ? Icon(Icons.check, color: t.accent, size: 18)
+                      : null,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await settings.setGemmaVariant(picked);
+    gemmaDownloader.updateUrl(picked.defaultUrl);
     gemmaDownloader.warmUp();
   }
 
@@ -724,7 +812,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           (
             WhisperModel.tinyEn,
             'Tiny · English',
-            '~75 MB · fastest, lower accuracy'
+            '~75 MB · fastest, lower accuracy',
           ),
           (WhisperModel.baseEn, 'Base · English', '~140 MB · balanced'),
           (WhisperModel.smallEn, 'Small · English', '~466 MB · most accurate'),
@@ -738,17 +826,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                  child: Text('Transcription model',
-                      style: RT.title.copyWith(color: t.textPrimary)),
+                  child: Text(
+                    'Transcription model',
+                    style: RT.title.copyWith(color: t.textPrimary),
+                  ),
                 ),
                 for (final (model, name, sub) in options)
                   ListTile(
                     onTap: () => Navigator.pop(ctx, model),
-                    title: Text(name,
-                        style: RT.body.copyWith(
-                            color: t.textPrimary, fontWeight: FontWeight.w500)),
-                    subtitle: Text(sub,
-                        style: RT.bodySm.copyWith(color: t.textMuted)),
+                    title: Text(
+                      name,
+                      style: RT.body.copyWith(
+                        color: t.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      sub,
+                      style: RT.bodySm.copyWith(color: t.textMuted),
+                    ),
                     trailing: transcriber.model == model
                         ? Icon(Icons.check, color: t.accent)
                         : null,
@@ -788,8 +884,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               for (final mode in ['auto', 'onDevice', 'cloud'])
                 ListTile(
-                  title: Text(_summaryModeLabel(mode),
-                      style: RT.body.copyWith(color: t.textPrimary)),
+                  title: Text(
+                    _summaryModeLabel(mode),
+                    style: RT.body.copyWith(color: t.textPrimary),
+                  ),
                   trailing: settings.summaryModeRaw == mode
                       ? Icon(Icons.check, color: t.accent)
                       : null,
@@ -846,28 +944,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.surface,
-        title: Text('Cloudflare Worker URL',
-            style: RT.subtitle.copyWith(color: t.textPrimary)),
+        title: Text(
+          'Cloudflare Worker URL',
+          style: RT.subtitle.copyWith(color: t.textPrimary),
+        ),
         content: TextField(
           controller: controller,
           style: TextStyle(color: t.textPrimary),
           decoration: InputDecoration(
             hintText: 'https://…',
             hintStyle: TextStyle(color: t.textMuted),
-            enabledBorder:
-                UnderlineInputBorder(borderSide: BorderSide(color: t.border)),
-            focusedBorder:
-                UnderlineInputBorder(borderSide: BorderSide(color: t.accent)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: t.border),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: t.accent),
+            ),
           ),
           keyboardType: TextInputType.url,
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: TextStyle(color: t.textMuted))),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: t.textMuted)),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: Text('Save', style: TextStyle(color: t.accent))),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text('Save', style: TextStyle(color: t.accent)),
+          ),
         ],
       ),
     );
@@ -930,8 +1034,10 @@ class _TweaksSheetState extends State<_TweaksSheet> {
               padding: const EdgeInsets.fromLTRB(4, 8, 0, 16),
               child: Row(
                 children: [
-                  Text('Tweaks',
-                      style: RT.title.copyWith(color: t.textPrimary)),
+                  Text(
+                    'Tweaks',
+                    style: RT.title.copyWith(color: t.textPrimary),
+                  ),
                   const Spacer(),
                   IconBtn(
                     icon: Icons.close,
@@ -942,11 +1048,13 @@ class _TweaksSheetState extends State<_TweaksSheet> {
             ),
             _section(t, 'THEME'),
             const SizedBox(height: 8),
-            Text('Mode',
-                style: RT.body.copyWith(
-                  color: t.textPrimary,
-                  fontWeight: FontWeight.w500,
-                )),
+            Text(
+              'Mode',
+              style: RT.body.copyWith(
+                color: t.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 8),
             Segmented<RecapMode>(
               value: themeController.mode,
@@ -959,11 +1067,13 @@ class _TweaksSheetState extends State<_TweaksSheet> {
             const SizedBox(height: 20),
             _section(t, 'BUTTONS'),
             const SizedBox(height: 8),
-            Text('Style',
-                style: RT.body.copyWith(
-                  color: t.textPrimary,
-                  fontWeight: FontWeight.w500,
-                )),
+            Text(
+              'Style',
+              style: RT.body.copyWith(
+                color: t.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 8),
             Segmented<RecapButtonStyle>(
               value: themeController.buttonStyle,
@@ -976,11 +1086,13 @@ class _TweaksSheetState extends State<_TweaksSheet> {
             const SizedBox(height: 20),
             _section(t, 'ACCENT'),
             const SizedBox(height: 8),
-            Text('Color',
-                style: RT.body.copyWith(
-                  color: t.textPrimary,
-                  fontWeight: FontWeight.w500,
-                )),
+            Text(
+              'Color',
+              style: RT.body.copyWith(
+                color: t.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 8),
             AccentSwatches(
               value: themeController.accent,

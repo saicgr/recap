@@ -75,6 +75,36 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The Gemma variant the user explicitly picked in the model picker, or null
+  /// to follow the tier default ([Tier.gemmaVariant]). Lets a user opt UP to E4B
+  /// for sharper long-meeting summaries even on a tier that defaults to E2B, or
+  /// stay on E2B to save space/RAM.
+  String? get gemmaVariantChoice => _prefs.getString('gemmaVariantChoice');
+
+  /// Persist a variant choice: records the id AND points the download URL at it
+  /// (unless the user has a manual custom URL override, which still wins).
+  Future<void> setGemmaVariant(GemmaVariant variant) async {
+    await _prefs.setString('gemmaVariantChoice', variant.modelId);
+    // Only set the URL when there is no manual override, so we don't clobber a
+    // power user's self-hosted CDN.
+    final manual = _prefs.getString('gemmaModelUrl');
+    if (manual == null || manual.isEmpty) {
+      await _prefs.setString('gemmaModelUrl', variant.defaultUrl);
+    }
+    notifyListeners();
+  }
+
+  /// Resolve the effective variant: explicit picker choice, else the tier
+  /// default. Callers pass the tier default so this stays UI-agnostic.
+  GemmaVariant effectiveGemmaVariant(GemmaVariant tierDefault) {
+    final id = gemmaVariantChoice;
+    if (id == null) return tierDefault;
+    for (final v in GemmaVariant.values) {
+      if (v.modelId == id) return v;
+    }
+    return tierDefault;
+  }
+
   // ---- Microphone ----
 
   /// The input the user explicitly pinned, if any. null = let MicPolicy choose

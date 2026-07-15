@@ -23,7 +23,7 @@ import 'services/iap_service.dart';
 import 'services/live_captions.dart';
 import 'services/recorder.dart';
 import 'services/settings.dart';
-import 'services/summarizer/apple_foundation_models_backend.dart';
+import 'services/summarizer/builtin_ai_backend.dart';
 import 'services/summarizer/byok_backend.dart';
 import 'services/cloud/install_identity.dart';
 import 'services/summarizer/cloud_backend.dart';
@@ -100,7 +100,7 @@ late final VadService vad;
 late final WakeWordService wakeWord;
 late final FolderService folderService;
 late final List<Translator> translatorChain;
-late final AppleFoundationModelsBackend appleFmBackend;
+late final BuiltinAiBackend builtinAiBackend;
 late final InstallIdentity installIdentity;
 late final CloudBackend cloudBackend;
 late final ByokBackend byokBackend;
@@ -147,13 +147,14 @@ Future<void> main() async {
   );
   themeController.addListener(() async {
     await settings.setThemeMode(
-        themeController.mode == RecapMode.dark ? 'dark' : 'light');
+      themeController.mode == RecapMode.dark ? 'dark' : 'light',
+    );
     await settings.setButtonStyle(
-        themeController.buttonStyle == RecapButtonStyle.glass
-            ? 'glass'
-            : 'flat');
-    await settings
-        .setAccentIndex(accentOptions.indexOf(themeController.accent));
+      themeController.buttonStyle == RecapButtonStyle.glass ? 'glass' : 'flat',
+    );
+    await settings.setAccentIndex(
+      accentOptions.indexOf(themeController.accent),
+    );
   });
 
   // ── Service objects (constructors only — no I/O yet) ─────────────────────
@@ -181,7 +182,7 @@ Future<void> main() async {
   unawaited(transcriber.setModel(ceilingModel));
   liveCaptions = LiveCaptionsService(transcriber: transcriber);
   backgroundRecorder = BackgroundRecorder();
-  appleFmBackend = AppleFoundationModelsBackend();
+  builtinAiBackend = BuiltinAiBackend();
   gemmaBackend = GemmaBackend();
   gemmaDownloader = GemmaDownloader(
     backend: gemmaBackend,
@@ -213,7 +214,7 @@ Future<void> main() async {
   );
   summaryRouter = SummaryRouter(
     entitlements: entitlements,
-    appleFm: appleFmBackend,
+    builtinAi: builtinAiBackend,
     gemma: gemmaBackend,
     cloud: cloudBackend,
     byok: byokBackend,
@@ -247,7 +248,7 @@ Future<void> main() async {
     // On-device only: chat is free, offline, and works on the Privacy tier.
     // Cloud chat is a later opt-in with its OWN meter — it must never spend
     // cloud-summary credits.
-    backends: [ollamaBackend, appleFmBackend, gemmaBackend],
+    backends: [ollamaBackend, builtinAiBackend, gemmaBackend],
     tierProvider: () => entitlements.currentTier,
   );
 
@@ -383,21 +384,26 @@ class RecapApp extends StatelessWidget {
         animation: themeController,
         builder: (ctx, _) {
           final t = themeController.theme;
-          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness:
-                t.mode == RecapMode.dark ? Brightness.light : Brightness.dark,
-            systemNavigationBarColor: t.bg,
-            systemNavigationBarIconBrightness:
-                t.mode == RecapMode.dark ? Brightness.light : Brightness.dark,
-          ));
+          SystemChrome.setSystemUIOverlayStyle(
+            SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: t.mode == RecapMode.dark
+                  ? Brightness.light
+                  : Brightness.dark,
+              systemNavigationBarColor: t.bg,
+              systemNavigationBarIconBrightness: t.mode == RecapMode.dark
+                  ? Brightness.light
+                  : Brightness.dark,
+            ),
+          );
           return MaterialApp(
             title: 'Recap',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               useMaterial3: true,
-              brightness:
-                  t.mode == RecapMode.dark ? Brightness.dark : Brightness.light,
+              brightness: t.mode == RecapMode.dark
+                  ? Brightness.dark
+                  : Brightness.light,
               scaffoldBackgroundColor: t.bg,
               canvasColor: t.bg,
               colorScheme: t.mode == RecapMode.dark

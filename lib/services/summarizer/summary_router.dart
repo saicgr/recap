@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../billing/entitlement_service.dart';
 import '../../billing/persona.dart';
 import '../../billing/tier.dart';
-import 'apple_foundation_models_backend.dart';
+import 'builtin_ai_backend.dart';
 import 'byok_backend.dart';
 import 'cloud_backend.dart';
 import 'gemma_backend.dart';
@@ -12,7 +12,7 @@ import 'summary_backend.dart';
 import 'summary_pipeline.dart';
 import 'summary_types.dart';
 
-enum SummaryRoute { ollama, appleFoundationModels, gemma, cloud, byok }
+enum SummaryRoute { ollama, builtinAi, gemma, cloud, byok }
 
 /// Whether the UI should OFFER a cloud summary before running a LONG meeting
 /// on-device. Pure decision — the dialog ("~N min on-device, or 1 credit in the
@@ -91,7 +91,7 @@ class SummaryFailed extends SummaryAttempt {
 class SummaryRouter {
   SummaryRouter({
     required this.entitlements,
-    required this.appleFm,
+    required this.builtinAi,
     required this.gemma,
     required this.cloud,
     required this.byok,
@@ -103,7 +103,11 @@ class SummaryRouter {
   }) : _pipeline = pipeline;
 
   final EntitlementService entitlements;
-  final AppleFoundationModelsBackend appleFm;
+
+  /// Gemini Nano (Android) / Apple Foundation Models (iOS/macOS) via
+  /// flutter_gemma_builtin_ai. Preferred over the downloaded Gemma when the
+  /// device supports it (better model, no download).
+  final BuiltinAiBackend builtinAi;
   final GemmaBackend gemma;
   final CloudBackend cloud;
   final ByokBackend byok;
@@ -224,7 +228,8 @@ class SummaryRouter {
   ) async {
     // Priority order on-device:
     //   1. Ollama (desktop only) — runs 27B+ models, biggest quality jump
-    //   2. Apple Foundation Models (iOS 26+ / macOS 15+ with Apple Intelligence)
+    //   2. OS built-in — Gemini Nano (Android) / Apple FM (iOS/macOS),
+    //      when the device supports it: strong model, zero download
     //   3. Gemma 4 E2B/E4B via flutter_gemma (everywhere)
     // Each gracefully falls through to the next if isAvailable() returns false.
     if (await ollama.isAvailable()) {
@@ -241,10 +246,10 @@ class SummaryRouter {
         debugPrintStack(stackTrace: s);
       }
     }
-    if (await appleFm.isAvailable()) {
+    if (await builtinAi.isAvailable()) {
       try {
-        final r = await _run(appleFm, input, persona, onProgress, cancel);
-        return SummaryReady(r, SummaryRoute.appleFoundationModels);
+        final r = await _run(builtinAi, input, persona, onProgress, cancel);
+        return SummaryReady(r, SummaryRoute.builtinAi);
       } on SummaryCancelled {
         rethrow;
       } catch (e, s) {
