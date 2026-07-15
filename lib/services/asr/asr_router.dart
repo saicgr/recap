@@ -18,6 +18,26 @@ enum AsrEnginePreference {
   whisperOnly,
 }
 
+/// Resolve the effective ASR preference from the user's raw setting and whether
+/// native ASR has been switched on.
+///
+/// **The native Apple/Android engines have never once been executed** — the
+/// bridges exist but no meeting has ever gone through them. Routing real capture
+/// onto an unproven path is not a refactor, it is a silent behavioural change.
+/// So until [nativeEnabled] is explicitly turned on (after device testing), this
+/// pins Whisper for everyone — the router becomes wired-in with ZERO change to
+/// which engine actually transcribes a meeting. Once native is enabled, the raw
+/// preference takes effect.
+AsrEnginePreference resolveAsrPreference(String raw,
+    {required bool nativeEnabled}) {
+  if (!nativeEnabled) return AsrEnginePreference.whisperOnly;
+  return switch (raw) {
+    'native' => AsrEnginePreference.nativeOnly,
+    'whisper' => AsrEnginePreference.whisperOnly,
+    _ => AsrEnginePreference.auto,
+  };
+}
+
 /// Picks the right [AsrEngine] for the current request, considering:
 ///   - User's Settings preference (auto / native-only / Whisper-only)
 ///   - User's tier (Privacy ⇒ force Whisper for verifiable no-network)

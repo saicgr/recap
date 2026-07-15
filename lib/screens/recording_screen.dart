@@ -332,19 +332,42 @@ class _RecordingScreenState extends State<RecordingScreen> {
   Future<void> _runFinalTranscription(
       String id, String path, Duration elapsed) async {
     try {
-      final deadline = DateTime.now().add(const Duration(minutes: 2));
-      while (!await transcriber.isModelInstalled) {
-        if (DateTime.now().isAfter(deadline)) {
-          throw StateError('Model still downloading after 2 minutes.');
-        }
-        await Future<void>.delayed(const Duration(seconds: 3));
+      // Route the final pass through AsrRouter instead of calling the Whisper
+      // transcriber directly. By default the router resolves to Whisper (native
+      // ASR is off until it has been device-tested), so this is a pure refactor:
+      // the same engine transcribes, but the tier/preference/platform decision
+      // now lives in the router rather than being hardcoded here — and the
+      // Privacy tier's Whisper-only guarantee is enforced there.
+      final engine = await asrRouter.pickFileEngine(approxDuration: elapsed);
+      if (engine == null) {
+        // Never a silent empty transcript. The audio is safe; surface it so the
+        // user can retry rather than see a blank transcript and assume failure.
+        throw StateError(
+          'No transcription engine is available. Make sure the Whisper model '
+          'has finished downloading, then retry.',
+        );
       }
-      final text = await transcriber.transcribe(path);
+
+      // Whisper needs its model on disk; a native engine does not, so only gate
+      // on the download when Whisper was actually chosen.
+      if (engine.id == 'whisper') {
+        final deadline = DateTime.now().add(const Duration(minutes: 2));
+        while (!await transcriber.isModelInstalled) {
+          if (DateTime.now().isAfter(deadline)) {
+            throw StateError('Model still downloading after 2 minutes.');
+          }
+          await Future<void>.delayed(const Duration(seconds: 3));
+        }
+      }
+
+      final text = await engine.transcribeFile(path);
       await db.into(db.transcripts).insertOnConflictUpdate(
             TranscriptsCompanion.insert(
               meetingId: id,
               body: text,
-              modelId: transcriber.model.modelName,
+              modelId: engine.id == 'whisper'
+                  ? transcriber.model.modelName
+                  : engine.id,
               createdAt: DateTime.now(),
             ),
           );

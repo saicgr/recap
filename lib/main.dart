@@ -271,11 +271,13 @@ Future<void> main() async {
     androidAsr: androidAsr,
     whisperAsr: whisperAsr,
     tierProvider: () => entitlements.currentTier,
-    preferenceProvider: () => switch (settings.asrEnginePreferenceRaw) {
-      'native' => AsrEnginePreference.nativeOnly,
-      'whisper' => AsrEnginePreference.whisperOnly,
-      _ => AsrEnginePreference.auto,
-    },
+    // Pins Whisper until native ASR is explicitly enabled (default off), so
+    // wiring the router in does not silently move meeting capture onto the
+    // never-executed Apple/Android bridges. See resolveAsrPreference.
+    preferenceProvider: () => resolveAsrPreference(
+      settings.asrEnginePreferenceRaw,
+      nativeEnabled: settings.nativeAsrEnabled,
+    ),
   );
 
   runApp(const RecapApp());

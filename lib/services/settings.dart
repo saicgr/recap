@@ -37,6 +37,17 @@ class SettingsService extends ChangeNotifier {
   // ---- ASR engine preference (D15.2) ----
   /// Stored as a string so we don't depend on the enum order. Values:
   /// 'auto' (default), 'native', 'whisper'.
+  /// Whether to route ASR through the platform-native engines (Apple / Android
+  /// SpeechRecognizer). DEFAULT FALSE: those bridges have never been executed on
+  /// a device, so until they are tested, every meeting transcribes through
+  /// Whisper. Flipping this on is what lets the AsrRouter actually use native.
+  bool get nativeAsrEnabled => _prefs.getBool('nativeAsrEnabled') ?? false;
+
+  Future<void> setNativeAsrEnabled(bool v) async {
+    await _prefs.setBool('nativeAsrEnabled', v);
+    notifyListeners();
+  }
+
   String get asrEnginePreferenceRaw =>
       _prefs.getString('asrEnginePreference') ?? 'auto';
 
