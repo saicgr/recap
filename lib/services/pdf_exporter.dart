@@ -29,8 +29,10 @@ class PdfExporter {
     final docs = await getApplicationSupportDirectory();
     final outDir = Directory(p.join(docs.path, 'exports'));
     if (!await outDir.exists()) await outDir.create(recursive: true);
-    final outPath = p.join(outDir.path,
-        '${_safeFilename(meeting.title)}-${meeting.id.substring(0, 8)}.pdf');
+    final outPath = p.join(
+      outDir.path,
+      '${_safeFilename(meeting.title)}-${meeting.id.substring(0, 8)}.pdf',
+    );
 
     // TODO: implement real PDF rendering. For now we write a placeholder
     // text file at the .pdf path so the share-sheet flow can be exercised
@@ -47,7 +49,8 @@ class PdfExporter {
       // exported as the heading "### custom:1752438…".
       buf
         ..writeln(
-            '### ${resolvePersona(s.personaKey, customPersonas).displayName}')
+          '### ${resolvePersona(s.personaKey, customPersonas).displayName}',
+        )
         ..writeln(s.body)
         ..writeln('');
     }

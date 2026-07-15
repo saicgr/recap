@@ -45,7 +45,8 @@ class AppleAsrEngine implements AsrEngine {
   Stream<AsrPartial> transcribeStreaming({String lang = 'en'}) async* {
     if (!_supportedPlatform) {
       throw const AsrUnavailableException(
-          AsrUnavailableReason.unsupportedPlatform);
+        AsrUnavailableReason.unsupportedPlatform,
+      );
     }
     // Native side configures AVAudioSession, installs an audio tap, and
     // feeds the SFSpeechRecognizer recognition request. The 1-minute
@@ -55,8 +56,9 @@ class AppleAsrEngine implements AsrEngine {
       await _method.invokeMethod<void>('startStreaming', {'lang': lang});
     } on MissingPluginException {
       throw const AsrUnavailableException(
-          AsrUnavailableReason.unsupportedPlatform,
-          'Apple ASR native bridge not installed');
+        AsrUnavailableReason.unsupportedPlatform,
+        'Apple ASR native bridge not installed',
+      );
     }
     try {
       await for (final event in _events.receiveBroadcastStream()) {
@@ -73,7 +75,9 @@ class AppleAsrEngine implements AsrEngine {
     } finally {
       try {
         await _method.invokeMethod<void>('stopStreaming');
-      } catch (_) {/* best effort */}
+      } catch (_) {
+        /* best effort */
+      }
     }
   }
 
@@ -81,7 +85,8 @@ class AppleAsrEngine implements AsrEngine {
   Future<String> transcribeFile(String wavPath, {String lang = 'en'}) async {
     if (!_supportedPlatform) {
       throw const AsrUnavailableException(
-          AsrUnavailableReason.unsupportedPlatform);
+        AsrUnavailableReason.unsupportedPlatform,
+      );
     }
     try {
       final res = await _method.invokeMethod<String>('transcribeFile', {
@@ -91,8 +96,9 @@ class AppleAsrEngine implements AsrEngine {
       return res ?? '';
     } on MissingPluginException {
       throw const AsrUnavailableException(
-          AsrUnavailableReason.unsupportedPlatform,
-          'Apple ASR native bridge not installed');
+        AsrUnavailableReason.unsupportedPlatform,
+        'Apple ASR native bridge not installed',
+      );
     } on PlatformException catch (e) {
       throw StateError('Apple ASR transcribeFile failed: ${e.message}');
     }

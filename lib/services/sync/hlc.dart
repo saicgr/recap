@@ -35,8 +35,7 @@ class Hlc implements Comparable<Hlc> {
   /// be forced past it, and nothing could ever be edited "after" that row again.
   static const maxDriftMs = 60 * 60 * 1000; // 1 hour
 
-  static Hlc zero(String nodeId) =>
-      Hlc(millis: 0, counter: 0, nodeId: nodeId);
+  static Hlc zero(String nodeId) => Hlc(millis: 0, counter: 0, nodeId: nodeId);
 
   /// Local event. Physical time normally advances; if it has not (two edits in
   /// the same millisecond, or the clock went backwards), the counter carries the
@@ -59,7 +58,11 @@ class Hlc implements Comparable<Hlc> {
       );
     }
 
-    final maxMs = [millis, remote.millis, nowMs].reduce((a, b) => a > b ? a : b);
+    final maxMs = [
+      millis,
+      remote.millis,
+      nowMs,
+    ].reduce((a, b) => a > b ? a : b);
 
     if (maxMs == millis && maxMs == remote.millis) {
       final c = (counter > remote.counter ? counter : remote.counter) + 1;

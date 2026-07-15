@@ -77,12 +77,14 @@ class LiveCaptionsService {
 
     try {
       final text = await transcriber.transcribe(chunkPath);
-      _controller.add(LiveCaption(
-        startMs: _lastChunkEndMs,
-        endMs: endMs,
-        text: text,
-        isFinal: finalChunk,
-      ));
+      _controller.add(
+        LiveCaption(
+          startMs: _lastChunkEndMs,
+          endMs: endMs,
+          text: text,
+          isFinal: finalChunk,
+        ),
+      );
       _lastChunkEndMs = endMs;
     } catch (_) {
       // Don't crash live captions on a single failed chunk — the final

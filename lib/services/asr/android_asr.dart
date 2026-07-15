@@ -41,14 +41,16 @@ class AndroidAsrEngine implements AsrEngine {
   Stream<AsrPartial> transcribeStreaming({String lang = 'en'}) async* {
     if (!Platform.isAndroid) {
       throw const AsrUnavailableException(
-          AsrUnavailableReason.unsupportedPlatform);
+        AsrUnavailableReason.unsupportedPlatform,
+      );
     }
     try {
       await _method.invokeMethod<void>('startStreaming', {'lang': lang});
     } on MissingPluginException {
       throw const AsrUnavailableException(
-          AsrUnavailableReason.unsupportedPlatform,
-          'Android ASR native bridge not installed');
+        AsrUnavailableReason.unsupportedPlatform,
+        'Android ASR native bridge not installed',
+      );
     }
     try {
       await for (final event in _events.receiveBroadcastStream()) {
@@ -65,7 +67,9 @@ class AndroidAsrEngine implements AsrEngine {
     } finally {
       try {
         await _method.invokeMethod<void>('stopStreaming');
-      } catch (_) {/* best effort */}
+      } catch (_) {
+        /* best effort */
+      }
     }
   }
 
@@ -74,8 +78,9 @@ class AndroidAsrEngine implements AsrEngine {
     // Android's SpeechRecognizer is mic-only — there's no file-input API.
     // For the final-quality file pass we always route to Whisper on Android.
     throw const AsrUnavailableException(
-        AsrUnavailableReason.unsupportedPlatform,
-        'Android on-device SpeechRecognizer does not support file input — '
-        'use WhisperAsrEngine for transcribeFile on Android.');
+      AsrUnavailableReason.unsupportedPlatform,
+      'Android on-device SpeechRecognizer does not support file input — '
+      'use WhisperAsrEngine for transcribeFile on Android.',
+    );
   }
 }

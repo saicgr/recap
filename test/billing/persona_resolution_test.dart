@@ -42,8 +42,11 @@ void main() {
     test('an unknown key falls back to basic — never renders the raw key', () {
       final p = resolvePersona('custom:deleted-template', const []);
       expect(p.style, SummaryStyle.basic);
-      expect(p.displayName, isNot(contains('custom:')),
-          reason: 'the raw key must never reach the UI');
+      expect(
+        p.displayName,
+        isNot(contains('custom:')),
+        reason: 'the raw key must never reach the UI',
+      );
     });
 
     test('a garbage key still yields a usable persona', () {

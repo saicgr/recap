@@ -44,8 +44,11 @@ void main() {
       expect(chunks.first.total, 1);
       expect(chunks.first.hasOverlap, isFalse);
       for (final s in segs) {
-        expect(chunks.first.text, contains(s.text),
-            reason: 'a segment that fits must never be split');
+        expect(
+          chunks.first.text,
+          contains(s.text),
+          reason: 'a segment that fits must never be split',
+        );
       }
     });
 
@@ -105,7 +108,8 @@ void main() {
           expect(
             estimateTokens(c.text),
             lessThanOrEqualTo(target),
-            reason: 'chunk ${c.index}/${c.total} is '
+            reason:
+                'chunk ${c.index}/${c.total} is '
                 '${estimateTokens(c.text)} est. tokens, over the $target budget '
                 '— this overflows the backend window the pipeline sized for it',
           );
@@ -131,40 +135,52 @@ void main() {
     // budget before packing); until then, these two tests hold the line.
     const framingTokens = 34;
 
-    test('an overlapping chunk overshoots by AT MOST the overlap framing cost',
-        () {
-      for (final target in [200, 300, 400, 500, 700, 900, 1200, 1937]) {
-        for (final tokensEach in [10, 30, 45, 60, 90, 150]) {
-          final segs = _transcript(count: 60, tokensEach: tokensEach);
-          for (final c in chunkSegments(segs, targetTokens: target)) {
-            expect(
-              estimateTokens(c.text),
-              lessThanOrEqualTo(target + framingTokens),
-              reason: 'chunk ${c.index} overshot target=$target by more than '
-                  'the known $framingTokens-token overlap framing '
-                  '(tokensEach=$tokensEach). The overshoot has grown — the '
-                  'pipeline reserve may no longer cover it.',
-            );
+    test(
+      'an overlapping chunk overshoots by AT MOST the overlap framing cost',
+      () {
+        for (final target in [200, 300, 400, 500, 700, 900, 1200, 1937]) {
+          for (final tokensEach in [10, 30, 45, 60, 90, 150]) {
+            final segs = _transcript(count: 60, tokensEach: tokensEach);
+            for (final c in chunkSegments(segs, targetTokens: target)) {
+              expect(
+                estimateTokens(c.text),
+                lessThanOrEqualTo(target + framingTokens),
+                reason:
+                    'chunk ${c.index} overshot target=$target by more than '
+                    'the known $framingTokens-token overlap framing '
+                    '(tokensEach=$tokensEach). The overshoot has grown — the '
+                    'pipeline reserve may no longer cover it.',
+              );
+            }
           }
         }
-      }
-    });
+      },
+    );
 
-    test('the overshoot stays well inside the pipeline reserve that hides it',
-        () {
-      // summary_pipeline.dart: const int _kReserveTokens = 200.
-      const pipelineReserve = 200;
-      expect(framingTokens, lessThan(pipelineReserve),
-          reason: 'the chunker now overshoots by more than the pipeline '
-              'reserves — map calls will overflow the backend window');
-    });
+    test(
+      'the overshoot stays well inside the pipeline reserve that hides it',
+      () {
+        // summary_pipeline.dart: const int _kReserveTokens = 200.
+        const pipelineReserve = 200;
+        expect(
+          framingTokens,
+          lessThan(pipelineReserve),
+          reason:
+              'the chunker now overshoots by more than the pipeline '
+              'reserves — map calls will overflow the backend window',
+        );
+      },
+    );
 
     test('a fat overlap request still cannot blow the budget open', () {
       final segs = _transcript(count: 40, tokensEach: 40);
       final chunks = chunkSegments(segs, targetTokens: 400, overlapTokens: 200);
       for (final c in chunks) {
-        expect(estimateTokens(c.text), lessThanOrEqualTo(400 + framingTokens),
-            reason: 'chunk ${c.index} busts the budget with overlap on');
+        expect(
+          estimateTokens(c.text),
+          lessThanOrEqualTo(400 + framingTokens),
+          reason: 'chunk ${c.index} busts the budget with overlap on',
+        );
       }
     });
   });
@@ -176,18 +192,26 @@ void main() {
       expect(chunks.length, greaterThan(1));
 
       for (var i = 1; i < chunks.length; i++) {
-        expect(chunks[i].hasOverlap, isTrue,
-            reason:
-                'chunk $i carries no context from chunk ${i - 1}; a thought '
-                'spanning the boundary is lost');
+        expect(
+          chunks[i].hasOverlap,
+          isTrue,
+          reason:
+              'chunk $i carries no context from chunk ${i - 1}; a thought '
+              'spanning the boundary is lost',
+        );
       }
 
       // The carried text must actually be the PREVIOUS chunk's trailing content.
-      final prevLines =
-          chunks[0].text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      final prevLines = chunks[0].text
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .toList();
       final lastLineOfPrev = prevLines.last;
-      expect(chunks[1].text, contains(lastLineOfPrev),
-          reason: 'the overlap must be the real tail of the previous chunk');
+      expect(
+        chunks[1].text,
+        contains(lastLineOfPrev),
+        reason: 'the overlap must be the real tail of the previous chunk',
+      );
     });
 
     test('the first chunk never claims overlap', () {
@@ -201,8 +225,11 @@ void main() {
       final chunks = chunkSegments(segs, targetTokens: 500);
       final second = chunks[1];
       expect(second.hasOverlap, isTrue);
-      expect(second.text.toLowerCase(), contains('previous part'),
-          reason: 'the model must be told which lines are repeats');
+      expect(
+        second.text.toLowerCase(),
+        contains('previous part'),
+        reason: 'the model must be told which lines are repeats',
+      );
     });
 
     test('overlapTokens: 0 disables the carry', () {
@@ -218,8 +245,11 @@ void main() {
       // A pathological caller asking for more overlap than the chunk can hold
       // must still terminate and still cover the transcript.
       final segs = _transcript(count: 20, tokensEach: 40);
-      final chunks =
-          chunkSegments(segs, targetTokens: 200, overlapTokens: 100000);
+      final chunks = chunkSegments(
+        segs,
+        targetTokens: 200,
+        overlapTokens: 100000,
+      );
       expect(chunks, isNotEmpty);
       final all = chunks.map((c) => c.text).join('\n');
       for (final s in segs) {
@@ -237,15 +267,19 @@ void main() {
       final segs = [_seg(0, 'Speaker 1', sentences.join(' '))];
 
       final chunks = chunkSegments(segs, targetTokens: 200);
-      expect(chunks.length, greaterThan(1),
-          reason: 'one oversized segment must be broken up');
+      expect(
+        chunks.length,
+        greaterThan(1),
+        reason: 'one oversized segment must be broken up',
+      );
 
       for (final c in chunks) {
         expect(estimateTokens(c.text), lessThanOrEqualTo(200));
         expect(
           c.text.trimRight().endsWith('.'),
           isTrue,
-          reason: 'chunk ${c.index} ends mid-sentence: '
+          reason:
+              'chunk ${c.index} ends mid-sentence: '
               '"${_tail(c.text)}" — sentence seams are the cut points',
         );
       }
@@ -265,54 +299,68 @@ void main() {
       final chunks = chunkSegments(segs, targetTokens: 150);
 
       for (final c in chunks) {
-        expect(c.text, contains('Dana:'),
-            reason: 'a split piece must keep its speaker — otherwise half the '
-                'words are orphaned from the attribution');
+        expect(
+          c.text,
+          contains('Dana:'),
+          reason:
+              'a split piece must keep its speaker — otherwise half the '
+              'words are orphaned from the attribution',
+        );
         expect(c.startMs, isNotNull);
       }
     });
 
-    test('falls back to WORD boundaries when one "sentence" busts the budget',
-        () {
-      // ASR rarely punctuates. A 400-token unpunctuated run must still chunk.
-      final words = List.generate(500, (i) => 'word$i').join(' ');
-      final segs = [_seg(0, 'Speaker 1', words)];
+    test(
+      'falls back to WORD boundaries when one "sentence" busts the budget',
+      () {
+        // ASR rarely punctuates. A 400-token unpunctuated run must still chunk.
+        final words = List.generate(500, (i) => 'word$i').join(' ');
+        final segs = [_seg(0, 'Speaker 1', words)];
 
-      final chunks = chunkSegments(segs, targetTokens: 200);
-      expect(chunks.length, greaterThan(1));
-      for (final c in chunks) {
-        expect(estimateTokens(c.text), lessThanOrEqualTo(200));
-      }
-      final all = chunks.map((c) => c.text).join(' ');
-      for (final w in ['word0', 'word250', 'word499']) {
-        expect(all, contains(w), reason: 'lost $w in the word-level split');
-      }
-    });
+        final chunks = chunkSegments(segs, targetTokens: 200);
+        expect(chunks.length, greaterThan(1));
+        for (final c in chunks) {
+          expect(estimateTokens(c.text), lessThanOrEqualTo(200));
+        }
+        final all = chunks.map((c) => c.text).join(' ');
+        for (final w in ['word0', 'word250', 'word499']) {
+          expect(all, contains(w), reason: 'lost $w in the word-level split');
+        }
+      },
+    );
 
-    test('a segment with no timing still splits without inventing timestamps',
-        () {
-      final segs = [
-        PromptSegment(
-          text: List.generate(40, (i) => 'Sentence number $i here.').join(' '),
-        ),
-      ];
-      final chunks = chunkSegments(segs, targetTokens: 120);
-      expect(chunks.length, greaterThan(1));
-      for (final c in chunks) {
-        expect(c.startMs, isNull);
-        expect(RegExp(r'\[\d\d:\d\d\]').hasMatch(c.text), isFalse,
-            reason: 'never fabricate a citation the transcript cannot back');
-      }
-    });
+    test(
+      'a segment with no timing still splits without inventing timestamps',
+      () {
+        final segs = [
+          PromptSegment(
+            text: List.generate(
+              40,
+              (i) => 'Sentence number $i here.',
+            ).join(' '),
+          ),
+        ];
+        final chunks = chunkSegments(segs, targetTokens: 120);
+        expect(chunks.length, greaterThan(1));
+        for (final c in chunks) {
+          expect(c.startMs, isNull);
+          expect(
+            RegExp(r'\[\d\d:\d\d\]').hasMatch(c.text),
+            isFalse,
+            reason: 'never fabricate a citation the transcript cannot back',
+          );
+        }
+      },
+    );
   });
 }
 
 PromptSegment _seg(int startMs, String? speaker, String text) => PromptSegment(
-      startMs: startMs,
-      endMs: startMs + 2000,
-      speaker: speaker,
-      text: text,
-    );
+  startMs: startMs,
+  endMs: startMs + 2000,
+  speaker: speaker,
+  text: text,
+);
 
 /// A synthetic transcript of [count] alternating-speaker segments, each about
 /// [tokensEach] estimated tokens.
@@ -320,11 +368,7 @@ List<PromptSegment> _transcript({required int count, required int tokensEach}) {
   final chars = (tokensEach * 3.6).round();
   return [
     for (var i = 0; i < count; i++)
-      _seg(
-        i * 5000,
-        'Speaker ${(i % 2) + 1}',
-        _filler(i, chars),
-      ),
+      _seg(i * 5000, 'Speaker ${(i % 2) + 1}', _filler(i, chars)),
   ];
 }
 

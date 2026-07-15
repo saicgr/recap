@@ -66,63 +66,69 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Row(children: [
-                IconBtn(
+              child: Row(
+                children: [
+                  IconBtn(
                     icon: Icons.arrow_back,
-                    onPressed: () => Navigator.pop(context)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: t.bgSubtle,
-                      border: Border.all(color: t.border),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(children: [
-                      Icon(Icons.search, size: 16, color: t.textMuted),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          autofocus: true,
-                          style: RT.body.copyWith(color: t.textPrimary),
-                          cursorColor: t.accent,
-                          decoration: InputDecoration(
-                            isCollapsed: true,
-                            border: InputBorder.none,
-                            hintText: 'Search transcripts…',
-                            hintStyle: RT.body.copyWith(color: t.textMuted),
-                          ),
-                          onChanged: _onChanged,
-                        ),
-                      ),
-                    ]),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                ),
-              ]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: t.bgSubtle,
+                        border: Border.all(color: t.border),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search, size: 16, color: t.textMuted),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              autofocus: true,
+                              style: RT.body.copyWith(color: t.textPrimary),
+                              cursorColor: t.accent,
+                              decoration: InputDecoration(
+                                isCollapsed: true,
+                                border: InputBorder.none,
+                                hintText: 'Search transcripts…',
+                                hintStyle: RT.body.copyWith(color: t.textMuted),
+                              ),
+                              onChanged: _onChanged,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: _searching
                   ? LinearProgressIndicator(color: t.accent)
                   : _results.isEmpty
-                      ? Center(
-                          child: Text(
-                            _controller.text.isEmpty
-                                ? 'Search across all meetings'
-                                : 'No matches',
-                            style: RT.body.copyWith(color: t.textMuted),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          itemCount: _results.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (ctx, i) => _row(t, _results[i]),
-                        ),
+                  ? Center(
+                      child: Text(
+                        _controller.text.isEmpty
+                            ? 'Search across all meetings'
+                            : 'No matches',
+                        style: RT.body.copyWith(color: t.textMuted),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: _results.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (ctx, i) => _row(t, _results[i]),
+                    ),
             ),
           ],
         ),
@@ -151,9 +157,13 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(m.title,
-                        style: RT.body.copyWith(
-                            fontWeight: FontWeight.w600, color: t.textPrimary)),
+                    Text(
+                      m.title,
+                      style: RT.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: t.textPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       DateFormat('MMM d · h:mm a').format(m.createdAt),

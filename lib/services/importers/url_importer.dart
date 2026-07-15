@@ -15,8 +15,10 @@ class UrlImporter {
   /// [url] should point at a publicly-fetchable audio/video file (no auth).
   /// Returns null on user-visible content-type rejection so the UI can show
   /// a clear error; throws on network / conversion failures.
-  static Future<ImportedAudio?> importFromUrl(String url,
-      {void Function(double)? onProgress}) async {
+  static Future<ImportedAudio?> importFromUrl(
+    String url, {
+    void Function(double)? onProgress,
+  }) async {
     final uri = Uri.parse(url);
     final req = http.Request('GET', uri);
     final res = await http.Client().send(req);
@@ -54,7 +56,9 @@ class UrlImporter {
     final durMs = await AudioConverter.probeDurationMs(wavPath);
     try {
       await tmp.delete();
-    } catch (_) {/* best effort */}
+    } catch (_) {
+      /* best effort */
+    }
 
     final title = p.basenameWithoutExtension(uri.path).replaceAll('_', ' ');
     return ImportedAudio(

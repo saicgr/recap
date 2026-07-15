@@ -75,9 +75,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Icon(Icons.mic, size: 88, color: t.accent),
           const SizedBox(height: 32),
-          Text('Recap',
-              style: RT.titleLg
-                  .copyWith(color: t.textPrimary, fontWeight: FontWeight.w700)),
+          Text(
+            'Recap',
+            style: RT.titleLg.copyWith(
+              color: t.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 12),
           Text(
             'Voice Memos, with on-device AI.',
@@ -103,19 +107,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Icon(Icons.lock_outline, size: 48, color: t.accent),
           const SizedBox(height: 24),
-          Text('Nothing leaves your phone',
-              style: RT.title.copyWith(color: t.textPrimary)),
+          Text(
+            'Nothing leaves your phone',
+            style: RT.title.copyWith(color: t.textPrimary),
+          ),
           const SizedBox(height: 16),
           _bullet(t, 'No account required. Ever.'),
           _bullet(t, 'No analytics. No telemetry.'),
-          _bullet(t,
-              'No background pings — online only when you tap a cloud button.'),
+          _bullet(
+            t,
+            'No background pings — online only when you tap a cloud button.',
+          ),
           _bullet(t, 'Transcription runs locally (Whisper).'),
           _bullet(
-              t, 'Summaries run locally (Gemma 4 / Apple Foundation Models).'),
+            t,
+            'Summaries run locally (Gemma 4 / Apple Foundation Models).',
+          ),
           _bullet(t, 'Cloud summaries are opt-in only.'),
-          _bullet(t,
-              'On the Privacy tier, cloud is structurally disabled — verifiable by reading our code.'),
+          _bullet(
+            t,
+            'On the Privacy tier, cloud is structurally disabled — verifiable by reading our code.',
+          ),
         ],
       ),
     );
@@ -147,23 +159,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 24),
           Text('Permissions', style: RT.title.copyWith(color: t.textPrimary)),
           const SizedBox(height: 16),
-          _permRow(t, Icons.mic, 'Microphone',
-              'Required for recording. Recap never shares mic audio.', true),
-          _permRow(t, Icons.calendar_month_outlined, 'Calendar',
-              'Optional. Auto-titles meetings from calendar events.', false),
           _permRow(
-              t,
-              Icons.notifications_none,
-              'Notifications',
-              'Optional. Local-only — "transcript ready", "action item due".',
-              false),
+            t,
+            Icons.mic,
+            'Microphone',
+            'Required for recording. Recap never shares mic audio.',
+            true,
+          ),
+          _permRow(
+            t,
+            Icons.calendar_month_outlined,
+            'Calendar',
+            'Optional. Auto-titles meetings from calendar events.',
+            false,
+          ),
+          _permRow(
+            t,
+            Icons.notifications_none,
+            'Notifications',
+            'Optional. Local-only — "transcript ready", "action item due".',
+            false,
+          ),
         ],
       ),
     );
   }
 
   Widget _permRow(
-      RecapTheme t, IconData icon, String name, String desc, bool required) {
+    RecapTheme t,
+    IconData icon,
+    String name,
+    String desc,
+    bool required,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -175,23 +203,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Text(name,
+                Row(
+                  children: [
+                    Text(
+                      name,
                       style: RT.body.copyWith(
-                          color: t.textPrimary, fontWeight: FontWeight.w600)),
-                  const SizedBox(width: 8),
-                  if (required)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: t.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
+                        color: t.textPrimary,
+                        fontWeight: FontWeight.w600,
                       ),
-                      child: Text('Required',
-                          style: RT.caption.copyWith(color: t.accent)),
                     ),
-                ]),
+                    const SizedBox(width: 8),
+                    if (required)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: t.accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Required',
+                          style: RT.caption.copyWith(color: t.accent),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(desc, style: RT.bodySm.copyWith(color: t.textSecondary)),
               ],
@@ -210,8 +248,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Icon(Icons.cloud_download_outlined, size: 48, color: t.accent),
           const SizedBox(height: 24),
-          Text('Better AI in the background',
-              style: RT.title.copyWith(color: t.textPrimary)),
+          Text(
+            'Better AI in the background',
+            style: RT.title.copyWith(color: t.textPrimary),
+          ),
           const SizedBox(height: 12),
           Text(
             'A small Whisper model is bundled, so live captions work right now. The better Whisper (~140 MB) + on-device AI summary model (~2.4 GB) download in the background while you record.',
@@ -221,8 +261,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('Wi-Fi only',
-                    style: RT.body.copyWith(color: t.textPrimary)),
+                child: Text(
+                  'Wi-Fi only',
+                  style: RT.body.copyWith(color: t.textPrimary),
+                ),
               ),
               RecapToggle(
                 value: _wifiOnly,
@@ -248,9 +290,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Icon(Icons.fiber_manual_record, size: 88, color: t.recordRed),
           const SizedBox(height: 32),
-          Text("You're set",
-              style: RT.titleLg
-                  .copyWith(color: t.textPrimary, fontWeight: FontWeight.w700)),
+          Text(
+            "You're set",
+            style: RT.titleLg.copyWith(
+              color: t.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 16),
           Text(
             'Tap Record on the home screen to capture your first meeting. Live captions appear instantly.',
@@ -298,8 +344,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               size: BtnSize.sm,
               trailing: Icons.arrow_forward,
               onPressed: () => _pageController.nextPage(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOut),
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOut,
+              ),
             ),
         ],
       ),

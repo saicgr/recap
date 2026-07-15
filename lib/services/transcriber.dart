@@ -97,7 +97,8 @@ class TranscriberService extends ChangeNotifier {
       final response = await request.close();
       if (response.statusCode != 200) {
         throw StateError(
-            'Model download HTTP ${response.statusCode} for ${m.modelUri}');
+          'Model download HTTP ${response.statusCode} for ${m.modelUri}',
+        );
       }
       _bytesTotal = response.contentLength;
       notifyListeners();

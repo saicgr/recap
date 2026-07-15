@@ -102,11 +102,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
               trailing: [
                 TextButton(
                   onPressed: _busy ? null : () => iap.restore(),
-                  child: Text('Restore',
-                      style: RT.label.copyWith(
-                        color: t.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      )),
+                  child: Text(
+                    'Restore',
+                    style: RT.label.copyWith(
+                      color: t.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -122,15 +124,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         border: Border.all(color: t.border),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(widget.reason!,
-                          style: RT.body.copyWith(color: t.textPrimary)),
+                      child: Text(
+                        widget.reason!,
+                        style: RT.body.copyWith(color: t.textPrimary),
+                      ),
                     ),
                     const SizedBox(height: 16),
                   ],
                   RichText(
                     text: TextSpan(
-                      style: RT.titleLg
-                          .copyWith(color: t.textPrimary, height: 36 / 28),
+                      style: RT.titleLg.copyWith(
+                        color: t.textPrimary,
+                        height: 36 / 28,
+                      ),
                       children: [
                         const TextSpan(text: 'Lifetime. No account.\n'),
                         TextSpan(
@@ -152,15 +158,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => const CompareScreen()),
+                          builder: (_) => const CompareScreen(),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Why Recap?',
-                              style: RT.label.copyWith(
-                                  color: t.accent,
-                                  fontWeight: FontWeight.w600)),
+                          Text(
+                            'Why Recap?',
+                            style: RT.label.copyWith(
+                              color: t.accent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(width: 4),
                           Icon(Icons.arrow_forward, size: 14, color: t.accent),
                         ],
@@ -183,21 +193,26 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: [
-                          Icon(Icons.lock_outline, size: 14, color: t.accent),
-                          const SizedBox(width: 8),
-                          Text(
-                            'What "no telemetry" means',
-                            style: RT.label.copyWith(
+                        Row(
+                          children: [
+                            Icon(Icons.lock_outline, size: 14, color: t.accent),
+                            const SizedBox(width: 8),
+                            Text(
+                              'What "no telemetry" means',
+                              style: RT.label.copyWith(
                                 color: t.textPrimary,
-                                fontWeight: FontWeight.w600),
-                          ),
-                        ]),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 6),
                         Text(
                           'We don\'t run analytics, crash reporting, or A/B tests. Cloud summaries — if enabled — route through a stateless proxy that strips identifiers.',
-                          style: RT.bodySm
-                              .copyWith(color: t.textSecondary, height: 1.5),
+                          style: RT.bodySm.copyWith(
+                            color: t.textSecondary,
+                            height: 1.5,
+                          ),
                         ),
                       ],
                     ),
@@ -226,8 +241,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     onPressed: _busy ? null : _buy,
                   ),
                   const SizedBox(height: 8),
-                  Text('One-time purchase. No subscription.',
-                      style: RT.bodySm.copyWith(color: t.textMuted)),
+                  Text(
+                    'One-time purchase. No subscription.',
+                    style: RT.bodySm.copyWith(color: t.textMuted),
+                  ),
                 ],
               ),
             ),
@@ -238,25 +255,24 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Widget _tierCard(
-      RecapTheme t,
-      ({
-        String id,
-        Tier tier,
-        String sub,
-        List<String> perks,
-        bool featured,
-        String pid,
-      }) entry) {
+    RecapTheme t,
+    ({
+      String id,
+      Tier tier,
+      String sub,
+      List<String> perks,
+      bool featured,
+      String pid,
+    })
+    entry,
+  ) {
     final picked = entry.id == _picked;
     return GestureDetector(
       onTap: () => setState(() => _picked = entry.id),
       child: Container(
         decoration: BoxDecoration(
           color: t.surface,
-          border: Border.all(
-            color: picked ? t.accent : t.border,
-            width: 1.5,
-          ),
+          border: Border.all(color: picked ? t.accent : t.border, width: 1.5),
           borderRadius: BorderRadius.circular(14),
         ),
         padding: const EdgeInsets.all(16),
@@ -268,14 +284,18 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 top: -22,
                 left: 0,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: t.accent,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text('MOST POPULAR',
-                      style: RT.caption.copyWith(color: Colors.white)),
+                  child: Text(
+                    'MOST POPULAR',
+                    style: RT.caption.copyWith(color: Colors.white),
+                  ),
                 ),
               ),
             Column(
@@ -288,13 +308,18 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_capitalize(entry.id),
-                              style: RT.subtitle.copyWith(
-                                  color: t.textPrimary,
-                                  fontWeight: FontWeight.w700)),
+                          Text(
+                            _capitalize(entry.id),
+                            style: RT.subtitle.copyWith(
+                              color: t.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(height: 2),
-                          Text(entry.sub,
-                              style: RT.bodySm.copyWith(color: t.textMuted)),
+                          Text(
+                            entry.sub,
+                            style: RT.bodySm.copyWith(color: t.textMuted),
+                          ),
                         ],
                       ),
                     ),
@@ -306,22 +331,29 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
-                              child: Text('\$',
-                                  style: RT.body.copyWith(
-                                      color: t.textMuted,
-                                      fontWeight: FontWeight.w500)),
+                              child: Text(
+                                '\$',
+                                style: RT.body.copyWith(
+                                  color: t.textMuted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                            Text('${entry.tier.priceUsd}',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: t.textPrimary,
-                                  letterSpacing: -0.5,
-                                ).merge(RT.num)),
+                            Text(
+                              '${entry.tier.priceUsd}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                color: t.textPrimary,
+                                letterSpacing: -0.5,
+                              ).merge(RT.num),
+                            ),
                           ],
                         ),
-                        Text('once',
-                            style: RT.caption.copyWith(color: t.textMuted)),
+                        Text(
+                          'once',
+                          style: RT.caption.copyWith(color: t.textMuted),
+                        ),
                       ],
                     ),
                   ],
@@ -333,13 +365,20 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.check,
-                            size: 14, color: picked ? t.accent : t.textMuted),
+                        Icon(
+                          Icons.check,
+                          size: 14,
+                          color: picked ? t.accent : t.textMuted,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(perk,
-                              style: RT.bodySm.copyWith(
-                                  color: t.textSecondary, height: 1.5)),
+                          child: Text(
+                            perk,
+                            style: RT.bodySm.copyWith(
+                              color: t.textSecondary,
+                              height: 1.5,
+                            ),
+                          ),
                         ),
                       ],
                     ),

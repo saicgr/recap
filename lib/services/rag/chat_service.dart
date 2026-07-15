@@ -163,13 +163,15 @@ class ChatService {
     final out = <ChatCitation>[];
     for (final n in used.toList()..sort()) {
       final h = hits[n - 1];
-      out.add(ChatCitation(
-        index: n,
-        meetingId: h.meetingId,
-        meetingTitle: h.meetingTitle,
-        startMs: h.startMs,
-        quote: h.body.trim(),
-      ));
+      out.add(
+        ChatCitation(
+          index: n,
+          meetingId: h.meetingId,
+          meetingTitle: h.meetingTitle,
+          startMs: h.startMs,
+          quote: h.body.trim(),
+        ),
+      );
     }
     return out;
   }

@@ -36,15 +36,16 @@ class EmbeddingIndexer {
   Future<int> indexMeeting(String meetingId) async {
     if (!await embeddings.isReady()) return 0;
 
-    final segments = await (db.select(db.transcriptSegments)
-          ..where((s) => s.meetingId.equals(meetingId)))
-        .get();
+    final segments = await (db.select(
+      db.transcriptSegments,
+    )..where((s) => s.meetingId.equals(meetingId))).get();
     if (segments.isEmpty) return 0;
 
-    final existing = await (db.select(db.segmentEmbeddings)
-          ..where((e) =>
-              e.meetingId.equals(meetingId) & e.model.equals(modelId)))
-        .get();
+    final existing =
+        await (db.select(db.segmentEmbeddings)..where(
+              (e) => e.meetingId.equals(meetingId) & e.model.equals(modelId),
+            ))
+            .get();
     final done = existing.map((e) => e.segmentId).toSet();
 
     var written = 0;
@@ -54,7 +55,9 @@ class EmbeddingIndexer {
       if (text.isEmpty) continue;
 
       final vec = await embeddings.embed(text);
-      await db.into(db.segmentEmbeddings).insert(
+      await db
+          .into(db.segmentEmbeddings)
+          .insert(
             SegmentEmbeddingsCompanion.insert(
               segmentId: seg.id,
               meetingId: meetingId,
@@ -75,8 +78,9 @@ class EmbeddingIndexer {
   /// Meetings that have segments but no vectors — the backlog for everything
   /// recorded before this indexer existed.
   Future<List<String>> pendingMeetingIds({int limit = 20}) async {
-    final rows = await db.customSelect(
-      '''
+    final rows = await db
+        .customSelect(
+          '''
       SELECT DISTINCT s.meeting_id AS id
       FROM transcript_segments s
       LEFT JOIN segment_embeddings e
@@ -84,9 +88,10 @@ class EmbeddingIndexer {
       WHERE e.segment_id IS NULL
       LIMIT ?
       ''',
-      variables: [const Variable<String>(modelId), Variable<int>(limit)],
-      readsFrom: {db.transcriptSegments, db.segmentEmbeddings},
-    ).get();
+          variables: [const Variable<String>(modelId), Variable<int>(limit)],
+          readsFrom: {db.transcriptSegments, db.segmentEmbeddings},
+        )
+        .get();
     return rows.map((r) => r.read<String>('id')).toList();
   }
 

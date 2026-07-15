@@ -18,14 +18,17 @@ class Account {
   /// immediately, whereas the session lasts.
   final String sessionToken;
 
-  Map<String, dynamic> toJson() =>
-      {'userId': userId, 'email': email, 'sessionToken': sessionToken};
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'email': email,
+    'sessionToken': sessionToken,
+  };
 
   factory Account.fromJson(Map<String, dynamic> j) => Account(
-        userId: j['userId'] as String,
-        email: j['email'] as String,
-        sessionToken: j['sessionToken'] as String,
-      );
+    userId: j['userId'] as String,
+    email: j['email'] as String,
+    sessionToken: j['sessionToken'] as String,
+  );
 }
 
 /// Stores every signed-in account, and which one is active.
@@ -40,7 +43,7 @@ class Account {
 /// keychain (flutter_secure_storage), not SharedPreferences.
 class AccountStore {
   AccountStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 

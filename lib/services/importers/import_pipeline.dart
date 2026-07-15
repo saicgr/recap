@@ -7,7 +7,7 @@ import '../../main.dart';
 /// Common result shape from any importer.
 class ImportedAudio {
   final String
-      wavPath; // 16 kHz mono PCM WAV path, ready for transcribe pipeline
+  wavPath; // 16 kHz mono PCM WAV path, ready for transcribe pipeline
   final Duration duration;
   final String title;
   final DateTime sourceDate;
@@ -39,7 +39,9 @@ Future<String> persistImportedMeeting(ImportedAudio imported) async {
       ? MeetingStatus.processing
       : MeetingStatus.ready;
 
-  await db.into(db.meetings).insert(
+  await db
+      .into(db.meetings)
+      .insert(
         MeetingsCompanion.insert(
           id: id,
           title: imported.title,
@@ -54,7 +56,9 @@ Future<String> persistImportedMeeting(ImportedAudio imported) async {
 
   // Precomputed transcript (e.g. YouTube caption track) — skip Whisper.
   if (imported.precomputedTranscript != null) {
-    await db.into(db.transcripts).insertOnConflictUpdate(
+    await db
+        .into(db.transcripts)
+        .insertOnConflictUpdate(
           TranscriptsCompanion.insert(
             meetingId: id,
             body: imported.precomputedTranscript!,

@@ -16,28 +16,21 @@ class ProductIds {
   static const topUp100 = 'recap_topup_100';
   static const topUp500 = 'recap_topup_500';
 
-  static const all = <String>{
-    pro,
-    privacy,
-    power,
-    topUp25,
-    topUp100,
-    topUp500,
-  };
+  static const all = <String>{pro, privacy, power, topUp25, topUp100, topUp500};
 
   static Tier? tierForProduct(String productId) => switch (productId) {
-        pro => Tier.pro,
-        privacy => Tier.privacy,
-        power => Tier.power,
-        _ => null,
-      };
+    pro => Tier.pro,
+    privacy => Tier.privacy,
+    power => Tier.power,
+    _ => null,
+  };
 
   static TopUpPack? topUpForProduct(String productId) => switch (productId) {
-        topUp25 => TopUpPack.small,
-        topUp100 => TopUpPack.medium,
-        topUp500 => TopUpPack.large,
-        _ => null,
-      };
+    topUp25 => TopUpPack.small,
+    topUp100 => TopUpPack.medium,
+    topUp500 => TopUpPack.large,
+    _ => null,
+  };
 }
 
 class IapService {

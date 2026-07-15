@@ -29,8 +29,10 @@ class PrivacyDashboardScreen extends StatelessWidget {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Privacy dashboard',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Privacy dashboard',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -131,8 +133,10 @@ class PrivacyDashboardScreen extends StatelessWidget {
               Icon(icon, color: accent, size: 20),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(title,
-                    style: RT.subtitle.copyWith(color: t.textPrimary)),
+                child: Text(
+                  title,
+                  style: RT.subtitle.copyWith(color: t.textPrimary),
+                ),
               ),
             ],
           ),
@@ -146,8 +150,10 @@ class PrivacyDashboardScreen extends StatelessWidget {
                   Icon(Icons.check, size: 14, color: accent),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(item,
-                        style: RT.bodySm.copyWith(color: t.textSecondary)),
+                    child: Text(
+                      item,
+                      style: RT.bodySm.copyWith(color: t.textSecondary),
+                    ),
                   ),
                 ],
               ),

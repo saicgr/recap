@@ -20,7 +20,8 @@ void main() {
       expect(
         cloud,
         isEmpty,
-        reason: 'Privacy tier is offering network exports: $cloud. '
+        reason:
+            'Privacy tier is offering network exports: $cloud. '
             'The entire \$69 SKU is "this build cannot reach the network".',
       );
     });
@@ -29,8 +30,11 @@ void main() {
       expect(Tier.privacy.cloudSummariesEnabled, isFalse);
       expect(Tier.privacy.cloudExportsEnabled, isFalse);
       expect(Tier.privacy.cloudTranscriptionEnabled, isFalse);
-      expect(Tier.privacy.byok, isFalse,
-          reason: 'BYOK is a user-supplied key for a cloud provider');
+      expect(
+        Tier.privacy.byok,
+        isFalse,
+        reason: 'BYOK is a user-supplied key for a cloud provider',
+      );
     });
 
     test('still gets the full offline feature set it paid for', () {
@@ -59,7 +63,8 @@ void main() {
         expect(
           t.availableExports.any((e) => e.isCloudDestination),
           isFalse,
-          reason: '${t.name} has cloudExportsEnabled=false but leaks a '
+          reason:
+              '${t.name} has cloudExportsEnabled=false but leaks a '
               'network destination through availableExports',
         );
       }
@@ -71,8 +76,7 @@ void main() {
     setUp(() => db = AppDb.forTesting(NativeDatabase.memory()));
     tearDown(() => db.close());
 
-    test('Privacy => SyncManager.create returns null (no object, no socket)',
-        () {
+    test('Privacy => SyncManager.create returns null (no object, no socket)', () {
       // The structural guarantee: not a disabled flag, an absent object. There
       // is no NeonAuth, no Data API client, nothing that could open a
       // connection. This is what makes "verifiable no-network" true instead of
@@ -84,7 +88,11 @@ void main() {
       // If create() returned null for everyone, the test above would pass
       // vacuously. It must return an object for the tiers that are allowed sync.
       for (final t in [Tier.free, Tier.pro, Tier.power]) {
-        expect(SyncManager.create(tier: t, db: db), isNotNull, reason: t.name);
+        expect(
+          SyncManager.create(tier: t, db: db),
+          isNotNull,
+          reason: t.name,
+        );
       }
     });
   });
@@ -113,9 +121,13 @@ void main() {
       // Nothing here should ever imply cloud is the default ASR path.
       expect(Tier.privacy.cloudTranscriptionEnabled, isFalse);
       for (final t in [Tier.free, Tier.pro, Tier.power]) {
-        expect(t.cloudTranscriptionEnabled, isTrue,
-            reason: '${t.name} may OFFER cloud transcription (still off by '
-                'default in Settings)');
+        expect(
+          t.cloudTranscriptionEnabled,
+          isTrue,
+          reason:
+              '${t.name} may OFFER cloud transcription (still off by '
+              'default in Settings)',
+        );
       }
     });
   });

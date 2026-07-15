@@ -13,7 +13,7 @@ import 'hlc.dart';
 /// change that no one remembers to sync.
 class SyncDao {
   SyncDao({required this.db, required this.nodeId, Hlc? clock})
-      : _clock = clock ?? Hlc.zero(nodeId);
+    : _clock = clock ?? Hlc.zero(nodeId);
 
   final AppDb db;
 
@@ -50,10 +50,12 @@ class SyncDao {
     required String op, // 'upsert' | 'delete'
     required Hlc hlc,
   }) async {
-    await (db.delete(db.syncOutbox)
-          ..where((o) => o.entityTable.equals(table) & o.entityId.equals(id)))
-        .go();
-    await db.into(db.syncOutbox).insert(
+    await (db.delete(
+      db.syncOutbox,
+    )..where((o) => o.entityTable.equals(table) & o.entityId.equals(id))).go();
+    await db
+        .into(db.syncOutbox)
+        .insert(
           SyncOutboxCompanion.insert(
             entityTable: table,
             entityId: id,

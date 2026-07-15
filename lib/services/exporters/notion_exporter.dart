@@ -38,7 +38,8 @@ class NotionExporter implements WorkflowExporter {
     //   4. Store token via flutter_secure_storage
     //   5. Prompt user to pick a destination database (POST /v1/search)
     throw UnimplementedError(
-        'Notion OAuth pending: client ID + flutter_appauth integration.');
+      'Notion OAuth pending: client ID + flutter_appauth integration.',
+    );
   }
 
   @override
@@ -59,17 +60,18 @@ class NotionExporter implements WorkflowExporter {
       return ExportResult.err('Connect to Notion first (Settings → Exports).');
     }
 
-    final summaryText =
-        summaries.isEmpty ? '(no summary yet)' : summaries.first.body;
+    final summaryText = summaries.isEmpty
+        ? '(no summary yet)'
+        : summaries.first.body;
     final body = {
       'parent': {'database_id': dbId},
       'properties': {
         'Name': {
           'title': [
             {
-              'text': {'content': meeting.title}
-            }
-          ]
+              'text': {'content': meeting.title},
+            },
+          ],
         },
       },
       'children': [
@@ -80,11 +82,11 @@ class NotionExporter implements WorkflowExporter {
             'rich_text': [
               {
                 'type': 'text',
-                'text': {'content': summaryText}
-              }
+                'text': {'content': summaryText},
+              },
             ],
             'icon': {'emoji': '📝'},
-          }
+          },
         },
         {
           'object': 'block',
@@ -93,10 +95,10 @@ class NotionExporter implements WorkflowExporter {
             'rich_text': [
               {
                 'type': 'text',
-                'text': {'content': 'Transcript'}
-              }
+                'text': {'content': 'Transcript'},
+              },
             ],
-          }
+          },
         },
         {
           'object': 'block',
@@ -105,10 +107,10 @@ class NotionExporter implements WorkflowExporter {
             'rich_text': [
               {
                 'type': 'text',
-                'text': {'content': transcript?.body ?? '(empty)'}
-              }
+                'text': {'content': transcript?.body ?? '(empty)'},
+              },
             ],
-          }
+          },
         },
       ],
     };

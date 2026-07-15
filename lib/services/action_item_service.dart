@@ -30,44 +30,45 @@ class ActionItem {
     DateTime? completedAt,
     String? assignee,
     DateTime? dueDate,
-  }) =>
-      ActionItem(
-        id: id,
-        meetingId: meetingId,
-        body: body,
-        assignee: assignee ?? this.assignee,
-        dueDate: dueDate ?? this.dueDate,
-        status: status ?? this.status,
-        createdAt: createdAt,
-        completedAt: completedAt ?? this.completedAt,
-      );
+  }) => ActionItem(
+    id: id,
+    meetingId: meetingId,
+    body: body,
+    assignee: assignee ?? this.assignee,
+    dueDate: dueDate ?? this.dueDate,
+    status: status ?? this.status,
+    createdAt: createdAt,
+    completedAt: completedAt ?? this.completedAt,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'meetingId': meetingId,
-        'body': body,
-        'assignee': assignee,
-        'dueDate': dueDate?.toIso8601String(),
-        'status': status.name,
-        'createdAt': createdAt.toIso8601String(),
-        'completedAt': completedAt?.toIso8601String(),
-      };
+    'id': id,
+    'meetingId': meetingId,
+    'body': body,
+    'assignee': assignee,
+    'dueDate': dueDate?.toIso8601String(),
+    'status': status.name,
+    'createdAt': createdAt.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+  };
 
   factory ActionItem.fromJson(Map<String, dynamic> m) => ActionItem(
-        id: m['id'] as String,
-        meetingId: m['meetingId'] as String,
-        body: m['body'] as String,
-        assignee: m['assignee'] as String?,
-        dueDate: m['dueDate'] == null
-            ? null
-            : DateTime.parse(m['dueDate'] as String),
-        status: ActionItemStatus.values.firstWhere((s) => s.name == m['status'],
-            orElse: () => ActionItemStatus.open),
-        createdAt: DateTime.parse(m['createdAt'] as String),
-        completedAt: m['completedAt'] == null
-            ? null
-            : DateTime.parse(m['completedAt'] as String),
-      );
+    id: m['id'] as String,
+    meetingId: m['meetingId'] as String,
+    body: m['body'] as String,
+    assignee: m['assignee'] as String?,
+    dueDate: m['dueDate'] == null
+        ? null
+        : DateTime.parse(m['dueDate'] as String),
+    status: ActionItemStatus.values.firstWhere(
+      (s) => s.name == m['status'],
+      orElse: () => ActionItemStatus.open,
+    ),
+    createdAt: DateTime.parse(m['createdAt'] as String),
+    completedAt: m['completedAt'] == null
+        ? null
+        : DateTime.parse(m['completedAt'] as String),
+  );
 }
 
 /// Action items extracted from summaries become tracked tasks. Top-level
@@ -130,6 +131,8 @@ class ActionItemService {
   Future<void> _save(List<ActionItem> list) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        _key, jsonEncode(list.map((a) => a.toJson()).toList()));
+      _key,
+      jsonEncode(list.map((a) => a.toJson()).toList()),
+    );
   }
 }

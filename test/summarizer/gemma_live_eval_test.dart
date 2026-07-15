@@ -36,73 +36,85 @@ void main() {
   HttpOverrides.global = null;
 
   test(
-      'live: Gemma-E2B-class model runs the real pipeline on the ASR transcript',
-      () async {
-    if (_model.isEmpty) {
-      markTestSkipped(
-          'set RECAP_OLLAMA_MODEL=gemma3n:e2b to run the live eval');
-      return;
-    }
+    'live: Gemma-E2B-class model runs the real pipeline on the ASR transcript',
+    () async {
+      if (_model.isEmpty) {
+        markTestSkipped(
+          'set RECAP_OLLAMA_MODEL=gemma3n:e2b to run the live eval',
+        );
+        return;
+      }
 
-    final transcriptPath = Platform.environment['RECAP_TRANSCRIPT'] ??
-        '/private/tmp/claude-501/-Users-saichetangrandhe-recap/'
-            '3dfee06c-6205-4ccb-a4bc-1eddaa11a041/scratchpad/transcript.txt';
-    final segments = _parseTranscript(File(transcriptPath).readAsStringSync());
-    expect(segments, isNotEmpty, reason: 'transcript did not parse');
+      final transcriptPath =
+          Platform.environment['RECAP_TRANSCRIPT'] ??
+          '/private/tmp/claude-501/-Users-saichetangrandhe-recap/'
+              '3dfee06c-6205-4ccb-a4bc-1eddaa11a041/scratchpad/transcript.txt';
+      final segments = _parseTranscript(
+        File(transcriptPath).readAsStringSync(),
+      );
+      expect(segments, isNotEmpty, reason: 'transcript did not parse');
 
-    // The honest glossary for THIS meeting: only the acronyms the shipped
-    // case-sensitive HeuristicEntityExtractor would actually catch. "skin apps"
-    // -> Scan Apps is deliberately NOT here — the polish agent flagged it as
-    // unreachable, so rule-1 repair must work from context alone. Testing with a
-    // fat hand-authored glossary would flatter the result.
-    final input = SummaryInput(
-      segments: segments,
-      meetingTitle: 'Scan Apps promo-ID tracking',
-      glossary: const ['APT', 'JBP', 'RGM'],
-    );
+      // The honest glossary for THIS meeting: only the acronyms the shipped
+      // case-sensitive HeuristicEntityExtractor would actually catch. "skin apps"
+      // -> Scan Apps is deliberately NOT here — the polish agent flagged it as
+      // unreachable, so rule-1 repair must work from context alone. Testing with a
+      // fat hand-authored glossary would flatter the result.
+      final input = SummaryInput(
+        segments: segments,
+        meetingTitle: 'Scan Apps promo-ID tracking',
+        glossary: const ['APT', 'JBP', 'RGM'],
+      );
 
-    final backend = _OllamaGemmaBackend(model: _model);
-    final result = await const SummaryPipeline().run(
-      backend: backend,
-      input: input,
-      persona: resolvePersona('basic', const []),
-      onProgress: (p) => stderr.writeln(
-          '  [${p.stage.name}] ${p.step}/${p.totalSteps} — ${p.label}'),
-    );
+      final backend = _OllamaGemmaBackend(model: _model);
+      final result = await const SummaryPipeline().run(
+        backend: backend,
+        input: input,
+        persona: resolvePersona('basic', const []),
+        onProgress: (p) => stderr.writeln(
+          '  [${p.stage.name}] ${p.step}/${p.totalSteps} — ${p.label}',
+        ),
+      );
 
-    // Dump everything for inspection.
-    final out = StringBuffer()
-      ..writeln('\n${'=' * 78}')
-      ..writeln(
+      // Dump everything for inspection.
+      final out = StringBuffer()
+        ..writeln('\n${'=' * 78}')
+        ..writeln(
           'MODEL: ${result.modelId}   (${backend.calls.length} generate calls, '
-          '${result.processingTime.inSeconds}s total)')
-      ..writeln(
+          '${result.processingTime.inSeconds}s total)',
+        )
+        ..writeln(
           'CHUNKS: ${backend.calls.where((c) => c.tag == 'map').length} map / '
           '${backend.calls.where((c) => c.tag == 'reduce').length} reduce / '
-          '${backend.calls.where((c) => c.tag == 'critic').length} critic')
-      ..writeln('=' * 78);
+          '${backend.calls.where((c) => c.tag == 'critic').length} critic',
+        )
+        ..writeln('=' * 78);
 
-    for (var i = 0; i < backend.calls.length; i++) {
-      final c = backend.calls[i];
+      for (var i = 0; i < backend.calls.length; i++) {
+        final c = backend.calls[i];
+        out
+          ..writeln(
+            '\n----- CALL ${i + 1}: ${c.tag.toUpperCase()} '
+            '(temp ${c.temperature}, ~${c.promptTokens} prompt tok) -----',
+          )
+          ..writeln('>>> RESPONSE:\n${c.response}');
+      }
       out
-        ..writeln('\n----- CALL ${i + 1}: ${c.tag.toUpperCase()} '
-            '(temp ${c.temperature}, ~${c.promptTokens} prompt tok) -----')
-        ..writeln('>>> RESPONSE:\n${c.response}');
-    }
-    out
-      ..writeln('\n${'#' * 78}')
-      ..writeln('# FINAL SUMMARY (what the user sees)')
-      ..writeln('#' * 78)
-      ..writeln(result.text);
+        ..writeln('\n${'#' * 78}')
+        ..writeln('# FINAL SUMMARY (what the user sees)')
+        ..writeln('#' * 78)
+        ..writeln(result.text);
 
-    // Write to a file too — test stdout gets truncated.
-    File('${Directory.systemTemp.path}/gemma_eval_output.md')
-        .writeAsStringSync(out.toString());
-    // ignore: avoid_print
-    print(out.toString());
+      // Write to a file too — test stdout gets truncated.
+      File(
+        '${Directory.systemTemp.path}/gemma_eval_output.md',
+      ).writeAsStringSync(out.toString());
+      // ignore: avoid_print
+      print(out.toString());
 
-    expect(result.text.trim(), isNotEmpty);
-  }, timeout: const Timeout(Duration(minutes: 30)));
+      expect(result.text.trim(), isNotEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 30)),
+  );
 }
 
 /// Parses "Speaker N (mm:ss)\n text" blocks into PromptSegments. Mirrors what
@@ -160,12 +172,11 @@ class _OllamaGemmaBackend implements SummaryBackend {
   // ten), which is BOTH how it would really run and fast enough to not time out.
   @override
   BackendCapabilities get capabilities => BackendCapabilities(
-        contextTokens:
-            int.tryParse(Platform.environment['RECAP_CTX_TOKENS'] ?? '') ??
-                4096,
-        maxOutputTokens:
-            int.tryParse(Platform.environment['RECAP_MAX_OUT'] ?? '') ?? 1024,
-      );
+    contextTokens:
+        int.tryParse(Platform.environment['RECAP_CTX_TOKENS'] ?? '') ?? 4096,
+    maxOutputTokens:
+        int.tryParse(Platform.environment['RECAP_MAX_OUT'] ?? '') ?? 1024,
+  );
 
   @override
   Future<bool> isAvailable() async => true;
@@ -182,38 +193,46 @@ class _OllamaGemmaBackend implements SummaryBackend {
     final tag = prompt.contains('DRAFT')
         ? 'critic'
         : (prompt.contains('Extract structured notes') ||
-                prompt.contains('SEGMENT'))
-            ? 'map'
-            : prompt.startsWith('Condense')
-                ? 'fold'
-                : 'reduce';
+              prompt.contains('SEGMENT'))
+        ? 'map'
+        : prompt.startsWith('Condense')
+        ? 'fold'
+        : 'reduce';
 
     final client = HttpClient();
     try {
-      final req = await client
-          .postUrl(Uri.parse('http://localhost:11434/api/generate'));
+      final req = await client.postUrl(
+        Uri.parse('http://localhost:11434/api/generate'),
+      );
       req.headers.contentType = ContentType.json;
-      req.add(utf8.encode(jsonEncode({
-        'model': model,
-        'prompt': prompt,
-        if (system != null && system.trim().isNotEmpty) 'system': system.trim(),
-        'stream': false,
-        // Gemma 4 is a THINKING model. Left on, it spends the entire ~1024-token
-        // on-device output budget reasoning and never emits a final answer — the
-        // response comes back EMPTY and the pipeline sees "extracted nothing".
-        // A phone cannot afford a thinking budget on top of the answer, so the
-        // real on-device config disables it; this mirrors that.
-        'think': false,
-        'options': {
-          'temperature': temperature,
-          // Match the advertised window (see capabilities): 4096 pins the phone's
-          // combined budget; a RECAP_CTX_TOKENS override models a bigger backend.
-          'num_ctx':
-              int.tryParse(Platform.environment['RECAP_CTX_TOKENS'] ?? '') ??
+      req.add(
+        utf8.encode(
+          jsonEncode({
+            'model': model,
+            'prompt': prompt,
+            if (system != null && system.trim().isNotEmpty)
+              'system': system.trim(),
+            'stream': false,
+            // Gemma 4 is a THINKING model. Left on, it spends the entire ~1024-token
+            // on-device output budget reasoning and never emits a final answer — the
+            // response comes back EMPTY and the pipeline sees "extracted nothing".
+            // A phone cannot afford a thinking budget on top of the answer, so the
+            // real on-device config disables it; this mirrors that.
+            'think': false,
+            'options': {
+              'temperature': temperature,
+              // Match the advertised window (see capabilities): 4096 pins the phone's
+              // combined budget; a RECAP_CTX_TOKENS override models a bigger backend.
+              'num_ctx':
+                  int.tryParse(
+                    Platform.environment['RECAP_CTX_TOKENS'] ?? '',
+                  ) ??
                   4096,
-          'num_predict': maxOutputTokens ?? capabilities.maxOutputTokens,
-        },
-      })));
+              'num_predict': maxOutputTokens ?? capabilities.maxOutputTokens,
+            },
+          }),
+        ),
+      );
       final resp = await req.close();
       final body = await resp.transform(utf8.decoder).join();
       if (resp.statusCode != 200) {

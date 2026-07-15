@@ -42,9 +42,9 @@ class _ByokScreenState extends State<ByokScreen> {
     await _storage.write(key: _kProvider, value: _provider);
     await _storage.write(key: _kKey, value: _keyController.text.trim());
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('API key saved to keychain')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('API key saved to keychain')));
     setState(() {
       _existing = true;
       _keyController.clear();
@@ -67,10 +67,13 @@ class _ByokScreenState extends State<ByokScreen> {
           children: [
             TopBar(
               leading: IconBtn(
-                  icon: Icons.arrow_back,
-                  onPressed: () => Navigator.pop(context)),
-              title: Text('Bring your own key',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+                icon: Icons.arrow_back,
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                'Bring your own key',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -81,8 +84,10 @@ class _ByokScreenState extends State<ByokScreen> {
                     style: RT.body.copyWith(color: t.textSecondary),
                   ),
                   const SizedBox(height: 20),
-                  Text('PROVIDER',
-                      style: RT.caption.copyWith(color: t.textMuted)),
+                  Text(
+                    'PROVIDER',
+                    style: RT.caption.copyWith(color: t.textMuted),
+                  ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
@@ -104,7 +109,9 @@ class _ByokScreenState extends State<ByokScreen> {
                               onTap: () => setState(() => _provider = p.$1),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 14),
+                                  horizontal: 14,
+                                  vertical: 14,
+                                ),
                                 decoration: BoxDecoration(
                                   border: Border(
                                     bottom: p.$1 == 'anthropic'
@@ -112,16 +119,24 @@ class _ByokScreenState extends State<ByokScreen> {
                                         : BorderSide(color: t.divider),
                                   ),
                                 ),
-                                child: Row(children: [
-                                  Expanded(
-                                    child: Text(p.$2,
-                                        style: RT.body
-                                            .copyWith(color: t.textPrimary)),
-                                  ),
-                                  if (_provider == p.$1)
-                                    Icon(Icons.check,
-                                        size: 16, color: t.accent),
-                                ]),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        p.$2,
+                                        style: RT.body.copyWith(
+                                          color: t.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    if (_provider == p.$1)
+                                      Icon(
+                                        Icons.check,
+                                        size: 16,
+                                        color: t.accent,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -129,8 +144,10 @@ class _ByokScreenState extends State<ByokScreen> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  Text(_existing ? 'REPLACE API KEY' : 'API KEY',
-                      style: RT.caption.copyWith(color: t.textMuted)),
+                  Text(
+                    _existing ? 'REPLACE API KEY' : 'API KEY',
+                    style: RT.caption.copyWith(color: t.textMuted),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _keyController,
@@ -157,16 +174,18 @@ class _ByokScreenState extends State<ByokScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(children: [
-                    Btn(label: 'Save', onPressed: _save),
-                    const SizedBox(width: 12),
-                    if (_existing)
-                      Btn(
-                        label: 'Delete saved key',
-                        variant: BtnVariant.destructive,
-                        onPressed: _delete,
-                      ),
-                  ]),
+                  Row(
+                    children: [
+                      Btn(label: 'Save', onPressed: _save),
+                      const SizedBox(width: 12),
+                      if (_existing)
+                        Btn(
+                          label: 'Delete saved key',
+                          variant: BtnVariant.destructive,
+                          onPressed: _delete,
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     'Stored in platform keychain (iOS Keychain / Android Keystore). Never written to disk in plaintext. Never sent anywhere except directly to the provider you select.',

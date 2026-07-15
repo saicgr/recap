@@ -51,15 +51,21 @@ class _StorageScreenState extends State<StorageScreen> {
     if (!await dir.exists()) return 0;
     var total = 0;
     try {
-      await for (final entity
-          in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity in dir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is File) {
           try {
             total += await entity.length();
-          } catch (_) {/* per-file races on iOS */}
+          } catch (_) {
+            /* per-file races on iOS */
+          }
         }
       }
-    } catch (_) {/* dir missing */}
+    } catch (_) {
+      /* dir missing */
+    }
     return total;
   }
 
@@ -87,8 +93,10 @@ class _StorageScreenState extends State<StorageScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Storage',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Storage',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: sizes == null
@@ -106,14 +114,20 @@ class _StorageScreenState extends State<StorageScreen> {
                           child: Row(
                             children: [
                               Expanded(
-                                child: Text('Total on this device',
-                                    style: RT.subtitle
-                                        .copyWith(color: t.textPrimary)),
+                                child: Text(
+                                  'Total on this device',
+                                  style: RT.subtitle.copyWith(
+                                    color: t.textPrimary,
+                                  ),
+                                ),
                               ),
-                              Text(_fmtBytes(total),
-                                  style: RT.titleLg.copyWith(
-                                      color: t.accent,
-                                      fontWeight: FontWeight.w700)),
+                              Text(
+                                _fmtBytes(total),
+                                style: RT.titleLg.copyWith(
+                                  color: t.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -140,11 +154,15 @@ class _StorageScreenState extends State<StorageScreen> {
       child: Row(
         children: [
           Expanded(
-            child:
-                Text(entry.key, style: RT.body.copyWith(color: t.textPrimary)),
+            child: Text(
+              entry.key,
+              style: RT.body.copyWith(color: t.textPrimary),
+            ),
           ),
-          Text(_fmtBytes(entry.value),
-              style: RT.bodySm.copyWith(color: t.textSecondary).merge(RT.num)),
+          Text(
+            _fmtBytes(entry.value),
+            style: RT.bodySm.copyWith(color: t.textSecondary).merge(RT.num),
+          ),
         ],
       ),
     );

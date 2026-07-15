@@ -22,7 +22,7 @@ import '../data/database.dart';
 ///   Power -> unlimited (+ variables / auto-apply, later)
 class TemplateService extends ChangeNotifier {
   TemplateService({required this.db, Uuid? uuid})
-      : _uuid = uuid ?? const Uuid();
+    : _uuid = uuid ?? const Uuid();
 
   final AppDb db;
   final Uuid _uuid;
@@ -49,9 +49,9 @@ class TemplateService extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    final rows = await (db.select(db.templates)
-          ..orderBy([(t) => OrderingTerm.asc(t.name)]))
-        .get();
+    final rows = await (db.select(
+      db.templates,
+    )..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
     _cache = rows.map(_toPersona).toList(growable: false);
     notifyListeners();
   }
@@ -61,12 +61,12 @@ class TemplateService extends ChangeNotifier {
   /// prompt. [SummaryRouter] lets `custom:` keys through that gate for exactly
   /// this reason.
   Persona _toPersona(Template t) => Persona(
-        style: SummaryStyle.basic,
-        key: t.id,
-        displayName: t.name,
-        emoji: t.emoji,
-        prompt: t.prompt,
-      );
+    style: SummaryStyle.basic,
+    key: t.id,
+    displayName: t.name,
+    emoji: t.emoji,
+    prompt: t.prompt,
+  );
 
   Future<Persona> create({
     required String name,
@@ -80,7 +80,9 @@ class TemplateService extends ChangeNotifier {
     if (p.isEmpty) throw ArgumentError('Template prompt cannot be empty');
 
     final now = DateTime.now();
-    final row = await db.into(db.templates).insertReturning(
+    final row = await db
+        .into(db.templates)
+        .insertReturning(
           TemplatesCompanion.insert(
             // The `custom:` prefix is load-bearing: resolvePersona keys off it.
             id: 'custom:${_uuid.v4()}',
@@ -99,11 +101,11 @@ class TemplateService extends ChangeNotifier {
   /// Fork a built-in into an editable copy — the fastest path to a useful
   /// template is "the standup one, but ours".
   Future<Persona> duplicateBuiltin(Persona builtin) => create(
-        name: '${builtin.displayName} (copy)',
-        prompt: builtin.prompt,
-        emoji: builtin.emoji,
-        builtinKey: builtin.key,
-      );
+    name: '${builtin.displayName} (copy)',
+    prompt: builtin.prompt,
+    emoji: builtin.emoji,
+    builtinKey: builtin.key,
+  );
 
   Future<void> update(
     String id, {
@@ -170,14 +172,17 @@ class TemplateService extends ChangeNotifier {
         final legacyId = m['id'] as String?;
         if (legacyId == null || legacyId.isEmpty) continue;
         // Old ids were stored bare; the key used everywhere was 'custom:$id'.
-        final id =
-            legacyId.startsWith('custom:') ? legacyId : 'custom:$legacyId';
+        final id = legacyId.startsWith('custom:')
+            ? legacyId
+            : 'custom:$legacyId';
         final name = (m['name'] as String?)?.trim();
         final prompt = (m['prompt'] as String?)?.trim();
         if (name == null || name.isEmpty || prompt == null || prompt.isEmpty) {
           continue; // unusable row — do not resurrect a broken template
         }
-        await db.into(db.templates).insert(
+        await db
+            .into(db.templates)
+            .insert(
               TemplatesCompanion.insert(
                 id: id,
                 name: name,

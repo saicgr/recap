@@ -49,9 +49,7 @@ class VadService {
   /// Trigger one-time model download. ~1.6 MB so we can do it without
   /// pre-download disclosure dialogs. Mirror of TranscriberService /
   /// SherpaDiarizer / GemmaDownloader patterns — see those for parallelism.
-  Future<void> ensureModelInstalled({
-    void Function(double)? onProgress,
-  }) async {
+  Future<void> ensureModelInstalled({void Function(double)? onProgress}) async {
     if (await isModelInstalled()) return;
     final dest = File(await _modelPath());
     final tmp = File('${dest.path}.part');
@@ -97,10 +95,12 @@ class VadService {
   }) async {
     final samples = await _readWavMono16(wavPath);
     if (samples.isEmpty) return const [];
-    return _detectInFrames(samples,
-        threshold: threshold,
-        minSilenceMs: minSilenceMs,
-        minSpeechMs: minSpeechMs);
+    return _detectInFrames(
+      samples,
+      threshold: threshold,
+      minSilenceMs: minSilenceMs,
+      minSpeechMs: minSpeechMs,
+    );
   }
 
   Future<List<({int startMs, int endMs})>> _detectInFrames(
@@ -134,7 +134,8 @@ class VadService {
         final newState = await outputs['stateN']!.asList();
         // Re-pack flattened state into a fresh Float32List for the next call.
         state = Float32List.fromList(
-            newState.cast<num>().map((n) => n.toDouble()).toList());
+          newState.cast<num>().map((n) => n.toDouble()).toList(),
+        );
       } catch (e) {
         // Per-frame failure — model schema mismatch with this Silero ONNX
         // variant (output names differ between v4 / v5 dumps). Fall back to
@@ -145,10 +146,12 @@ class VadService {
         return [(startMs: start, endMs: end)];
       }
     }
-    return _probsToSegments(probs,
-        threshold: threshold,
-        minSilenceMs: minSilenceMs,
-        minSpeechMs: minSpeechMs);
+    return _probsToSegments(
+      probs,
+      threshold: threshold,
+      minSilenceMs: minSilenceMs,
+      minSpeechMs: minSpeechMs,
+    );
   }
 
   /// Convert per-frame probabilities into [(startMs, endMs)] segments.
@@ -205,8 +208,10 @@ class VadService {
   /// Streaming variant for live captions. Caller feeds 32 ms PCM frames
   /// (512 samples at 16 kHz mono); emits true while speech is present.
   /// LiveCaptionsService gates Whisper inference on this output.
-  Stream<bool> isSpeechStream(Stream<Int16List> pcm16,
-      {double threshold = 0.5}) async* {
+  Stream<bool> isSpeechStream(
+    Stream<Int16List> pcm16, {
+    double threshold = 0.5,
+  }) async* {
     final session = await _ensureSession();
     var state = Float32List(2 * 1 * 128);
     final frameBuf = Float32List(windowSize);
@@ -227,7 +232,8 @@ class VadService {
         final probList = await outputs['output']!.asList();
         final newState = await outputs['stateN']!.asList();
         state = Float32List.fromList(
-            newState.cast<num>().map((n) => n.toDouble()).toList());
+          newState.cast<num>().map((n) => n.toDouble()).toList(),
+        );
         yield (probList.first as num).toDouble() >= threshold;
       } catch (_) {
         yield true; // graceful: assume speech when VAD fails
@@ -244,10 +250,6 @@ class VadService {
     final bytes = await file.readAsBytes();
     if (bytes.length <= 44) return Int16List(0);
     final pcm = bytes.sublist(44);
-    return Int16List.view(
-      pcm.buffer,
-      pcm.offsetInBytes,
-      pcm.length ~/ 2,
-    );
+    return Int16List.view(pcm.buffer, pcm.offsetInBytes, pcm.length ~/ 2);
   }
 }

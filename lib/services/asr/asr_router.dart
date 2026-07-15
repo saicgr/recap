@@ -28,8 +28,10 @@ enum AsrEnginePreference {
 /// pins Whisper for everyone — the router becomes wired-in with ZERO change to
 /// which engine actually transcribes a meeting. Once native is enabled, the raw
 /// preference takes effect.
-AsrEnginePreference resolveAsrPreference(String raw,
-    {required bool nativeEnabled}) {
+AsrEnginePreference resolveAsrPreference(
+  String raw, {
+  required bool nativeEnabled,
+}) {
   if (!nativeEnabled) return AsrEnginePreference.whisperOnly;
   return switch (raw) {
     'native' => AsrEnginePreference.nativeOnly,

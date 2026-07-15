@@ -71,7 +71,9 @@ class VoiceprintService {
   Future<void> _save(List<Voiceprint> list) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        _key, jsonEncode(list.map((v) => v.toJson()).toList()));
+      _key,
+      jsonEncode(list.map((v) => v.toJson()).toList()),
+    );
   }
 
   double _cosineSim(Float32List a, Float32List b) {
@@ -112,19 +114,20 @@ class Voiceprint {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'embedding': base64Encode(embedding.buffer.asUint8List()),
-        'avatarPath': avatarPath,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'embedding': base64Encode(embedding.buffer.asUint8List()),
+    'avatarPath': avatarPath,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   factory Voiceprint.fromJson(Map<String, dynamic> m) {
     return Voiceprint(
       id: m['id'] as String,
       name: m['name'] as String,
-      embedding:
-          Float32List.view(base64Decode(m['embedding'] as String).buffer),
+      embedding: Float32List.view(
+        base64Decode(m['embedding'] as String).buffer,
+      ),
       avatarPath: m['avatarPath'] as String?,
       createdAt: DateTime.parse(m['createdAt'] as String),
     );

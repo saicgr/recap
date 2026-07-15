@@ -23,17 +23,16 @@ void main() {
     String workspaceId = 'ws-1',
     int kid = 1,
     SecretKey? key,
-  }) =>
-      Envelope.seal(
-        plaintext: text,
-        workspaceKey: key ?? kws,
-        kid: kid,
-        workspaceId: workspaceId,
-        table: table,
-        rowId: rowId,
-        field: field,
-        hlc: hlc,
-      );
+  }) => Envelope.seal(
+    plaintext: text,
+    workspaceKey: key ?? kws,
+    kid: kid,
+    workspaceId: workspaceId,
+    table: table,
+    rowId: rowId,
+    field: field,
+    hlc: hlc,
+  );
 
   Future<String> open(
     String sealed, {
@@ -43,16 +42,15 @@ void main() {
     String hlc = '000000000000001-00000-node',
     String workspaceId = 'ws-1',
     SecretKey? key,
-  }) =>
-      Envelope.open(
-        sealed: sealed,
-        workspaceKey: key ?? kws,
-        workspaceId: workspaceId,
-        table: table,
-        rowId: rowId,
-        field: field,
-        hlc: hlc,
-      );
+  }) => Envelope.open(
+    sealed: sealed,
+    workspaceKey: key ?? kws,
+    workspaceId: workspaceId,
+    table: table,
+    rowId: rowId,
+    field: field,
+    hlc: hlc,
+  );
 
   group('envelope round-trip', () {
     test('seals and opens', () async {
@@ -83,42 +81,43 @@ void main() {
     test('a different workspace key cannot open it', () async {
       final s = await seal('secret');
       final other = await KeyWrap.generateWorkspaceKey();
-      await expectLater(
-          open(s, key: other), throwsA(isA<EnvelopeError>()));
+      await expectLater(open(s, key: other), throwsA(isA<EnvelopeError>()));
     });
 
     test('a ciphertext replayed into a DIFFERENT ROW fails', () async {
       // Without the row in the AAD, the operator could copy your salary line
       // into someone else's meeting and it would decrypt cleanly.
       final s = await seal('secret', rowId: 'row-1');
-      await expectLater(
-          open(s, rowId: 'row-2'), throwsA(isA<EnvelopeError>()));
+      await expectLater(open(s, rowId: 'row-2'), throwsA(isA<EnvelopeError>()));
     });
 
     test('a ciphertext replayed into a different FIELD fails', () async {
       final s = await seal('secret', field: 'title');
-      await expectLater(
-          open(s, field: 'body'), throwsA(isA<EnvelopeError>()));
+      await expectLater(open(s, field: 'body'), throwsA(isA<EnvelopeError>()));
     });
 
     test('a ciphertext replayed into another WORKSPACE fails', () async {
       final s = await seal('secret', workspaceId: 'ws-1');
       await expectLater(
-          open(s, workspaceId: 'ws-2'), throwsA(isA<EnvelopeError>()));
-    });
-
-    test('THE REPLAY ATTACK: an OLD ciphertext cannot be swapped back in',
-        () async {
-      // This is why the HLC is in the AAD. Without it the operator could serve
-      // yesterday's version of a row: it is genuinely our ciphertext, it would
-      // decrypt cleanly, and the user would silently see stale content with no
-      // indication anything was wrong.
-      final oldRow = await seal('old value', hlc: '000000000000001-00000-n');
-      await expectLater(
-        open(oldRow, hlc: '000000000000009-00000-n'),
+        open(s, workspaceId: 'ws-2'),
         throwsA(isA<EnvelopeError>()),
       );
     });
+
+    test(
+      'THE REPLAY ATTACK: an OLD ciphertext cannot be swapped back in',
+      () async {
+        // This is why the HLC is in the AAD. Without it the operator could serve
+        // yesterday's version of a row: it is genuinely our ciphertext, it would
+        // decrypt cleanly, and the user would silently see stale content with no
+        // indication anything was wrong.
+        final oldRow = await seal('old value', hlc: '000000000000001-00000-n');
+        await expectLater(
+          open(oldRow, hlc: '000000000000009-00000-n'),
+          throwsA(isA<EnvelopeError>()),
+        );
+      },
+    );
 
     test('a flipped bit is detected, not silently decrypted', () async {
       final s = await seal('secret');
@@ -145,8 +144,10 @@ void main() {
         workspaceKey: kws,
         recipientPublicKey: await alice.extractPublicKey(),
       );
-      final recovered =
-          await KeyWrap.unwrap(wrapped: wrapped, myIdentity: alice);
+      final recovered = await KeyWrap.unwrap(
+        wrapped: wrapped,
+        myIdentity: alice,
+      );
       expect(await recovered.extractBytes(), await kws.extractBytes());
     });
 
@@ -168,8 +169,14 @@ void main() {
       // same workspace key just by comparing their wrapped rows.
       final alice = await KeyWrap.generateIdentity();
       final pub = await alice.extractPublicKey();
-      final a = await KeyWrap.wrapFor(workspaceKey: kws, recipientPublicKey: pub);
-      final b = await KeyWrap.wrapFor(workspaceKey: kws, recipientPublicKey: pub);
+      final a = await KeyWrap.wrapFor(
+        workspaceKey: kws,
+        recipientPublicKey: pub,
+      );
+      final b = await KeyWrap.wrapFor(
+        workspaceKey: kws,
+        recipientPublicKey: pub,
+      );
       expect(a, isNot(b));
     });
 
@@ -182,8 +189,10 @@ void main() {
         workspaceKey: kws,
         recipientPublicKey: await removed.extractPublicKey(),
       );
-      final oldKey =
-          await KeyWrap.unwrap(wrapped: oldWrapped, myIdentity: removed);
+      final oldKey = await KeyWrap.unwrap(
+        wrapped: oldWrapped,
+        myIdentity: removed,
+      );
 
       // Admin re-keys the workspace (kid 2) and does NOT wrap it for them.
       final kws2 = await KeyWrap.generateWorkspaceKey();
@@ -222,17 +231,19 @@ void main() {
       expect(h2.counter, 1);
     });
 
-    test('a device with a SLOW clock still sorts its reply after the message',
-        () {
-      // The whole point. Our clock says 500; a peer edited at 1000. Our next
-      // edit must still sort AFTER theirs, or our reply would be silently
-      // discarded as "older".
-      var mine = Hlc.zero('slow-phone');
-      const theirs = Hlc(millis: 1000, counter: 0, nodeId: 'fast');
-      mine = mine.receive(theirs, nowMs: 500);
-      final myReply = mine.tick(nowMs: 500);
-      expect(myReply > theirs, isTrue);
-    });
+    test(
+      'a device with a SLOW clock still sorts its reply after the message',
+      () {
+        // The whole point. Our clock says 500; a peer edited at 1000. Our next
+        // edit must still sort AFTER theirs, or our reply would be silently
+        // discarded as "older".
+        var mine = Hlc.zero('slow-phone');
+        const theirs = Hlc(millis: 1000, counter: 0, nodeId: 'fast');
+        mine = mine.receive(theirs, nowMs: 500);
+        final myReply = mine.tick(nowMs: 500);
+        expect(myReply > theirs, isTrue);
+      },
+    );
 
     test('refuses a wildly-future remote clock instead of poisoning ours', () {
       // Accepting it would drag our clock years forward, permanently: nothing
@@ -244,7 +255,8 @@ void main() {
         nodeId: 'broken',
       );
       expect(
-        () => mine.receive(broken, nowMs: DateTime(2026).millisecondsSinceEpoch),
+        () =>
+            mine.receive(broken, nowMs: DateTime(2026).millisecondsSinceEpoch),
         throwsStateError,
       );
     });

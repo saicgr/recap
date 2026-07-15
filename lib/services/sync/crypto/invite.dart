@@ -41,7 +41,8 @@ class Invite {
     return base64Url.encode(bytes).replaceAll('=', '');
   }
 
-  static Future<SecretKey> _derive(String token, String label) => _hkdf.deriveKey(
+  static Future<SecretKey> _derive(String token, String label) =>
+      _hkdf.deriveKey(
         secretKey: SecretKey(utf8.encode(token)),
         nonce: const [], // token itself is the high-entropy input
         info: utf8.encode(label),

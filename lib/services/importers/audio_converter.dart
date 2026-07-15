@@ -30,7 +30,8 @@ class AudioConverter {
     if (!ReturnCode.isSuccess(rc)) {
       final logs = await session.getAllLogsAsString();
       throw StateError(
-          'ffmpeg conversion failed (rc=$rc): ${(logs ?? '').trim()}');
+        'ffmpeg conversion failed (rc=$rc): ${(logs ?? '').trim()}',
+      );
     }
     return outPath;
   }

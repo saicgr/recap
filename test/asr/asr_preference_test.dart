@@ -26,20 +26,28 @@ void main() {
     // the test above would pass vacuously. It must actually honour the setting
     // once native is switched on.
     test('auto -> auto', () {
-      expect(resolveAsrPreference('auto', nativeEnabled: true),
-          AsrEnginePreference.auto);
+      expect(
+        resolveAsrPreference('auto', nativeEnabled: true),
+        AsrEnginePreference.auto,
+      );
     });
     test('native -> nativeOnly', () {
-      expect(resolveAsrPreference('native', nativeEnabled: true),
-          AsrEnginePreference.nativeOnly);
+      expect(
+        resolveAsrPreference('native', nativeEnabled: true),
+        AsrEnginePreference.nativeOnly,
+      );
     });
     test('whisper -> whisperOnly (user can still force Whisper)', () {
-      expect(resolveAsrPreference('whisper', nativeEnabled: true),
-          AsrEnginePreference.whisperOnly);
+      expect(
+        resolveAsrPreference('whisper', nativeEnabled: true),
+        AsrEnginePreference.whisperOnly,
+      );
     });
     test('an unknown value falls back to auto', () {
-      expect(resolveAsrPreference('???', nativeEnabled: true),
-          AsrEnginePreference.auto);
+      expect(
+        resolveAsrPreference('???', nativeEnabled: true),
+        AsrEnginePreference.auto,
+      );
     });
   });
 }

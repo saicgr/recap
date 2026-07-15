@@ -23,8 +23,9 @@ import 'package:flutter/services.dart';
 ///   AVAudioRecorder running in the background. No method-channel work
 ///   strictly required on iOS — this class is a no-op there.
 class BackgroundRecorder {
-  static const _channel =
-      MethodChannel('com.recapfreenote.recap/background_recorder');
+  static const _channel = MethodChannel(
+    'com.recapfreenote.recap/background_recorder',
+  );
 
   Future<void> startForeground({required String meetingTitle}) async {
     if (!Platform.isAndroid) return;

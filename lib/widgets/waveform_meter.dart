@@ -28,8 +28,11 @@ class WaveformMeter extends StatefulWidget {
 }
 
 class _WaveformMeterState extends State<WaveformMeter> {
-  late final List<double> _bars =
-      List<double>.filled(widget.barCount, 0, growable: false);
+  late final List<double> _bars = List<double>.filled(
+    widget.barCount,
+    0,
+    growable: false,
+  );
   late final StreamSubscription<double> _sub;
   double _currentRms = 0;
 
@@ -69,11 +72,12 @@ class _WaveformMeterState extends State<WaveformMeter> {
             decoration: BoxDecoration(
               color: t.bgSubtle,
               border: Border.all(
-                  color: clipping
-                      ? t.recordRed
-                      : hot
-                          ? t.warn
-                          : t.border),
+                color: clipping
+                    ? t.recordRed
+                    : hot
+                    ? t.warn
+                    : t.border,
+              ),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -85,8 +89,8 @@ class _WaveformMeterState extends State<WaveformMeter> {
                 color: clipping
                     ? t.recordRed
                     : hot
-                        ? t.warn
-                        : t.textSecondary,
+                    ? t.warn
+                    : t.textSecondary,
               ),
             ),
           ),

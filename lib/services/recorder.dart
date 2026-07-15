@@ -31,8 +31,10 @@ class RecorderService {
       throw StateError('Microphone permission denied');
     }
 
-    final choice =
-        MicPolicy.choose(await listInputs(), pinnedId: pinnedDeviceId);
+    final choice = MicPolicy.choose(
+      await listInputs(),
+      pinnedId: pinnedDeviceId,
+    );
     _lastChoice = choice;
 
     await _recorder.start(_config(choice.device), path: path);
@@ -69,29 +71,29 @@ class RecorderService {
   /// silently reintroduces narrowband capture — with no error, and no test
   /// failure.
   RecordConfig _config(InputDevice? device) => RecordConfig(
-        encoder: AudioEncoder.wav,
-        sampleRate: 16000,
-        numChannels: 1,
-        device: device,
-        // Let the mic be the mic. AGC/NS pump and gate quiet speakers, which is
-        // exactly the audio Whisper already struggles with.
-        autoGain: false,
-        echoCancel: false,
-        noiseSuppress: false,
-        iosConfig: const IosRecordConfig(
-          categoryOptions: [
-            IosAudioCategoryOption.defaultToSpeaker,
-            // allowBluetooth DELIBERATELY OMITTED — see above.
-            IosAudioCategoryOption.allowBluetoothA2DP,
-          ],
-        ),
-        androidConfig: const AndroidRecordConfig(
-          manageBluetooth: false,
-          // voiceRecognition is tuned for ASR and skips the aggressive
-          // call-oriented processing that mic/voiceCommunication apply.
-          audioSource: AndroidAudioSource.voiceRecognition,
-        ),
-      );
+    encoder: AudioEncoder.wav,
+    sampleRate: 16000,
+    numChannels: 1,
+    device: device,
+    // Let the mic be the mic. AGC/NS pump and gate quiet speakers, which is
+    // exactly the audio Whisper already struggles with.
+    autoGain: false,
+    echoCancel: false,
+    noiseSuppress: false,
+    iosConfig: const IosRecordConfig(
+      categoryOptions: [
+        IosAudioCategoryOption.defaultToSpeaker,
+        // allowBluetooth DELIBERATELY OMITTED — see above.
+        IosAudioCategoryOption.allowBluetoothA2DP,
+      ],
+    ),
+    androidConfig: const AndroidRecordConfig(
+      manageBluetooth: false,
+      // voiceRecognition is tuned for ASR and skips the aggressive
+      // call-oriented processing that mic/voiceCommunication apply.
+      audioSource: AndroidAudioSource.voiceRecognition,
+    ),
+  );
 
   Future<String?> stop() => _recorder.stop();
 

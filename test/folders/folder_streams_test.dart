@@ -18,7 +18,9 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Future<void> seedMeeting(String id) => db.into(db.meetings).insert(
+  Future<void> seedMeeting(String id) => db
+      .into(db.meetings)
+      .insert(
         MeetingsCompanion.insert(
           id: id,
           title: 'Meeting $id',
@@ -30,29 +32,31 @@ void main() {
         ),
       );
 
-  test('watchMeetingsInFolder emits only that folder, and updates live',
-      () async {
-    await seedMeeting('m1');
-    await seedMeeting('m2');
-    final work = await svc.createFolder(name: 'Work');
-    final personal = await svc.createFolder(name: 'Personal');
+  test(
+    'watchMeetingsInFolder emits only that folder, and updates live',
+    () async {
+      await seedMeeting('m1');
+      await seedMeeting('m2');
+      final work = await svc.createFolder(name: 'Work');
+      final personal = await svc.createFolder(name: 'Personal');
 
-    await svc.setFoldersForMeeting('m1', {work.id});
-    await svc.setFoldersForMeeting('m2', {personal.id});
+      await svc.setFoldersForMeeting('m1', {work.id});
+      await svc.setFoldersForMeeting('m2', {personal.id});
 
-    expect(
-      (await svc.watchMeetingsInFolder(work.id).first).map((m) => m.id),
-      ['m1'],
-    );
+      expect(
+        (await svc.watchMeetingsInFolder(work.id).first).map((m) => m.id),
+        ['m1'],
+      );
 
-    // Filing m2 into Work must show up without a manual reload — the home list
-    // subscribes to this stream.
-    await svc.setFoldersForMeeting('m2', {personal.id, work.id});
-    final ids = (await svc.watchMeetingsInFolder(work.id).first)
-        .map((m) => m.id)
-        .toSet();
-    expect(ids, {'m1', 'm2'});
-  });
+      // Filing m2 into Work must show up without a manual reload — the home list
+      // subscribes to this stream.
+      await svc.setFoldersForMeeting('m2', {personal.id, work.id});
+      final ids = (await svc.watchMeetingsInFolder(work.id).first)
+          .map((m) => m.id)
+          .toSet();
+      expect(ids, {'m1', 'm2'});
+    },
+  );
 
   test('watchFolderCounts reports per-folder totals', () async {
     await seedMeeting('m1');

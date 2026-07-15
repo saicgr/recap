@@ -18,10 +18,7 @@ class GlossaryContext {
   final List<String> terms;
   final Map<String, String> speakerAliases;
 
-  const GlossaryContext({
-    required this.terms,
-    required this.speakerAliases,
-  });
+  const GlossaryContext({required this.terms, required this.speakerAliases});
 
   static const empty = GlossaryContext(terms: [], speakerAliases: {});
 
@@ -91,7 +88,8 @@ class SummaryGlossary {
   /// prompt that would otherwise be told to "prefer this exact spelling".
   static final Set<String> _leadingStopWords = _stopWordList.split(' ').toSet();
 
-  static const _stopWordList = 'a about after all also am an and any are as at '
+  static const _stopWordList =
+      'a about after all also am an and any are as at '
       'because been before but by can did do does for from good great had has '
       'have he her here his how i if in is it its just let like made make may '
       'me my no not now of off ok okay on one or our out over right she so '
@@ -115,15 +113,16 @@ class SummaryGlossary {
     // Priority governs who survives the cap; the user's own terms never lose to
     // a heuristic guess. Within a priority band, longest-first: a longer term is
     // more specific and therefore a safer repair target.
-    final ranked = <_Candidate>[
-      for (final t in curated) _Candidate(t, 0),
-      for (final n in enrolled) _Candidate(n, 1),
-      for (final e in extracted) _Candidate(e, 2),
-    ]..sort((a, b) {
-        final byPriority = a.priority.compareTo(b.priority);
-        if (byPriority != 0) return byPriority;
-        return b.term.length.compareTo(a.term.length);
-      });
+    final ranked =
+        <_Candidate>[
+          for (final t in curated) _Candidate(t, 0),
+          for (final n in enrolled) _Candidate(n, 1),
+          for (final e in extracted) _Candidate(e, 2),
+        ]..sort((a, b) {
+          final byPriority = a.priority.compareTo(b.priority);
+          if (byPriority != 0) return byPriority;
+          return b.term.length.compareTo(a.term.length);
+        });
 
     final kept = <String>[];
     final seen = <String>{};

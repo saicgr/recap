@@ -22,22 +22,28 @@ class _FakeDataApi implements DataApi {
   final FakeServer server;
 
   @override
-  Future<void> upsert(String table, List<Map<String, dynamic>> rows,
-      {required String onConflict}) async {
+  Future<void> upsert(
+    String table,
+    List<Map<String, dynamic>> rows, {
+    required String onConflict,
+  }) async {
     for (final r in rows) {
       server.rows[r['id'] as String] = Map.of(r);
     }
   }
 
   @override
-  Future<List<Map<String, dynamic>>> select(String table,
-      {Map<String, String> query = const {}}) async {
+  Future<List<Map<String, dynamic>>> select(
+    String table, {
+    Map<String, String> query = const {},
+  }) async {
     final cursor = (query['hlc'] ?? 'gt.').substring(3);
-    final out = server.rows.values
-        .where((r) => (r['hlc'] as String).compareTo(cursor) > 0)
-        .map(Map<String, dynamic>.of)
-        .toList()
-      ..sort((a, b) => (a['hlc'] as String).compareTo(b['hlc'] as String));
+    final out =
+        server.rows.values
+            .where((r) => (r['hlc'] as String).compareTo(cursor) > 0)
+            .map(Map<String, dynamic>.of)
+            .toList()
+          ..sort((a, b) => (a['hlc'] as String).compareTo(b['hlc'] as String));
     return out;
   }
 
@@ -71,42 +77,57 @@ void main() {
     return (db: db, engine: engine, dao: dao);
   }
 
-  Future<void> makeMeeting(AppDb db, SyncDao dao, String id, String title) async {
+  Future<void> makeMeeting(
+    AppDb db,
+    SyncDao dao,
+    String id,
+    String title,
+  ) async {
     await db.transaction(() async {
-      await db.into(db.meetings).insert(MeetingsCompanion.insert(
-            id: id,
-            title: title,
-            durationMs: const Value(1000),
-            audioPath: '/tmp/$id.wav',
-            createdAt: DateTime(2026, 7, 1),
-            updatedAt: DateTime(2026, 7, 1),
-            status: MeetingStatus.ready,
-          ));
+      await db
+          .into(db.meetings)
+          .insert(
+            MeetingsCompanion.insert(
+              id: id,
+              title: title,
+              durationMs: const Value(1000),
+              audioPath: '/tmp/$id.wav',
+              createdAt: DateTime(2026, 7, 1),
+              updatedAt: DateTime(2026, 7, 1),
+              status: MeetingStatus.ready,
+            ),
+          );
       await dao.recordChange(
-          table: 'meetings', id: id, op: 'upsert', hlc: dao.tick());
+        table: 'meetings',
+        id: id,
+        op: 'upsert',
+        hlc: dao.tick(),
+      );
     });
   }
 
-  test('a meeting created on device A appears, decrypted, on device B',
-      () async {
-    final a = device('A');
-    final b = device('B');
+  test(
+    'a meeting created on device A appears, decrypted, on device B',
+    () async {
+      final a = device('A');
+      final b = device('B');
 
-    await makeMeeting(a.db, a.dao, 'm1', 'Q3 Board Review');
-    await a.engine.syncOnce();
+      await makeMeeting(a.db, a.dao, 'm1', 'Q3 Board Review');
+      await a.engine.syncOnce();
 
-    // The server holds only ciphertext.
-    expect(server.rows['m1']!['title_enc'], isA<String>());
-    expect(server.rows['m1']!['title_enc'], isNot(contains('Board')));
+      // The server holds only ciphertext.
+      expect(server.rows['m1']!['title_enc'], isA<String>());
+      expect(server.rows['m1']!['title_enc'], isNot(contains('Board')));
 
-    await b.engine.syncOnce();
-    final onB = await (b.db.select(b.db.meetings)).getSingle();
-    expect(onB.id, 'm1');
-    expect(onB.title, 'Q3 Board Review');
+      await b.engine.syncOnce();
+      final onB = await (b.db.select(b.db.meetings)).getSingle();
+      expect(onB.id, 'm1');
+      expect(onB.title, 'Q3 Board Review');
 
-    await a.db.close();
-    await b.db.close();
-  });
+      await a.db.close();
+      await b.db.close();
+    },
+  );
 
   test('the operator (holding no key) cannot read the title', () async {
     final a = device('A');
@@ -133,30 +154,39 @@ void main() {
     await peeker.db.close();
   });
 
-  test('last-writer-wins: a newer remote edit overwrites; an older one does not',
-      () async {
-    final a = device('A');
-    final b = device('B');
+  test(
+    'last-writer-wins: a newer remote edit overwrites; an older one does not',
+    () async {
+      final a = device('A');
+      final b = device('B');
 
-    await makeMeeting(a.db, a.dao, 'm1', 'Original');
-    await a.engine.syncOnce();
-    await b.engine.syncOnce();
-    expect((await b.db.select(b.db.meetings).getSingle()).title, 'Original');
+      await makeMeeting(a.db, a.dao, 'm1', 'Original');
+      await a.engine.syncOnce();
+      await b.engine.syncOnce();
+      expect((await b.db.select(b.db.meetings).getSingle()).title, 'Original');
 
-    // A edits later -> B should adopt it.
-    await a.db.transaction(() async {
-      await (a.db.update(a.db.meetings)..where((t) => t.id.equals('m1')))
-          .write(const MeetingsCompanion(title: Value('Edited on A')));
-      await a.dao.recordChange(
-          table: 'meetings', id: 'm1', op: 'upsert', hlc: a.dao.tick());
-    });
-    await a.engine.syncOnce();
-    await b.engine.syncOnce();
-    expect((await b.db.select(b.db.meetings).getSingle()).title, 'Edited on A');
+      // A edits later -> B should adopt it.
+      await a.db.transaction(() async {
+        await (a.db.update(a.db.meetings)..where((t) => t.id.equals('m1')))
+            .write(const MeetingsCompanion(title: Value('Edited on A')));
+        await a.dao.recordChange(
+          table: 'meetings',
+          id: 'm1',
+          op: 'upsert',
+          hlc: a.dao.tick(),
+        );
+      });
+      await a.engine.syncOnce();
+      await b.engine.syncOnce();
+      expect(
+        (await b.db.select(b.db.meetings).getSingle()).title,
+        'Edited on A',
+      );
 
-    await a.db.close();
-    await b.db.close();
-  });
+      await a.db.close();
+      await b.db.close();
+    },
+  );
 
   test('a remote tombstone deletes the row locally', () async {
     final a = device('A');
@@ -170,7 +200,11 @@ void main() {
     await a.db.transaction(() async {
       await (a.db.delete(a.db.meetings)..where((t) => t.id.equals('m1'))).go();
       await a.dao.recordChange(
-          table: 'meetings', id: 'm1', op: 'delete', hlc: a.dao.tick());
+        table: 'meetings',
+        id: 'm1',
+        op: 'delete',
+        hlc: a.dao.tick(),
+      );
     });
     await a.engine.syncOnce();
     await b.engine.syncOnce();

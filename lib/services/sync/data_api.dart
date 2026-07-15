@@ -14,32 +14,29 @@ import 'neon_auth.dart';
 /// client therefore does NO tenancy checking itself — it cannot, and must not
 /// try. The database is the boundary.
 class DataApi {
-  DataApi({
-    required this.baseUrl,
-    required this.auth,
-    http.Client? client,
-  }) : _client = client ?? http.Client();
+  DataApi({required this.baseUrl, required this.auth, http.Client? client})
+    : _client = client ?? http.Client();
 
   final String baseUrl;
   final NeonAuth auth;
   final http.Client _client;
 
   Future<Map<String, String>> _headers() async => {
-        'Content-Type': 'application/json',
-        HttpHeaders.authorizationHeader: 'Bearer ${await auth.jwt()}',
-      };
+    'Content-Type': 'application/json',
+    HttpHeaders.authorizationHeader: 'Bearer ${await auth.jwt()}',
+  };
 
   /// GET a table/view with PostgREST query params (e.g. filters, order, limit).
   Future<List<Map<String, dynamic>>> select(
     String table, {
     Map<String, String> query = const {},
   }) async {
-    final uri = Uri.parse('$baseUrl/$table').replace(queryParameters: {
-      if (query.isEmpty) 'select': '*',
-      ...query,
-    });
-    final resp = await _send(() async =>
-        _client.get(uri, headers: await _headers()));
+    final uri = Uri.parse(
+      '$baseUrl/$table',
+    ).replace(queryParameters: {if (query.isEmpty) 'select': '*', ...query});
+    final resp = await _send(
+      () async => _client.get(uri, headers: await _headers()),
+    );
     return (jsonDecode(resp.body) as List).cast<Map<String, dynamic>>();
   }
 
@@ -51,32 +48,35 @@ class DataApi {
     required String onConflict,
   }) async {
     if (rows.isEmpty) return;
-    final uri = Uri.parse('$baseUrl/$table')
-        .replace(queryParameters: {'on_conflict': onConflict});
-    await _send(() async => _client.post(
-          uri,
-          headers: {
-            ...await _headers(),
-            'Prefer': 'resolution=merge-duplicates,return=minimal',
-          },
-          body: jsonEncode(rows),
-        ));
+    final uri = Uri.parse(
+      '$baseUrl/$table',
+    ).replace(queryParameters: {'on_conflict': onConflict});
+    await _send(
+      () async => _client.post(
+        uri,
+        headers: {
+          ...await _headers(),
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+        },
+        body: jsonEncode(rows),
+      ),
+    );
   }
 
   /// Call a Postgres function (e.g. create_workspace, accept_invite).
   Future<dynamic> rpc(String fn, Map<String, dynamic> args) async {
-    final resp = await _send(() async => _client.post(
-          Uri.parse('$baseUrl/rpc/$fn'),
-          headers: await _headers(),
-          body: jsonEncode(args),
-        ));
+    final resp = await _send(
+      () async => _client.post(
+        Uri.parse('$baseUrl/rpc/$fn'),
+        headers: await _headers(),
+        body: jsonEncode(args),
+      ),
+    );
     if (resp.body.isEmpty) return null;
     return jsonDecode(resp.body);
   }
 
-  Future<http.Response> _send(
-    Future<http.Response> Function() run,
-  ) async {
+  Future<http.Response> _send(Future<http.Response> Function() run) async {
     final http.Response resp;
     try {
       resp = await run().timeout(const Duration(seconds: 30));
@@ -103,8 +103,9 @@ class DataApi {
     }
     if (resp.statusCode >= 400) {
       throw SyncPermanentError(
-          'Sync request rejected (${resp.statusCode}): '
-          '${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}');
+        'Sync request rejected (${resp.statusCode}): '
+        '${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}',
+      );
     }
     return resp;
   }

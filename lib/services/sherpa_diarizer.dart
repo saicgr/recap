@@ -39,10 +39,8 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
   final double clusteringThreshold;
   final Diarizer fallback;
 
-  SherpaDiarizer({
-    this.clusteringThreshold = 0.5,
-    Diarizer? fallback,
-  }) : fallback = fallback ?? HeuristicDiarizer();
+  SherpaDiarizer({this.clusteringThreshold = 0.5, Diarizer? fallback})
+    : fallback = fallback ?? HeuristicDiarizer();
 
   SherpaDiarizerStatus _status = SherpaDiarizerStatus.uninitialized;
   String? _failureReason;
@@ -65,16 +63,11 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
     return d;
   }
 
-  Future<String> get _segmentationPath async => p.join(
-        (await _modelsDir).path,
-        _segmentationFolder,
-        _segmentationFile,
-      );
+  Future<String> get _segmentationPath async =>
+      p.join((await _modelsDir).path, _segmentationFolder, _segmentationFile);
 
-  Future<String> get _embeddingPath async => p.join(
-        (await _modelsDir).path,
-        _embeddingFile,
-      );
+  Future<String> get _embeddingPath async =>
+      p.join((await _modelsDir).path, _embeddingFile);
 
   /// True iff both ONNX files are on disk and non-empty.
   Future<bool> get isModelInstalled async {
@@ -135,7 +128,9 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
     }
     try {
       await File(archivePath).delete();
-    } catch (_) {/* best effort */}
+    } catch (_) {
+      /* best effort */
+    }
   }
 
   Future<void> _ensureEmbedding() async {
@@ -173,7 +168,8 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
     if (_sd != null) return;
     if (!await isModelInstalled) {
       throw StateError(
-          'Sherpa diarizer models not installed. Call warmUp() first.');
+        'Sherpa diarizer models not installed. Call warmUp() first.',
+      );
     }
     final segPath = await _segmentationPath;
     final embPath = await _embeddingPath;
@@ -257,8 +253,9 @@ class SherpaDiarizer extends ChangeNotifier implements Diarizer {
         out.add(null);
         continue;
       }
-      final best =
-          overlap.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+      final best = overlap.entries
+          .reduce((a, b) => a.value >= b.value ? a : b)
+          .key;
       out.add('Speaker ${firstSeenOrder[best]}');
     }
     return out;

@@ -15,7 +15,9 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Future<void> seedMeeting(String id) => db.into(db.meetings).insert(
+  Future<void> seedMeeting(String id) => db
+      .into(db.meetings)
+      .insert(
         MeetingsCompanion.insert(
           id: id,
           title: 'M $id',
@@ -34,7 +36,11 @@ void main() {
       db.transaction(() async {
         await seedMeeting('m1');
         await dao.recordChange(
-            table: 'meetings', id: 'm1', op: 'upsert', hlc: dao.tick());
+          table: 'meetings',
+          id: 'm1',
+          op: 'upsert',
+          hlc: dao.tick(),
+        );
         throw Exception('crash before commit');
       }),
       throwsException,
@@ -47,7 +53,11 @@ void main() {
     await db.transaction(() async {
       await seedMeeting('m1');
       await dao.recordChange(
-          table: 'meetings', id: 'm1', op: 'upsert', hlc: dao.tick());
+        table: 'meetings',
+        id: 'm1',
+        op: 'upsert',
+        hlc: dao.tick(),
+      );
     });
     final pending = await dao.pending();
     expect(pending.length, 1);
@@ -59,7 +69,11 @@ void main() {
     // A burst of edits to a note should become ONE server write, not twenty.
     for (var i = 0; i < 5; i++) {
       await dao.recordChange(
-          table: 'meetings', id: 'm1', op: 'upsert', hlc: dao.tick());
+        table: 'meetings',
+        id: 'm1',
+        op: 'upsert',
+        hlc: dao.tick(),
+      );
     }
     final pending = await dao.pending();
     expect(pending.length, 1);
@@ -69,20 +83,39 @@ void main() {
 
   test('an upsert followed by a delete collapses to a delete', () async {
     await dao.recordChange(
-        table: 'meetings', id: 'm1', op: 'upsert', hlc: dao.tick());
+      table: 'meetings',
+      id: 'm1',
+      op: 'upsert',
+      hlc: dao.tick(),
+    );
     await dao.recordChange(
-        table: 'meetings', id: 'm1', op: 'delete', hlc: dao.tick());
+      table: 'meetings',
+      id: 'm1',
+      op: 'delete',
+      hlc: dao.tick(),
+    );
     final pending = await dao.pending();
     expect(pending.length, 1);
-    expect(pending.single.op, 'delete',
-        reason: 'no point pushing a create for something we then deleted');
+    expect(
+      pending.single.op,
+      'delete',
+      reason: 'no point pushing a create for something we then deleted',
+    );
   });
 
   test('ack drains only the acknowledged rows', () async {
     await dao.recordChange(
-        table: 'meetings', id: 'a', op: 'upsert', hlc: dao.tick());
+      table: 'meetings',
+      id: 'a',
+      op: 'upsert',
+      hlc: dao.tick(),
+    );
     await dao.recordChange(
-        table: 'meetings', id: 'b', op: 'upsert', hlc: dao.tick());
+      table: 'meetings',
+      id: 'b',
+      op: 'upsert',
+      hlc: dao.tick(),
+    );
     final pending = await dao.pending();
     expect(pending.length, 2);
 
@@ -108,7 +141,10 @@ void main() {
   test('backoff grows and is bounded', () {
     expect(SyncDao.backoff(0).inSeconds, lessThanOrEqualTo(2));
     expect(SyncDao.backoff(3).inSeconds, inInclusiveRange(8, 10));
-    expect(SyncDao.backoff(50).inSeconds, lessThanOrEqualTo(360),
-        reason: 'must cap, not grow forever');
+    expect(
+      SyncDao.backoff(50).inSeconds,
+      lessThanOrEqualTo(360),
+      reason: 'must cap, not grow forever',
+    );
   });
 }

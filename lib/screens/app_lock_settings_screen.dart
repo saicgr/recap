@@ -44,8 +44,10 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('App Lock',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'App Lock',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -65,9 +67,10 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                           children: [
                             Icon(Icons.lock_outline, color: t.accent, size: 20),
                             const SizedBox(width: 8),
-                            Text('Require biometric to open',
-                                style:
-                                    RT.subtitle.copyWith(color: t.textPrimary)),
+                            Text(
+                              'Require biometric to open',
+                              style: RT.subtitle.copyWith(color: t.textPrimary),
+                            ),
                             const Spacer(),
                             RecapToggle(
                               value: appLock.enabled,
@@ -83,19 +86,24 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                           style: RT.bodySm.copyWith(color: t.textSecondary),
                         ),
                         const SizedBox(height: 18),
-                        Text('Lock after',
-                            style: RT.subtitle.copyWith(color: t.textPrimary)),
+                        Text(
+                          'Lock after',
+                          style: RT.subtitle.copyWith(color: t.textPrimary),
+                        ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           children: [
                             for (final m in const [1, 5, 15, 60])
                               ChoiceChip(
-                                label: Text('$m min',
-                                    style: TextStyle(
-                                        color: appLock.timeoutMinutes == m
-                                            ? Colors.white
-                                            : t.textPrimary)),
+                                label: Text(
+                                  '$m min',
+                                  style: TextStyle(
+                                    color: appLock.timeoutMinutes == m
+                                        ? Colors.white
+                                        : t.textPrimary,
+                                  ),
+                                ),
                                 selected: appLock.timeoutMinutes == m,
                                 selectedColor: t.accent,
                                 backgroundColor: t.bgSubtle,

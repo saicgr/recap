@@ -62,11 +62,7 @@ class TopBar extends StatelessWidget {
               width: 80,
               child: Row(children: [if (leading != null) leading!]),
             ),
-            Expanded(
-              child: Center(
-                child: title ?? const SizedBox.shrink(),
-              ),
-            ),
+            Expanded(child: Center(child: title ?? const SizedBox.shrink())),
             SizedBox(
               width: 80,
               child: Row(
@@ -106,8 +102,8 @@ class IconBtn extends StatelessWidget {
     final btn = Material(
       color: glass
           ? (t.mode == RecapMode.dark
-              ? const Color.fromRGBO(255, 255, 255, 0.10)
-              : const Color.fromRGBO(255, 255, 255, 0.55))
+                ? const Color.fromRGBO(255, 255, 255, 0.10)
+                : const Color.fromRGBO(255, 255, 255, 0.55))
           : Colors.transparent,
       shape: glass
           ? CircleBorder(
@@ -371,8 +367,10 @@ class SectionHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label.toUpperCase(),
-              style: RT.caption.copyWith(color: t.textMuted)),
+          Text(
+            label.toUpperCase(),
+            style: RT.caption.copyWith(color: t.textMuted),
+          ),
           if (action != null) action!,
         ],
       ),
@@ -404,8 +402,10 @@ class SettingsGroup extends StatelessWidget {
           if (label != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(label!.toUpperCase(),
-                  style: RT.caption.copyWith(color: t.textMuted)),
+              child: Text(
+                label!.toUpperCase(),
+                style: RT.caption.copyWith(color: t.textMuted),
+              ),
             ),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -478,8 +478,8 @@ class SettingsRow extends StatelessWidget {
                     color: danger
                         ? t.recordRed
                         : accentIcon
-                            ? t.accent
-                            : t.textSecondary,
+                        ? t.accent
+                        : t.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -664,8 +664,11 @@ class AccentSwatches extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: selected
-                    ? const Icon(Icons.check_rounded,
-                        size: 18, color: Colors.white)
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      )
                     : null,
               ),
             ),
@@ -785,7 +788,11 @@ class _RecordFabState extends State<RecordFab> {
         height: widget.size,
         transform: Matrix4.identity()
           ..scaleByDouble(
-              _pressed ? 0.97 : 1.0, _pressed ? 0.97 : 1.0, 1.0, 1.0),
+            _pressed ? 0.97 : 1.0,
+            _pressed ? 0.97 : 1.0,
+            1.0,
+            1.0,
+          ),
         transformAlignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -885,8 +892,7 @@ class _WaveformState extends State<Waveform>
     _ticker = createTicker((elapsed) {
       _t = elapsed.inMilliseconds / 1000.0;
       if (mounted) setState(() {});
-    })
-      ..start();
+    })..start();
   }
 
   @override
@@ -916,7 +922,8 @@ class _WaveformState extends State<Waveform>
               height: h,
               decoration: BoxDecoration(
                 color: c.withValues(
-                    alpha: widget.active ? 0.55 + s1 * 0.45 : 0.35),
+                  alpha: widget.active ? 0.55 + s1 * 0.45 : 0.35,
+                ),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

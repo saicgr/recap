@@ -9,7 +9,7 @@ import 'tier.dart';
 
 class DriftEntitlementService implements EntitlementService {
   DriftEntitlementService({required this.db, Tier? initialTier})
-      : _tier = initialTier ?? Tier.free;
+    : _tier = initialTier ?? Tier.free;
 
   final AppDb db;
   Tier _tier;
@@ -92,7 +92,9 @@ class DriftEntitlementService implements EntitlementService {
     // last_insert_rowid on a no-op), so it reports a replayed purchase as new —
     // which would mint free top-up credits on every restore.
     // insertReturningOrNull returns null when nothing was inserted.
-    final row = await db.into(db.purchases).insertReturningOrNull(
+    final row = await db
+        .into(db.purchases)
+        .insertReturningOrNull(
           PurchasesCompanion.insert(
             id: purchaseId,
             productId: productId,
@@ -109,7 +111,9 @@ class DriftEntitlementService implements EntitlementService {
   /// with source 'debug_override' so it can never be confused with a real
   /// purchase, and so it survives a restart like a real tier does.
   Future<void> setTier(Tier tier) async {
-    await db.into(db.purchases).insertOnConflictUpdate(
+    await db
+        .into(db.purchases)
+        .insertOnConflictUpdate(
           PurchasesCompanion.insert(
             id: 'debug_override',
             productId: 'debug_override',
@@ -141,12 +145,12 @@ class DriftEntitlementService implements EntitlementService {
 
   Future<TierUsage> _currentUsage() async {
     final now = DateTime.now();
-    final day = await (db.select(db.usageDays)
-          ..where((t) => t.day.equals(_dayKey(now))))
-        .getSingleOrNull();
-    final month = await (db.select(db.usageMonths)
-          ..where((t) => t.month.equals(_monthKey(now))))
-        .getSingleOrNull();
+    final day = await (db.select(
+      db.usageDays,
+    )..where((t) => t.day.equals(_dayKey(now)))).getSingleOrNull();
+    final month = await (db.select(
+      db.usageMonths,
+    )..where((t) => t.month.equals(_monthKey(now)))).getSingleOrNull();
     final credits = await db.select(db.topUpCredits).get();
     final totalCredits = credits.fold<int>(0, (sum, c) => sum + c.remaining);
     final totalMeetings = (await db.select(db.meetings).get()).length;
@@ -204,18 +208,24 @@ class DriftEntitlementService implements EntitlementService {
   Future<void> recordMeetingStarted() async {
     final key = _dayKey(DateTime.now());
     await db.transaction(() async {
-      final existing = await (db.select(db.usageDays)
-            ..where((t) => t.day.equals(key)))
-          .getSingleOrNull();
+      final existing = await (db.select(
+        db.usageDays,
+      )..where((t) => t.day.equals(key))).getSingleOrNull();
       if (existing == null) {
-        await db.into(db.usageDays).insert(UsageDaysCompanion.insert(
-              day: key,
-              meetingsStarted: const Value(1),
-            ));
+        await db
+            .into(db.usageDays)
+            .insert(
+              UsageDaysCompanion.insert(
+                day: key,
+                meetingsStarted: const Value(1),
+              ),
+            );
       } else {
         await (db.update(db.usageDays)..where((t) => t.day.equals(key))).write(
-            UsageDaysCompanion(
-                meetingsStarted: Value(existing.meetingsStarted + 1)));
+          UsageDaysCompanion(
+            meetingsStarted: Value(existing.meetingsStarted + 1),
+          ),
+        );
       }
     });
     await _emitUsage();
@@ -228,31 +238,37 @@ class DriftEntitlementService implements EntitlementService {
     final monthKey = _monthKey(now);
     final ms = duration.inMilliseconds;
     await db.transaction(() async {
-      final day = await (db.select(db.usageDays)
-            ..where((t) => t.day.equals(dayKey)))
-          .getSingleOrNull();
+      final day = await (db.select(
+        db.usageDays,
+      )..where((t) => t.day.equals(dayKey))).getSingleOrNull();
       if (day == null) {
-        await db.into(db.usageDays).insert(UsageDaysCompanion.insert(
-              day: dayKey,
-              recordedMs: Value(ms),
-            ));
+        await db
+            .into(db.usageDays)
+            .insert(
+              UsageDaysCompanion.insert(day: dayKey, recordedMs: Value(ms)),
+            );
       } else {
         await (db.update(db.usageDays)..where((t) => t.day.equals(dayKey)))
             .write(UsageDaysCompanion(recordedMs: Value(day.recordedMs + ms)));
       }
-      final month = await (db.select(db.usageMonths)
-            ..where((t) => t.month.equals(monthKey)))
-          .getSingleOrNull();
+      final month = await (db.select(
+        db.usageMonths,
+      )..where((t) => t.month.equals(monthKey))).getSingleOrNull();
       if (month == null) {
-        await db.into(db.usageMonths).insert(UsageMonthsCompanion.insert(
-              month: monthKey,
-              recordedMs: Value(ms),
-            ));
+        await db
+            .into(db.usageMonths)
+            .insert(
+              UsageMonthsCompanion.insert(
+                month: monthKey,
+                recordedMs: Value(ms),
+              ),
+            );
       } else {
-        await (db.update(db.usageMonths)
-              ..where((t) => t.month.equals(monthKey)))
-            .write(
-                UsageMonthsCompanion(recordedMs: Value(month.recordedMs + ms)));
+        await (db.update(
+          db.usageMonths,
+        )..where((t) => t.month.equals(monthKey))).write(
+          UsageMonthsCompanion(recordedMs: Value(month.recordedMs + ms)),
+        );
       }
     });
     await _emitUsage();
@@ -265,9 +281,9 @@ class DriftEntitlementService implements EntitlementService {
     final cap = _tier.cloudSummariesPerMonth;
 
     await db.transaction(() async {
-      final month = await (db.select(db.usageMonths)
-            ..where((t) => t.month.equals(monthKey)))
-          .getSingleOrNull();
+      final month = await (db.select(
+        db.usageMonths,
+      )..where((t) => t.month.equals(monthKey))).getSingleOrNull();
       final current = month?.cloudSummariesUsed ?? 0;
 
       // Are we within free quota, or do we need to burn a top-up credit?
@@ -275,26 +291,33 @@ class DriftEntitlementService implements EntitlementService {
 
       if (withinQuota) {
         if (month == null) {
-          await db.into(db.usageMonths).insert(UsageMonthsCompanion.insert(
-                month: monthKey,
-                cloudSummariesUsed: const Value(1),
-              ));
+          await db
+              .into(db.usageMonths)
+              .insert(
+                UsageMonthsCompanion.insert(
+                  month: monthKey,
+                  cloudSummariesUsed: const Value(1),
+                ),
+              );
         } else {
-          await (db.update(db.usageMonths)
-                ..where((t) => t.month.equals(monthKey)))
-              .write(
-                  UsageMonthsCompanion(cloudSummariesUsed: Value(current + 1)));
+          await (db.update(
+            db.usageMonths,
+          )..where((t) => t.month.equals(monthKey))).write(
+            UsageMonthsCompanion(cloudSummariesUsed: Value(current + 1)),
+          );
         }
       } else {
         // Burn one top-up credit. Take from the oldest pack with remaining > 0.
-        final pack = await (db.select(db.topUpCredits)
-              ..where((t) => t.remaining.isBiggerThanValue(0))
-              ..orderBy([(t) => OrderingTerm.asc(t.purchasedAt)])
-              ..limit(1))
-            .getSingleOrNull();
+        final pack =
+            await (db.select(db.topUpCredits)
+                  ..where((t) => t.remaining.isBiggerThanValue(0))
+                  ..orderBy([(t) => OrderingTerm.asc(t.purchasedAt)])
+                  ..limit(1))
+                .getSingleOrNull();
         if (pack == null) {
           throw StateError(
-              'recordCloudSummaryUsed called with no quota and no credits');
+            'recordCloudSummaryUsed called with no quota and no credits',
+          );
         }
         await (db.update(db.topUpCredits)..where((t) => t.id.equals(pack.id)))
             .write(TopUpCreditsCompanion(remaining: Value(pack.remaining - 1)));
@@ -305,12 +328,16 @@ class DriftEntitlementService implements EntitlementService {
 
   @override
   Future<void> applyTopUp(TopUpPack pack) async {
-    await db.into(db.topUpCredits).insert(TopUpCreditsCompanion.insert(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          remaining: pack.summaries,
-          purchasedAt: DateTime.now(),
-          productId: 'topup_${pack.name}',
-        ));
+    await db
+        .into(db.topUpCredits)
+        .insert(
+          TopUpCreditsCompanion.insert(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            remaining: pack.summaries,
+            purchasedAt: DateTime.now(),
+            productId: 'topup_${pack.name}',
+          ),
+        );
     await _emitUsage();
   }
 }

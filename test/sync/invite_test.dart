@@ -36,21 +36,25 @@ void main() {
 
   test('a different token cannot unwrap', () async {
     final kws = await KeyWrap.generateWorkspaceKey();
-    final wrapped =
-        await Invite.wrapKey(token: Invite.newToken(), workspaceKey: kws);
+    final wrapped = await Invite.wrapKey(
+      token: Invite.newToken(),
+      workspaceKey: kws,
+    );
     await expectLater(
       Invite.unwrapKey(token: Invite.newToken(), wrapped: wrapped),
       throwsA(isA<InviteError>()),
     );
   });
 
-  test('lookup is deterministic for a token, and differs across tokens',
-      () async {
-    final t1 = Invite.newToken();
-    final t2 = Invite.newToken();
-    expect(await Invite.lookup(t1), await Invite.lookup(t1)); // stable
-    expect(await Invite.lookup(t1), isNot(await Invite.lookup(t2)));
-  });
+  test(
+    'lookup is deterministic for a token, and differs across tokens',
+    () async {
+      final t1 = Invite.newToken();
+      final t2 = Invite.newToken();
+      expect(await Invite.lookup(t1), await Invite.lookup(t1)); // stable
+      expect(await Invite.lookup(t1), isNot(await Invite.lookup(t2)));
+    },
+  );
 
   test('tokens are url-safe (they ride in a link fragment)', () {
     for (var i = 0; i < 50; i++) {
@@ -59,18 +63,20 @@ void main() {
     }
   });
 
-  test('a tampered wrapped blob is rejected, not silently mis-unwrapped',
-      () async {
-    final kws = await KeyWrap.generateWorkspaceKey();
-    final token = Invite.newToken();
-    final wrapped = await Invite.wrapKey(token: token, workspaceKey: kws);
-    // Corrupt an actual ciphertext byte (past the 12-byte nonce), then re-encode
-    // — a reliable tamper that AES-GCM's tag must catch.
-    final raw = base64.decode(wrapped);
-    raw[13] ^= 0x01;
-    await expectLater(
-      Invite.unwrapKey(token: token, wrapped: base64.encode(raw)),
-      throwsA(isA<InviteError>()),
-    );
-  });
+  test(
+    'a tampered wrapped blob is rejected, not silently mis-unwrapped',
+    () async {
+      final kws = await KeyWrap.generateWorkspaceKey();
+      final token = Invite.newToken();
+      final wrapped = await Invite.wrapKey(token: token, workspaceKey: kws);
+      // Corrupt an actual ciphertext byte (past the 12-byte nonce), then re-encode
+      // — a reliable tamper that AES-GCM's tag must catch.
+      final raw = base64.decode(wrapped);
+      raw[13] ^= 0x01;
+      await expectLater(
+        Invite.unwrapKey(token: token, wrapped: base64.encode(raw)),
+        throwsA(isA<InviteError>()),
+      );
+    },
+  );
 }

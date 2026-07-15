@@ -20,8 +20,9 @@ abstract class SecretStore {
 
 /// Production [SecretStore] — iOS Keychain / Android Keystore.
 class SecureStorageSecretStore implements SecretStore {
-  const SecureStorageSecretStore(
-      [this._storage = const FlutterSecureStorage()]);
+  const SecureStorageSecretStore([
+    this._storage = const FlutterSecureStorage(),
+  ]);
 
   final FlutterSecureStorage _storage;
 
@@ -58,9 +59,9 @@ class InstallIdentity {
     SecretStore? store,
     http.Client? client,
     Duration? timeout,
-  })  : _store = store ?? const SecureStorageSecretStore(),
-        _client = client ?? http.Client(),
-        _timeout = timeout ?? const Duration(seconds: 20);
+  }) : _store = store ?? const SecureStorageSecretStore(),
+       _client = client ?? http.Client(),
+       _timeout = timeout ?? const Duration(seconds: 20);
 
   static const kInstallIdKey = 'install_id';
   static const kTokenKey = 'install_hmac_token';
@@ -138,19 +139,25 @@ class InstallIdentity {
           )
           .timeout(_timeout);
     } on TimeoutException {
-      throw CloudError(CloudFailureKind.timeout,
-          'Timed out reaching the cloud proxy. Check your connection.');
+      throw CloudError(
+        CloudFailureKind.timeout,
+        'Timed out reaching the cloud proxy. Check your connection.',
+      );
     } on IOException catch (e) {
       // Covers SocketException, HandshakeException, TlsException, and every
       // other transport failure — a captive portal throws HandshakeException,
       // not SocketException, and that is the common real-world case.
-      throw CloudError(CloudFailureKind.offline,
-          'Could not reach the cloud proxy: ${truncateForError('$e')}');
+      throw CloudError(
+        CloudFailureKind.offline,
+        'Could not reach the cloud proxy: ${truncateForError('$e')}',
+      );
     }
 
     if (resp.statusCode == 429) {
-      throw CloudError(CloudFailureKind.rateLimited,
-          'Too many registration attempts. Try again in a little while.');
+      throw CloudError(
+        CloudFailureKind.rateLimited,
+        'Too many registration attempts. Try again in a little while.',
+      );
     }
     if (resp.statusCode >= 400) {
       throw CloudError(
@@ -165,12 +172,16 @@ class InstallIdentity {
       token =
           (jsonDecode(resp.body) as Map<String, dynamic>)['token'] as String;
     } catch (_) {
-      throw CloudError(CloudFailureKind.emptyResponse,
-          'Cloud registration returned no token.');
+      throw CloudError(
+        CloudFailureKind.emptyResponse,
+        'Cloud registration returned no token.',
+      );
     }
     if (token.isEmpty) {
-      throw CloudError(CloudFailureKind.emptyResponse,
-          'Cloud registration returned an empty token.');
+      throw CloudError(
+        CloudFailureKind.emptyResponse,
+        'Cloud registration returned an empty token.',
+      );
     }
 
     await _writeOrThrow(kTokenKey, token);
@@ -196,8 +207,10 @@ class InstallIdentity {
     try {
       return await _store.read(key);
     } catch (e) {
-      throw CloudError(CloudFailureKind.server,
-          'Secure storage is unreadable (key "$key"): ${truncateForError('$e')}');
+      throw CloudError(
+        CloudFailureKind.server,
+        'Secure storage is unreadable (key "$key"): ${truncateForError('$e')}',
+      );
     }
   }
 
@@ -205,8 +218,10 @@ class InstallIdentity {
     try {
       await _store.write(key, value);
     } catch (e) {
-      throw CloudError(CloudFailureKind.server,
-          'Secure storage is unwritable (key "$key"): ${truncateForError('$e')}');
+      throw CloudError(
+        CloudFailureKind.server,
+        'Secure storage is unwritable (key "$key"): ${truncateForError('$e')}',
+      );
     }
   }
 

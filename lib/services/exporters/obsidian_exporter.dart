@@ -42,21 +42,16 @@ class ObsidianExporter implements WorkflowExporter {
       final outFile = File(p.join(docs.path, filename));
       final body = _buildMarkdown(meeting, transcript, summaries);
       await outFile.writeAsString(body);
-      await Share.shareXFiles(
-        [XFile(outFile.path)],
-        subject: 'Recap → Obsidian: ${meeting.title}',
-      );
+      await Share.shareXFiles([
+        XFile(outFile.path),
+      ], subject: 'Recap → Obsidian: ${meeting.title}');
       return ExportResult.ok();
     } catch (e) {
       return ExportResult.err(e.toString());
     }
   }
 
-  String _buildMarkdown(
-    Meeting m,
-    Transcript? tr,
-    List<Summary> summaries,
-  ) {
+  String _buildMarkdown(Meeting m, Transcript? tr, List<Summary> summaries) {
     final buf = StringBuffer()
       ..writeln('---')
       ..writeln('title: ${_yamlEscape(m.title)}')

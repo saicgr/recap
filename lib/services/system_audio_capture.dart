@@ -53,7 +53,8 @@ class SystemAudioCapture {
       });
     } on MissingPluginException {
       throw const SystemAudioCaptureUnsupportedException(
-          'Native system-audio bridge not installed in this build.');
+        'Native system-audio bridge not installed in this build.',
+      );
     }
   }
 
@@ -61,7 +62,9 @@ class SystemAudioCapture {
     if (!isSupportedPlatform) return;
     try {
       await _method.invokeMethod<void>('stopCapture');
-    } catch (_) {/* best effort */}
+    } catch (_) {
+      /* best effort */
+    }
   }
 
   /// Stream of RMS levels (0..1) emitted by the native side for the UI
@@ -77,8 +80,9 @@ class SystemAudioCapture {
 
 class SystemAudioCaptureUnsupportedException implements Exception {
   final String message;
-  const SystemAudioCaptureUnsupportedException(
-      [this.message = 'System audio capture is desktop-only.']);
+  const SystemAudioCaptureUnsupportedException([
+    this.message = 'System audio capture is desktop-only.',
+  ]);
   @override
   String toString() => 'SystemAudioCaptureUnsupportedException: $message';
 }

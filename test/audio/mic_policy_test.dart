@@ -15,8 +15,10 @@ import 'package:recap/services/audio/mic_policy.dart';
 void main() {
   const builtIn = InputDevice(id: 'builtin', label: 'iPhone Microphone');
   const airpods = InputDevice(id: 'bt-1', label: 'AirPods Pro');
-  const btHeadset =
-      InputDevice(id: 'bt-2', label: 'Jabra Evolve Bluetooth Headset');
+  const btHeadset = InputDevice(
+    id: 'bt-2',
+    label: 'Jabra Evolve Bluetooth Headset',
+  );
   const usb = InputDevice(id: 'usb-1', label: 'USB Audio Device');
   const wired = InputDevice(id: 'w-1', label: 'Wired Headphones');
 
@@ -62,7 +64,11 @@ void main() {
 
     test('a pin for a device that has been unplugged falls back safely', () {
       final c = MicPolicy.choose([builtIn, airpods], pinnedId: 'gone');
-      expect(c.device, builtIn, reason: 'must not fail, must not pick the BT mic');
+      expect(
+        c.device,
+        builtIn,
+        reason: 'must not fail, must not pick the BT mic',
+      );
     });
 
     test('Bluetooth is used only when it is genuinely the ONLY input', () {
@@ -70,8 +76,11 @@ void main() {
       final c = MicPolicy.choose([airpods]);
       expect(c.device, airpods);
       expect(c.reason, MicChoiceReason.onlyOption);
-      expect(MicPolicy.shouldWarn(c), isTrue,
-          reason: 'the user must still be told the quality is degraded');
+      expect(
+        MicPolicy.shouldWarn(c),
+        isTrue,
+        reason: 'the user must still be told the quality is degraded',
+      );
     });
 
     test('no inputs enumerated -> defer to the platform, do not crash', () {

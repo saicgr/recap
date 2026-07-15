@@ -32,7 +32,8 @@ void main() {
         expect(
           estimateTokens(s),
           greaterThanOrEqualTo(baseline(s)),
-          reason: 'estimateTokens must over-estimate; under-estimating '
+          reason:
+              'estimateTokens must over-estimate; under-estimating '
               'silently overflows the on-device context window.',
         );
       });
@@ -41,8 +42,11 @@ void main() {
     test('never under-estimates across a large sweep of lengths', () {
       for (var len = 0; len < 5000; len += 7) {
         final s = 'x' * len;
-        expect(estimateTokens(s), greaterThanOrEqualTo(baseline(s)),
-            reason: 'failed at length $len');
+        expect(
+          estimateTokens(s),
+          greaterThanOrEqualTo(baseline(s)),
+          reason: 'failed at length $len',
+        );
       }
     });
 

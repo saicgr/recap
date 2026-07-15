@@ -49,8 +49,10 @@ class SegmentRetriever {
   Future<List<RetrievedSegment>> retrieve(
     String query, {
     int limit = 8,
+
     /// Restrict to one meeting (per-meeting chat) — null searches the corpus.
     String? meetingId,
+
     /// Meetings the user marked confidential. Excluded UNCONDITIONALLY when the
     /// answer may leave the device.
     Set<String> excludeMeetingIds = const {},
@@ -65,8 +67,11 @@ class SegmentRetriever {
     final fused = <String, double>{};
     void fuse(List<String> ranking) {
       for (var i = 0; i < ranking.length; i++) {
-        fused.update(ranking[i], (v) => v + 1.0 / (_k + i + 1),
-            ifAbsent: () => 1.0 / (_k + i + 1));
+        fused.update(
+          ranking[i],
+          (v) => v + 1.0 / (_k + i + 1),
+          ifAbsent: () => 1.0 / (_k + i + 1),
+        );
       }
     }
 
@@ -96,7 +101,10 @@ class SegmentRetriever {
 
     final meetingIds = meetingId != null
         ? [meetingId]
-        : (await db.searchRanked(q, limit: 10)).map((r) => r.meetingId).toList();
+        : (await db.searchRanked(
+            q,
+            limit: 10,
+          )).map((r) => r.meetingId).toList();
     if (meetingIds.isEmpty) return const [];
 
     // Within those meetings, rank segments by literal term overlap. Crude, but
@@ -106,9 +114,9 @@ class SegmentRetriever {
         .split(RegExp(r'\s+'))
         .where((t) => t.length > 2)
         .toSet();
-    final segs = await (db.select(db.transcriptSegments)
-          ..where((s) => s.meetingId.isIn(meetingIds)))
-        .get();
+    final segs = await (db.select(
+      db.transcriptSegments,
+    )..where((s) => s.meetingId.isIn(meetingIds))).get();
 
     final scored = <({String id, int hits})>[];
     for (final s in segs) {
@@ -138,24 +146,22 @@ class SegmentRetriever {
       return const [];
     }
 
-    final rows = await (db.select(db.segmentEmbeddings)
-          ..where((e) => meetingId == null
-              // Only OUR model's vectors. Mixing embedding spaces produces
-              // confident nonsense, silently.
-              ? e.model.equals(EmbeddingIndexer.modelId)
-              : e.model.equals(EmbeddingIndexer.modelId) &
-                  e.meetingId.equals(meetingId)))
-        .get();
+    final rows =
+        await (db.select(db.segmentEmbeddings)..where(
+              (e) => meetingId == null
+                  // Only OUR model's vectors. Mixing embedding spaces produces
+                  // confident nonsense, silently.
+                  ? e.model.equals(EmbeddingIndexer.modelId)
+                  : e.model.equals(EmbeddingIndexer.modelId) &
+                        e.meetingId.equals(meetingId),
+            ))
+            .get();
     if (rows.isEmpty) return const [];
 
     final scored = <({String id, double sim})>[];
     for (final r in rows) {
       if (r.dim != EmbeddingService.dim) continue; // width mismatch — skip
-      final v = Float32List.view(
-        Uint8List.fromList(r.vec).buffer,
-        0,
-        r.dim,
-      );
+      final v = Float32List.view(Uint8List.fromList(r.vec).buffer, 0, r.dim);
       scored.add((id: r.segmentId, sim: EmbeddingService.cosineSim(qv, v)));
     }
     scored.sort((a, b) => b.sim.compareTo(a.sim));
@@ -163,13 +169,13 @@ class SegmentRetriever {
   }
 
   Future<RetrievedSegment?> _hydrate(String segmentId, double score) async {
-    final seg = await (db.select(db.transcriptSegments)
-          ..where((s) => s.id.equals(segmentId)))
-        .getSingleOrNull();
+    final seg = await (db.select(
+      db.transcriptSegments,
+    )..where((s) => s.id.equals(segmentId))).getSingleOrNull();
     if (seg == null) return null;
-    final meeting = await (db.select(db.meetings)
-          ..where((m) => m.id.equals(seg.meetingId)))
-        .getSingleOrNull();
+    final meeting = await (db.select(
+      db.meetings,
+    )..where((m) => m.id.equals(seg.meetingId))).getSingleOrNull();
     if (meeting == null) return null;
     return RetrievedSegment(
       segmentId: seg.id,

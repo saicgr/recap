@@ -7,7 +7,7 @@ enum SummaryStyle {
   salesCall,
   interview,
   lecture,
-  doctorVisit
+  doctorVisit,
 }
 
 enum ExportTarget {
@@ -32,18 +32,16 @@ enum ExportTarget {
   /// target here and [Tier.availableExports] filters it out of Privacy for
   /// free.
   bool get isCloudDestination => switch (this) {
-        ExportTarget.googleDocs ||
-        ExportTarget.notion ||
-        ExportTarget.slack =>
-          true,
-        ExportTarget.copy ||
-        ExportTarget.shareSheet ||
-        ExportTarget.appleReminders ||
-        ExportTarget.appleNotes ||
-        ExportTarget.markdown ||
-        ExportTarget.obsidian =>
-          false,
-      };
+    ExportTarget.googleDocs ||
+    ExportTarget.notion ||
+    ExportTarget.slack => true,
+    ExportTarget.copy ||
+    ExportTarget.shareSheet ||
+    ExportTarget.appleReminders ||
+    ExportTarget.appleNotes ||
+    ExportTarget.markdown ||
+    ExportTarget.obsidian => false,
+  };
 }
 
 enum Tier {
@@ -198,9 +196,9 @@ enum Tier {
   /// On-device summary *count* is unlimited on every tier — only quality
   /// differs. (Apple FM on iOS 26+ is layered on top wherever available.)
   GemmaVariant get gemmaVariant => switch (this) {
-        Tier.free => GemmaVariant.e2b,
-        _ => GemmaVariant.e4b,
-      };
+    Tier.free => GemmaVariant.e2b,
+    _ => GemmaVariant.e4b,
+  };
 
   /// Whisper model ceiling for *final* transcription. Free → base.en
   /// (~140 MB, competitive with Apple Voice Memos / Samsung Transcript
@@ -209,9 +207,9 @@ enum Tier {
   /// use tiny.en regardless of tier — fast streaming model is the right
   /// shape for the every-5s chunk loop. Otter / Granola do the same split.
   WhisperCeiling get whisperCeiling => switch (this) {
-        Tier.free => WhisperCeiling.baseEn,
-        _ => WhisperCeiling.smallEn,
-      };
+    Tier.free => WhisperCeiling.baseEn,
+    _ => WhisperCeiling.smallEn,
+  };
 }
 
 enum GemmaVariant {

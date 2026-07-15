@@ -79,7 +79,8 @@ class _ImportScreenState extends State<ImportScreen> {
       );
       if (imported == null) {
         throw StateError(
-            'That URL returned HTML, not a media file. Try a direct .mp3 / .mp4 link.');
+          'That URL returned HTML, not a media file. Try a direct .mp3 / .mp4 link.',
+        );
       }
       setState(() => _status = 'Saving meeting…');
       final id = await persistImportedMeeting(imported);
@@ -119,8 +120,10 @@ class _ImportScreenState extends State<ImportScreen> {
     }
   }
 
-  Future<String?> _promptUrl(
-      {required String title, required String hint}) async {
+  Future<String?> _promptUrl({
+    required String title,
+    required String hint,
+  }) async {
     final t = RecapThemeScope.of(context);
     final c = TextEditingController();
     final res = await showDialog<String>(
@@ -166,8 +169,10 @@ class _ImportScreenState extends State<ImportScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Import',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Import',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -222,14 +227,16 @@ class _ImportScreenState extends State<ImportScreen> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(_status,
-                                style:
-                                    RT.bodySm.copyWith(color: t.textPrimary)),
+                            child: Text(
+                              _status,
+                              style: RT.bodySm.copyWith(color: t.textPrimary),
+                            ),
                           ),
                           if (_progress > 0)
-                            Text('${(_progress * 100).toStringAsFixed(0)}%',
-                                style:
-                                    RT.bodySm.copyWith(color: t.textSecondary)),
+                            Text(
+                              '${(_progress * 100).toStringAsFixed(0)}%',
+                              style: RT.bodySm.copyWith(color: t.textSecondary),
+                            ),
                         ],
                       ),
                     ),
@@ -242,8 +249,10 @@ class _ImportScreenState extends State<ImportScreen> {
                         border: Border.all(color: t.recordRed),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(_error!,
-                          style: RT.bodySm.copyWith(color: t.recordRed)),
+                      child: Text(
+                        _error!,
+                        style: RT.bodySm.copyWith(color: t.recordRed),
+                      ),
                     ),
                   ],
                 ],
@@ -280,11 +289,17 @@ class _ImportScreenState extends State<ImportScreen> {
           ),
           child: Icon(icon, color: t.accent, size: 20),
         ),
-        title: Text(title,
-            style: RT.body
-                .copyWith(color: t.textPrimary, fontWeight: FontWeight.w600)),
-        subtitle:
-            Text(subtitle, style: RT.bodySm.copyWith(color: t.textSecondary)),
+        title: Text(
+          title,
+          style: RT.body.copyWith(
+            color: t.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: RT.bodySm.copyWith(color: t.textSecondary),
+        ),
         trailing: Icon(Icons.chevron_right, color: t.textMuted),
       ),
     );

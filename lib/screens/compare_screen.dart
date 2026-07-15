@@ -80,8 +80,10 @@ class CompareScreen extends StatelessWidget {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('What makes Recap different',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'What makes Recap different',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -94,8 +96,10 @@ class CompareScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Recap is a meeting recorder built around a single idea: your conversations are yours. Here is how that plays out — point by point.',
-                    style:
-                        RT.body.copyWith(color: t.textSecondary, height: 1.5),
+                    style: RT.body.copyWith(
+                      color: t.textSecondary,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   for (final p in _pillars) _pillar(t, p.$1, p.$2, p.$3, p.$4),
@@ -107,7 +111,10 @@ class CompareScreen extends StatelessWidget {
                     'we don\'t run any. The full, sourced comparison lives in our docs.',
                     textAlign: TextAlign.center,
                     style: RT.caption.copyWith(
-                        color: t.textMuted, letterSpacing: 0, height: 1.5),
+                      color: t.textMuted,
+                      letterSpacing: 0,
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -149,8 +156,10 @@ class CompareScreen extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title,
-                    style: RT.subtitle.copyWith(color: t.textPrimary)),
+                child: Text(
+                  title,
+                  style: RT.subtitle.copyWith(color: t.textPrimary),
+                ),
               ),
             ],
           ),
@@ -207,8 +216,10 @@ class CompareScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('See it for yourself',
-              style: RT.subtitle.copyWith(color: t.textPrimary)),
+          Text(
+            'See it for yourself',
+            style: RT.subtitle.copyWith(color: t.textPrimary),
+          ),
           const SizedBox(height: 6),
           Text(
             'Open the Privacy dashboard for a live audit of exactly what stays on your device and what would go over the network if you tapped a cloud button.',

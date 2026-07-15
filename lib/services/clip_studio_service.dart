@@ -57,13 +57,15 @@ class ClipStudioService {
       current.add(s);
       currentMs += (s.endMs - s.startMs);
       if (currentMs >= minClipLen.inMilliseconds) {
-        candidates.add(ClipCandidate(
-          startMs: current.first.startMs,
-          endMs: current.last.endMs,
-          score: 0.6,
-          hook: current.first.body.split(' ').take(8).join(' '),
-          body: current.map((s) => s.body).join(' '),
-        ));
+        candidates.add(
+          ClipCandidate(
+            startMs: current.first.startMs,
+            endMs: current.last.endMs,
+            score: 0.6,
+            hook: current.first.body.split(' ').take(8).join(' '),
+            body: current.map((s) => s.body).join(' '),
+          ),
+        );
         current = [];
         currentMs = 0;
       }
@@ -90,7 +92,8 @@ class ClipStudioService {
     // TODO: real ffmpeg pipeline. For v1 dev, write a stub .mp4-named text
     // file so the Clip Studio screen can be wired end-to-end.
     throw UnimplementedError(
-        'Clip rendering requires ffmpeg_kit_flutter; pipeline TODO.');
+      'Clip rendering requires ffmpeg_kit_flutter; pipeline TODO.',
+    );
   }
 }
 
@@ -111,11 +114,11 @@ enum ClipTemplate {
 /// Resolve the right persona-style prompt for the LLM scoring step.
 /// Power-tier users can override with a custom persona.
 Persona viralScoringPersona() => const Persona(
-      style: SummaryStyle.basic,
-      key: 'viral_clip_scoring',
-      displayName: 'Viral clip scoring',
-      emoji: '✨',
-      prompt: '''
+  style: SummaryStyle.basic,
+  key: 'viral_clip_scoring',
+  displayName: 'Viral clip scoring',
+  emoji: '✨',
+  prompt: '''
 You are scoring a meeting / podcast / lecture transcript for short-form
 social-video potential. For each ~30-60s window, output a JSON line:
 {"startMs":..., "endMs":..., "score":0..1, "hook":"first 8 words",
@@ -125,4 +128,4 @@ Score high for: surprising claims, strong opinions, vivid stories, clear
 takeaways, emotional beats, sharp one-liners. Score low for: meta talk,
 filler, scheduling, "uh"s. Output top 5 only.
 ''',
-    );
+);

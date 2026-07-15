@@ -35,17 +35,20 @@ class FolderService {
   Future<List<Folder>> allFolders() =>
       (db.select(db.folders)..orderBy([(f) => OrderingTerm.asc(f.name)])).get();
 
-  Stream<List<Folder>> watchFolders() =>
-      (db.select(db.folders)..orderBy([(f) => OrderingTerm.asc(f.name)]))
-          .watch();
+  Stream<List<Folder>> watchFolders() => (db.select(
+    db.folders,
+  )..orderBy([(f) => OrderingTerm.asc(f.name)])).watch();
 
   /// Direct children of [parentId] (top-level when null).
-  Future<List<Folder>> childrenOf(String? parentId) => (db.select(db.folders)
-        ..where((f) => parentId == null
-            ? f.parentId.isNull()
-            : f.parentId.equals(parentId))
-        ..orderBy([(f) => OrderingTerm.asc(f.name)]))
-      .get();
+  Future<List<Folder>> childrenOf(String? parentId) =>
+      (db.select(db.folders)
+            ..where(
+              (f) => parentId == null
+                  ? f.parentId.isNull()
+                  : f.parentId.equals(parentId),
+            )
+            ..orderBy([(f) => OrderingTerm.asc(f.name)]))
+          .get();
 
   Future<Folder> createFolder({
     required String name,
@@ -71,8 +74,9 @@ class FolderService {
     if (trimmed.isEmpty) {
       throw ArgumentError.value(name, 'name', 'Folder name cannot be empty');
     }
-    await (db.update(db.folders)..where((f) => f.id.equals(id)))
-        .write(FoldersCompanion(name: Value(trimmed)));
+    await (db.update(db.folders)..where((f) => f.id.equals(id))).write(
+      FoldersCompanion(name: Value(trimmed)),
+    );
   }
 
   /// Re-parent [id] under [newParentId].
@@ -86,10 +90,12 @@ class FolderService {
     }
     if (newParentId != null && await _isDescendantOf(newParentId, id)) {
       throw ArgumentError(
-          'Cannot move a folder into its own descendant (that would make a cycle)');
+        'Cannot move a folder into its own descendant (that would make a cycle)',
+      );
     }
-    await (db.update(db.folders)..where((f) => f.id.equals(id)))
-        .write(FoldersCompanion(parentId: Value(newParentId)));
+    await (db.update(db.folders)..where((f) => f.id.equals(id))).write(
+      FoldersCompanion(parentId: Value(newParentId)),
+    );
   }
 
   /// True if [candidate] is [ancestor], or sits somewhere beneath it.
@@ -100,9 +106,9 @@ class FolderService {
     while (true) {
       if (cursor == ancestor) return true;
       if (!seen.add(cursor)) return false; // already-cyclic data; do not hang
-      final row = await (db.select(db.folders)
-            ..where((f) => f.id.equals(cursor)))
-          .getSingleOrNull();
+      final row = await (db.select(
+        db.folders,
+      )..where((f) => f.id.equals(cursor))).getSingleOrNull();
       final parent = row?.parentId;
       if (parent == null) return false;
       cursor = parent;
@@ -114,12 +120,13 @@ class FolderService {
   /// trade anyone would accept. MeetingFolders rows cascade away on their own.
   Future<void> deleteFolder(String id) async {
     await db.transaction(() async {
-      final folder = await (db.select(db.folders)
-            ..where((f) => f.id.equals(id)))
-          .getSingleOrNull();
+      final folder = await (db.select(
+        db.folders,
+      )..where((f) => f.id.equals(id))).getSingleOrNull();
       if (folder == null) return;
-      await (db.update(db.folders)..where((f) => f.parentId.equals(id)))
-          .write(FoldersCompanion(parentId: Value(folder.parentId)));
+      await (db.update(db.folders)..where((f) => f.parentId.equals(id))).write(
+        FoldersCompanion(parentId: Value(folder.parentId)),
+      );
       await (db.delete(db.folders)..where((f) => f.id.equals(id))).go();
     });
   }
@@ -127,19 +134,22 @@ class FolderService {
   // -- meeting <-> folder ------------------------------------------------------
 
   Future<Set<String>> foldersForMeeting(String meetingId) async {
-    final rows = await (db.select(db.meetingFolders)
-          ..where((mf) => mf.meetingId.equals(meetingId)))
-        .get();
+    final rows = await (db.select(
+      db.meetingFolders,
+    )..where((mf) => mf.meetingId.equals(meetingId))).get();
     return rows.map((r) => r.folderId).toSet();
   }
 
   Future<List<Meeting>> meetingsInFolder(String folderId) async {
-    final q = db.select(db.meetings).join([
-      innerJoin(db.meetingFolders,
-          db.meetingFolders.meetingId.equalsExp(db.meetings.id)),
-    ])
-      ..where(db.meetingFolders.folderId.equals(folderId))
-      ..orderBy([OrderingTerm.desc(db.meetings.createdAt)]);
+    final q =
+        db.select(db.meetings).join([
+            innerJoin(
+              db.meetingFolders,
+              db.meetingFolders.meetingId.equalsExp(db.meetings.id),
+            ),
+          ])
+          ..where(db.meetingFolders.folderId.equals(folderId))
+          ..orderBy([OrderingTerm.desc(db.meetings.createdAt)]);
     final rows = await q.get();
     return rows.map((r) => r.readTable(db.meetings)).toList();
   }
@@ -147,15 +157,18 @@ class FolderService {
   /// Reactive counterpart of [meetingsInFolder] — the home list needs a Stream
   /// so adding a meeting to the selected folder updates without a manual reload.
   Stream<List<Meeting>> watchMeetingsInFolder(String folderId) {
-    final q = db.select(db.meetings).join([
-      innerJoin(db.meetingFolders,
-          db.meetingFolders.meetingId.equalsExp(db.meetings.id)),
-    ])
-      ..where(db.meetingFolders.folderId.equals(folderId))
-      ..orderBy([OrderingTerm.desc(db.meetings.createdAt)]);
+    final q =
+        db.select(db.meetings).join([
+            innerJoin(
+              db.meetingFolders,
+              db.meetingFolders.meetingId.equalsExp(db.meetings.id),
+            ),
+          ])
+          ..where(db.meetingFolders.folderId.equals(folderId))
+          ..orderBy([OrderingTerm.desc(db.meetings.createdAt)]);
     return q.watch().map(
-          (rows) => rows.map((r) => r.readTable(db.meetings)).toList(),
-        );
+      (rows) => rows.map((r) => r.readTable(db.meetings)).toList(),
+    );
   }
 
   /// How many meetings sit in each folder, for the drawer's counts.
@@ -165,23 +178,28 @@ class FolderService {
         readsFrom: {db.meetingFolders},
       )
       .watch()
-      .map((rows) => {
-            for (final r in rows)
-              r.read<String>('folder_id'): r.read<int>('n'),
-          });
+      .map(
+        (rows) => {
+          for (final r in rows) r.read<String>('folder_id'): r.read<int>('n'),
+        },
+      );
 
   Future<void> setFoldersForMeeting(
     String meetingId,
     Set<String> folderIds,
   ) async {
     await db.transaction(() async {
-      await (db.delete(db.meetingFolders)
-            ..where((mf) => mf.meetingId.equals(meetingId)))
-          .go();
+      await (db.delete(
+        db.meetingFolders,
+      )..where((mf) => mf.meetingId.equals(meetingId))).go();
       for (final fid in folderIds) {
-        await db.into(db.meetingFolders).insert(
+        await db
+            .into(db.meetingFolders)
+            .insert(
               MeetingFoldersCompanion.insert(
-                  meetingId: meetingId, folderId: fid),
+                meetingId: meetingId,
+                folderId: fid,
+              ),
               mode: InsertMode.insertOrIgnore,
             );
       }
@@ -191,29 +209,33 @@ class FolderService {
   // -- tags --------------------------------------------------------------------
 
   Future<Set<String>> tagsForMeeting(String meetingId) async {
-    final rows = await (db.select(db.meetingTags)
-          ..where((t) => t.meetingId.equals(meetingId)))
-        .get();
+    final rows = await (db.select(
+      db.meetingTags,
+    )..where((t) => t.meetingId.equals(meetingId))).get();
     return rows.map((r) => r.tag).toSet();
   }
 
   /// Every tag in use, for autocomplete.
   Future<List<String>> allTags() async {
-    final rows = await db.customSelect(
-      'SELECT DISTINCT tag FROM meeting_tags ORDER BY tag',
-      readsFrom: {db.meetingTags},
-    ).get();
+    final rows = await db
+        .customSelect(
+          'SELECT DISTINCT tag FROM meeting_tags ORDER BY tag',
+          readsFrom: {db.meetingTags},
+        )
+        .get();
     return rows.map((r) => r.read<String>('tag')).toList();
   }
 
   Future<void> setTagsForMeeting(String meetingId, Set<String> tags) async {
     final clean = tags.map((t) => t.trim()).where((t) => t.isNotEmpty).toSet();
     await db.transaction(() async {
-      await (db.delete(db.meetingTags)
-            ..where((t) => t.meetingId.equals(meetingId)))
-          .go();
+      await (db.delete(
+        db.meetingTags,
+      )..where((t) => t.meetingId.equals(meetingId))).go();
       for (final tag in clean) {
-        await db.into(db.meetingTags).insert(
+        await db
+            .into(db.meetingTags)
+            .insert(
               MeetingTagsCompanion.insert(meetingId: meetingId, tag: tag),
               mode: InsertMode.insertOrIgnore,
             );
@@ -245,8 +267,9 @@ class FolderService {
       return;
     }
 
-    final liveMeetingIds =
-        (await db.select(db.meetings).get()).map((m) => m.id).toSet();
+    final liveMeetingIds = (await db.select(db.meetings).get())
+        .map((m) => m.id)
+        .toSet();
 
     await db.transaction(() async {
       final knownFolderIds = <String>{};
@@ -256,7 +279,9 @@ class FolderService {
           final m = entry as Map<String, dynamic>;
           final id = m['id'] as String;
           knownFolderIds.add(id);
-          await db.into(db.folders).insert(
+          await db
+              .into(db.folders)
+              .insert(
                 FoldersCompanion.insert(
                   id: id,
                   name: m['name'] as String,
@@ -264,7 +289,7 @@ class FolderService {
                   colorIndex: Value((m['colorIndex'] as num?)?.toInt() ?? 0),
                   createdAt:
                       DateTime.tryParse(m['createdAt'] as String? ?? '') ??
-                          DateTime.now(),
+                      DateTime.now(),
                 ),
                 mode: InsertMode.insertOrIgnore,
               );
@@ -277,9 +302,13 @@ class FolderService {
           if (!liveMeetingIds.contains(e.key)) continue;
           for (final fid in (e.value as List<dynamic>).cast<String>()) {
             if (!knownFolderIds.contains(fid)) continue;
-            await db.into(db.meetingFolders).insert(
+            await db
+                .into(db.meetingFolders)
+                .insert(
                   MeetingFoldersCompanion.insert(
-                      meetingId: e.key, folderId: fid),
+                    meetingId: e.key,
+                    folderId: fid,
+                  ),
                   mode: InsertMode.insertOrIgnore,
                 );
           }
@@ -292,9 +321,13 @@ class FolderService {
           if (!liveMeetingIds.contains(e.key)) continue;
           for (final tag in (e.value as List<dynamic>).cast<String>()) {
             if (tag.trim().isEmpty) continue;
-            await db.into(db.meetingTags).insert(
+            await db
+                .into(db.meetingTags)
+                .insert(
                   MeetingTagsCompanion.insert(
-                      meetingId: e.key, tag: tag.trim()),
+                    meetingId: e.key,
+                    tag: tag.trim(),
+                  ),
                   mode: InsertMode.insertOrIgnore,
                 );
           }

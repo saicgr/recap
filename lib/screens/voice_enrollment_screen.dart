@@ -46,8 +46,10 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.surface,
-        title: Text('Enroll a voice',
-            style: RT.subtitle.copyWith(color: t.textPrimary)),
+        title: Text(
+          'Enroll a voice',
+          style: RT.subtitle.copyWith(color: t.textPrimary),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -56,7 +58,9 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('Enroll'),
@@ -90,11 +94,11 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Voice enrollment',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
-              trailing: [
-                IconBtn(icon: Icons.add, onPressed: _addStub),
-              ],
+              title: Text(
+                'Voice enrollment',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
+              trailing: [IconBtn(icon: Icons.add, onPressed: _addStub)],
             ),
             Expanded(
               child: _list.isEmpty
@@ -104,12 +108,16 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.record_voice_over_outlined,
-                                size: 48, color: t.textMuted),
+                            Icon(
+                              Icons.record_voice_over_outlined,
+                              size: 48,
+                              color: t.textMuted,
+                            ),
                             const SizedBox(height: 16),
-                            Text('No voices enrolled yet',
-                                style:
-                                    RT.subtitle.copyWith(color: t.textPrimary)),
+                            Text(
+                              'No voices enrolled yet',
+                              style: RT.subtitle.copyWith(color: t.textPrimary),
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'Enroll a 30s reference clip of each known speaker. We\'ll auto-label them in future meetings.',
@@ -143,8 +151,10 @@ class _VoiceEnrollmentScreenState extends State<VoiceEnrollmentScreen> {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: t.accent.withValues(alpha: 0.12),
-          child: Text(vp.name.isEmpty ? '?' : vp.name[0].toUpperCase(),
-              style: TextStyle(color: t.accent)),
+          child: Text(
+            vp.name.isEmpty ? '?' : vp.name[0].toUpperCase(),
+            style: TextStyle(color: t.accent),
+          ),
         ),
         title: Text(vp.name, style: TextStyle(color: t.textPrimary)),
         subtitle: Text(

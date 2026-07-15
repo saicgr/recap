@@ -81,13 +81,15 @@ class StubEntitlementService implements EntitlementService {
   Tier get currentTier => Tier.free;
 
   @override
-  Stream<TierUsage> watchUsage() => Stream.value(const TierUsage(
-        cloudSummariesUsedThisMonth: 0,
-        meetingsStartedToday: 0,
-        recordedThisMonth: Duration.zero,
-        totalMeetings: 0,
-        topUpCreditsRemaining: 0,
-      ));
+  Stream<TierUsage> watchUsage() => Stream.value(
+    const TierUsage(
+      cloudSummariesUsedThisMonth: 0,
+      meetingsStartedToday: 0,
+      recordedThisMonth: Duration.zero,
+      totalMeetings: 0,
+      topUpCreditsRemaining: 0,
+    ),
+  );
 
   @override
   Future<StartRecordingDecision> decideStartRecording() async =>

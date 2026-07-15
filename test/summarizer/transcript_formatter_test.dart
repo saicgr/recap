@@ -20,14 +20,16 @@ void main() {
       expect(formatTimestamp(3599000), '59:59');
     });
 
-    test('h:mm:ss past the hour — a 90-minute meeting must not wrap to 30:00',
-        () {
-      expect(formatTimestamp(3600000), '1:00:00');
-      expect(formatTimestamp(3661000), '1:01:01');
-      expect(formatTimestamp(3723000), '1:02:03');
-      expect(formatTimestamp(5400000), '1:30:00');
-      expect(formatTimestamp(7325000), '2:02:05');
-    });
+    test(
+      'h:mm:ss past the hour — a 90-minute meeting must not wrap to 30:00',
+      () {
+        expect(formatTimestamp(3600000), '1:00:00');
+        expect(formatTimestamp(3661000), '1:01:01');
+        expect(formatTimestamp(3723000), '1:02:03');
+        expect(formatTimestamp(5400000), '1:30:00');
+        expect(formatTimestamp(7325000), '2:02:05');
+      },
+    );
 
     test('truncates sub-second, never rounds up into the next second', () {
       expect(formatTimestamp(1999), '00:01');
@@ -37,8 +39,13 @@ void main() {
   group('renderSegment', () {
     test('renders [mm:ss] Speaker: text when both are present', () {
       expect(
-        renderSegment(const PromptSegment(
-            startMs: 21000, speaker: 'Speaker 1', text: 'Hello there.')),
+        renderSegment(
+          const PromptSegment(
+            startMs: 21000,
+            speaker: 'Speaker 1',
+            text: 'Hello there.',
+          ),
+        ),
         '[00:21] Speaker 1: Hello there.',
       );
     });
@@ -100,10 +107,11 @@ void main() {
         fallbackBody: '',
       );
       expect(out.map((s) => s.text).toList(), ['A.', 'B.', 'C.']);
-      expect(
-        out.map((s) => s.speaker).toList(),
-        ['Speaker 1', 'Speaker 2', 'Speaker 1'],
-      );
+      expect(out.map((s) => s.speaker).toList(), [
+        'Speaker 1',
+        'Speaker 2',
+        'Speaker 1',
+      ]);
     });
 
     test('applies speakerAliases so enrolled names reach the prompt', () {
@@ -116,12 +124,14 @@ void main() {
         speakerAliases: const {'Speaker 1': 'Dana'},
       );
       expect(out[0].speaker, 'Dana');
-      expect(out[1].speaker, 'Speaker 2',
-          reason: 'unaliased labels pass through');
+      expect(
+        out[1].speaker,
+        'Speaker 2',
+        reason: 'unaliased labels pass through',
+      );
     });
 
-    test(
-        'sorts by startMs before merging — out-of-order rows must not fuse '
+    test('sorts by startMs before merging — out-of-order rows must not fuse '
         'the wrong turns', () {
       final out = buildPromptSegments(
         segments: [
@@ -153,12 +163,19 @@ void main() {
       // single timestamp-free wall that can be neither cited nor chunked.
       final segs = [
         for (var i = 0; i < 40; i++)
-          _seg(i * 1000, (i + 1) * 1000, 'Speaker 1',
-              'This is turn number $i of a long uninterrupted monologue.'),
+          _seg(
+            i * 1000,
+            (i + 1) * 1000,
+            'Speaker 1',
+            'This is turn number $i of a long uninterrupted monologue.',
+          ),
       ];
       final out = buildPromptSegments(segments: segs, fallbackBody: '');
-      expect(out.length, greaterThan(1),
-          reason: 'must keep citation granularity');
+      expect(
+        out.length,
+        greaterThan(1),
+        reason: 'must keep citation granularity',
+      );
       for (final s in out) {
         expect(s.startMs, isNotNull);
       }
@@ -200,29 +217,36 @@ void main() {
         (i) => 'Sentence number $i explains something about the promo.',
       ).join(' ');
       final out = buildPromptSegments(segments: const [], fallbackBody: body);
-      expect(out.length, greaterThan(1),
-          reason: 'the chunker needs seams to cut on');
+      expect(
+        out.length,
+        greaterThan(1),
+        reason: 'the chunker needs seams to cut on',
+      );
       expect(out.every((s) => s.text.trim().isNotEmpty), isTrue);
     });
 
-    test('renders without speakers or timestamps — no invented attribution',
-        () {
-      final out = buildPromptSegments(
-        segments: const [],
-        fallbackBody: 'Alpha.\n\nBeta.',
-      );
-      expect(renderSegments(out), 'Alpha.\nBeta.');
-    });
+    test(
+      'renders without speakers or timestamps — no invented attribution',
+      () {
+        final out = buildPromptSegments(
+          segments: const [],
+          fallbackBody: 'Alpha.\n\nBeta.',
+        );
+        expect(renderSegments(out), 'Alpha.\nBeta.');
+      },
+    );
 
-    test('blank-bodied segments fall back to the body rather than throwing',
-        () {
-      final out = buildPromptSegments(
-        segments: [_seg(0, 1000, 'Speaker 1', '   ')],
-        fallbackBody: 'The real transcript.',
-      );
-      expect(out.length, 1);
-      expect(out.first.text, 'The real transcript.');
-    });
+    test(
+      'blank-bodied segments fall back to the body rather than throwing',
+      () {
+        final out = buildPromptSegments(
+          segments: [_seg(0, 1000, 'Speaker 1', '   ')],
+          fallbackBody: 'The real transcript.',
+        );
+        expect(out.length, 1);
+        expect(out.first.text, 'The real transcript.');
+      },
+    );
   });
 
   group('buildPromptSegments — the error path', () {
@@ -256,17 +280,18 @@ void main() {
 
   group('splitSentences', () {
     test('splits on terminal punctuation', () {
-      expect(
-        splitSentences('One. Two! Three? Four.'),
-        ['One.', 'Two!', 'Three?', 'Four.'],
-      );
+      expect(splitSentences('One. Two! Three? Four.'), [
+        'One.',
+        'Two!',
+        'Three?',
+        'Four.',
+      ]);
     });
 
     test('unpunctuated ASR output stays whole rather than vanishing', () {
-      expect(
-        splitSentences('so yeah the thing about the promo is'),
-        ['so yeah the thing about the promo is'],
-      );
+      expect(splitSentences('so yeah the thing about the promo is'), [
+        'so yeah the thing about the promo is',
+      ]);
     });
   });
 }

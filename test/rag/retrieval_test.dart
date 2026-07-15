@@ -38,22 +38,30 @@ void main() {
     tearDown(() => db.close());
 
     Future<void> seed(String id, String title, String body) async {
-      await db.into(db.meetings).insert(MeetingsCompanion.insert(
-            id: id,
-            title: title,
-            durationMs: const Value(1000),
-            audioPath: '/tmp/$id.wav',
-            createdAt: DateTime(2026, 7, 1),
-            updatedAt: DateTime(2026, 7, 1),
-            status: MeetingStatus.ready,
-          ));
-      await db.into(db.transcripts).insert(TranscriptsCompanion.insert(
-            meetingId: id,
-            body: body,
-            modelId: 'whisper',
-            processingMs: const Value(1),
-            createdAt: DateTime(2026, 7, 1),
-          ));
+      await db
+          .into(db.meetings)
+          .insert(
+            MeetingsCompanion.insert(
+              id: id,
+              title: title,
+              durationMs: const Value(1000),
+              audioPath: '/tmp/$id.wav',
+              createdAt: DateTime(2026, 7, 1),
+              updatedAt: DateTime(2026, 7, 1),
+              status: MeetingStatus.ready,
+            ),
+          );
+      await db
+          .into(db.transcripts)
+          .insert(
+            TranscriptsCompanion.insert(
+              meetingId: id,
+              body: body,
+              modelId: 'whisper',
+              processingMs: const Value(1),
+              createdAt: DateTime(2026, 7, 1),
+            ),
+          );
     }
 
     test('a query with punctuation searches instead of throwing', () async {
@@ -67,8 +75,9 @@ void main() {
       await seed('m1', 'Old Title', 'quarterly numbers');
       expect(await db.searchMeetingIds('Old'), ['m1']);
 
-      await (db.update(db.meetings)..where((m) => m.id.equals('m1')))
-          .write(const MeetingsCompanion(title: Value('Renamed Title')));
+      await (db.update(db.meetings)..where((m) => m.id.equals('m1'))).write(
+        const MeetingsCompanion(title: Value('Renamed Title')),
+      );
 
       // There was no meetings_au trigger, so a renamed meeting stayed
       // searchable only under its OLD title, forever.

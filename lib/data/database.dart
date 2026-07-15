@@ -340,27 +340,29 @@ class GlossaryTerms extends Table {
 // Drift's @UseRowClass + custom migration creates the virtual table.
 // ---------------------------------------------------------------------------
 
-@DriftDatabase(tables: [
-  Meetings,
-  Transcripts,
-  TranscriptSegments,
-  Summaries,
-  Bookmarks,
-  UsageDays,
-  UsageMonths,
-  TopUpCredits,
-  Voiceprints,
-  SegmentEmbeddings,
-  ActionItems,
-  Folders,
-  MeetingFolders,
-  MeetingTags,
-  TranslationCache,
-  GlossaryTerms,
-  Purchases,
-  Templates,
-  SyncOutbox,
-])
+@DriftDatabase(
+  tables: [
+    Meetings,
+    Transcripts,
+    TranscriptSegments,
+    Summaries,
+    Bookmarks,
+    UsageDays,
+    UsageMonths,
+    TopUpCredits,
+    Voiceprints,
+    SegmentEmbeddings,
+    ActionItems,
+    Folders,
+    MeetingFolders,
+    MeetingTags,
+    TranslationCache,
+    GlossaryTerms,
+    Purchases,
+    Templates,
+    SyncOutbox,
+  ],
+)
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
@@ -374,11 +376,11 @@ class AppDb extends _$AppDb {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-          // FTS5 virtual table for cross-meeting search. Indexes transcript
-          // text + meeting title; we update via triggers below.
-          await customStatement('''
+    onCreate: (m) async {
+      await m.createAll();
+      // FTS5 virtual table for cross-meeting search. Indexes transcript
+      // text + meeting title; we update via triggers below.
+      await customStatement('''
             CREATE VIRTUAL TABLE meeting_search USING fts5(
               meeting_id UNINDEXED,
               title,
@@ -386,14 +388,14 @@ class AppDb extends _$AppDb {
               tokenize = 'porter unicode61'
             );
           ''');
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER transcripts_ai AFTER INSERT ON transcripts BEGIN
               INSERT INTO meeting_search(meeting_id, title, body)
               SELECT new.meeting_id, m.title, new.body
               FROM meetings m WHERE m.id = new.meeting_id;
             END;
           ''');
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER transcripts_au AFTER UPDATE ON transcripts BEGIN
               DELETE FROM meeting_search WHERE meeting_id = new.meeting_id;
               INSERT INTO meeting_search(meeting_id, title, body)
@@ -401,12 +403,12 @@ class AppDb extends _$AppDb {
               FROM meetings m WHERE m.id = new.meeting_id;
             END;
           ''');
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER meetings_ad AFTER DELETE ON meetings BEGIN
               DELETE FROM meeting_search WHERE meeting_id = old.id;
             END;
           ''');
-          await customStatement('''
+      await customStatement('''
             CREATE TRIGGER meetings_au AFTER UPDATE OF title ON meetings BEGIN
               DELETE FROM meeting_search WHERE meeting_id = new.id;
               INSERT INTO meeting_search(meeting_id, title, body)
@@ -414,45 +416,45 @@ class AppDb extends _$AppDb {
               FROM transcripts t WHERE t.meeting_id = new.id;
             END;
           ''');
-        },
-        onUpgrade: (m, from, to) async {
-          // v1 → v2: added Voiceprints, SegmentEmbeddings, ActionItems,
-          // Folders, MeetingFolders, MeetingTags, TranslationCache,
-          // GlossaryTerms (D14.4 voice ID + D14.9 action items + D14.8
-          // organization + D13.4 translation memory/glossary + B3 search).
-          if (from < 2) {
-            await m.createTable(voiceprints);
-            await m.createTable(segmentEmbeddings);
-            await m.createTable(actionItems);
-            await m.createTable(folders);
-            await m.createTable(meetingFolders);
-            await m.createTable(meetingTags);
-            await m.createTable(translationCache);
-            await m.createTable(glossaryTerms);
-          }
-          // v2 → v3: Purchases. The tier was previously held only in memory,
-          // so every relaunch dropped a paying user to Free. Existing installs
-          // start with an empty table and repopulate it from iap.restore() on
-          // the next launch.
-          if (from < 3) {
-            await m.createTable(purchases);
-          }
-          // v3 → v4: Templates. Custom personas move off SharedPreferences so
-          // they can be queried, joined, and eventually synced.
-          if (from < 4) {
-            await m.createTable(templates);
-          }
-          // v4 -> v5: vector-space guards on SegmentEmbeddings, and the FTS
-          // trigger that was missing all along.
-          if (from < 5) {
-            await m.addColumn(segmentEmbeddings, segmentEmbeddings.dim);
-            await m.addColumn(segmentEmbeddings, segmentEmbeddings.model);
-            // Renaming a meeting never re-indexed it: there were AFTER INSERT /
-            // AFTER UPDATE triggers on transcripts and an AFTER DELETE on
-            // meetings, but nothing on meetings UPDATE. So a renamed meeting
-            // stayed searchable only under its OLD title, forever.
-            await customStatement('DROP TRIGGER IF EXISTS meetings_au');
-            await customStatement('''
+    },
+    onUpgrade: (m, from, to) async {
+      // v1 → v2: added Voiceprints, SegmentEmbeddings, ActionItems,
+      // Folders, MeetingFolders, MeetingTags, TranslationCache,
+      // GlossaryTerms (D14.4 voice ID + D14.9 action items + D14.8
+      // organization + D13.4 translation memory/glossary + B3 search).
+      if (from < 2) {
+        await m.createTable(voiceprints);
+        await m.createTable(segmentEmbeddings);
+        await m.createTable(actionItems);
+        await m.createTable(folders);
+        await m.createTable(meetingFolders);
+        await m.createTable(meetingTags);
+        await m.createTable(translationCache);
+        await m.createTable(glossaryTerms);
+      }
+      // v2 → v3: Purchases. The tier was previously held only in memory,
+      // so every relaunch dropped a paying user to Free. Existing installs
+      // start with an empty table and repopulate it from iap.restore() on
+      // the next launch.
+      if (from < 3) {
+        await m.createTable(purchases);
+      }
+      // v3 → v4: Templates. Custom personas move off SharedPreferences so
+      // they can be queried, joined, and eventually synced.
+      if (from < 4) {
+        await m.createTable(templates);
+      }
+      // v4 -> v5: vector-space guards on SegmentEmbeddings, and the FTS
+      // trigger that was missing all along.
+      if (from < 5) {
+        await m.addColumn(segmentEmbeddings, segmentEmbeddings.dim);
+        await m.addColumn(segmentEmbeddings, segmentEmbeddings.model);
+        // Renaming a meeting never re-indexed it: there were AFTER INSERT /
+        // AFTER UPDATE triggers on transcripts and an AFTER DELETE on
+        // meetings, but nothing on meetings UPDATE. So a renamed meeting
+        // stayed searchable only under its OLD title, forever.
+        await customStatement('DROP TRIGGER IF EXISTS meetings_au');
+        await customStatement('''
               CREATE TRIGGER meetings_au AFTER UPDATE OF title ON meetings BEGIN
                 DELETE FROM meeting_search WHERE meeting_id = new.id;
                 INSERT INTO meeting_search(meeting_id, title, body)
@@ -460,36 +462,36 @@ class AppDb extends _$AppDb {
                 FROM transcripts t WHERE t.meeting_id = new.id;
               END;
             ''');
-          }
-          // v5 -> v6: the sync outbox. Local-first sync tracks every syncable
-          // write here so a crash between "save" and "sync" cannot strand a
-          // change. Purely additive; existing rows are untouched.
-          if (from < 6) {
-            await m.createTable(syncOutbox);
-          }
-        },
-        beforeOpen: (details) async {
-          // Foreign keys are OFF by default in SQLite — per connection, every
-          // time. Without this, all 10 of our onDelete: cascade declarations
-          // are inert decoration: deleting a meeting silently orphans its
-          // transcripts, segments, summaries, bookmarks, embeddings and action
-          // items, and they accumulate forever.
-          //
-          // ORDER MATTERS. Databases created before this hook existed have been
-          // running with cascades disabled, so they may already contain orphans.
-          // Turning enforcement on over a dirty database makes later writes fail
-          // on constraints the user never violated. So: sweep first, enable
-          // second. The sweep is idempotent and cheap once clean.
-          await _sweepOrphans();
-          await customStatement('PRAGMA foreign_keys = ON');
-          // Internal sync bookkeeping (pull cursor per workspace, last-applied
-          // HLC per row). Plain KV, never synced, not user-facing — a raw table
-          // rather than a Drift-managed one so it needs no codegen or migration.
-          await customStatement(
-            'CREATE TABLE IF NOT EXISTS sync_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)',
-          );
-        },
+      }
+      // v5 -> v6: the sync outbox. Local-first sync tracks every syncable
+      // write here so a crash between "save" and "sync" cannot strand a
+      // change. Purely additive; existing rows are untouched.
+      if (from < 6) {
+        await m.createTable(syncOutbox);
+      }
+    },
+    beforeOpen: (details) async {
+      // Foreign keys are OFF by default in SQLite — per connection, every
+      // time. Without this, all 10 of our onDelete: cascade declarations
+      // are inert decoration: deleting a meeting silently orphans its
+      // transcripts, segments, summaries, bookmarks, embeddings and action
+      // items, and they accumulate forever.
+      //
+      // ORDER MATTERS. Databases created before this hook existed have been
+      // running with cascades disabled, so they may already contain orphans.
+      // Turning enforcement on over a dirty database makes later writes fail
+      // on constraints the user never violated. So: sweep first, enable
+      // second. The sweep is idempotent and cheap once clean.
+      await _sweepOrphans();
+      await customStatement('PRAGMA foreign_keys = ON');
+      // Internal sync bookkeeping (pull cursor per workspace, last-applied
+      // HLC per row). Plain KV, never synced, not user-facing — a raw table
+      // rather than a Drift-managed one so it needs no codegen or migration.
+      await customStatement(
+        'CREATE TABLE IF NOT EXISTS sync_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)',
       );
+    },
+  );
 
   /// Delete rows whose parent is already gone.
   ///
@@ -500,26 +502,36 @@ class AppDb extends _$AppDb {
   Future<void> _sweepOrphans() async {
     await transaction(() async {
       await customStatement(
-          'DELETE FROM transcripts WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM transcripts WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM transcript_segments WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM transcript_segments WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM summaries WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM summaries WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM bookmarks WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM bookmarks WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM action_items WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM action_items WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM meeting_folders WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM meeting_folders WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM meeting_tags WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM meeting_tags WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM meeting_folders WHERE folder_id NOT IN (SELECT id FROM folders)');
+        'DELETE FROM meeting_folders WHERE folder_id NOT IN (SELECT id FROM folders)',
+      );
       // segment_embeddings hangs off BOTH a segment and a meeting.
       await customStatement(
-          'DELETE FROM segment_embeddings WHERE meeting_id NOT IN (SELECT id FROM meetings)');
+        'DELETE FROM segment_embeddings WHERE meeting_id NOT IN (SELECT id FROM meetings)',
+      );
       await customStatement(
-          'DELETE FROM segment_embeddings WHERE segment_id NOT IN (SELECT id FROM transcript_segments)');
+        'DELETE FROM segment_embeddings WHERE segment_id NOT IN (SELECT id FROM transcript_segments)',
+      );
     });
   }
 
@@ -546,8 +558,9 @@ class AppDb extends _$AppDb {
   }
 
   Future<Transcript?> transcriptFor(String meetingId) {
-    return (select(transcripts)..where((t) => t.meetingId.equals(meetingId)))
-        .getSingleOrNull();
+    return (select(
+      transcripts,
+    )..where((t) => t.meetingId.equals(meetingId))).getSingleOrNull();
   }
 
   Future<List<TranscriptSegment>> segmentsFor(String meetingId) {
@@ -619,12 +632,14 @@ class AppDb extends _$AppDb {
       variables: [Variable<String>(match), Variable<int>(limit)],
     ).get();
     return rows
-        .map((r) => (
-              meetingId: r.read<String>('meeting_id'),
-              // bm25 returns a NEGATIVE score, best first. Flip it so callers
-              // can treat "higher is better" like every other ranker.
-              score: -r.read<double>('score'),
-            ))
+        .map(
+          (r) => (
+            meetingId: r.read<String>('meeting_id'),
+            // bm25 returns a NEGATIVE score, best first. Flip it so callers
+            // can treat "higher is better" like every other ranker.
+            score: -r.read<double>('score'),
+          ),
+        )
         .toList();
   }
 }

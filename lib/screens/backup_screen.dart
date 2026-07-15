@@ -28,10 +28,7 @@ class _BackupScreenState extends State<BackupScreen> {
     });
     try {
       final path = await backupService.exportAll();
-      await Share.shareXFiles(
-        [XFile(path)],
-        subject: 'Recap backup',
-      );
+      await Share.shareXFiles([XFile(path)], subject: 'Recap backup');
       if (!mounted) return;
       setState(() => _lastBackupPath = path);
     } catch (e) {
@@ -55,8 +52,10 @@ class _BackupScreenState extends State<BackupScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Backup & restore',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Backup & restore',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -98,8 +97,10 @@ class _BackupScreenState extends State<BackupScreen> {
                         border: Border.all(color: t.positive),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text('Last backup: $_lastBackupPath',
-                          style: RT.bodySm.copyWith(color: t.textSecondary)),
+                      child: Text(
+                        'Last backup: $_lastBackupPath',
+                        style: RT.bodySm.copyWith(color: t.textSecondary),
+                      ),
                     ),
                   ],
                   if (_lastError != null) ...[
@@ -111,8 +112,10 @@ class _BackupScreenState extends State<BackupScreen> {
                         border: Border.all(color: t.recordRed),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(_lastError!,
-                          style: RT.bodySm.copyWith(color: t.recordRed)),
+                      child: Text(
+                        _lastError!,
+                        style: RT.bodySm.copyWith(color: t.recordRed),
+                      ),
                     ),
                   ],
                 ],

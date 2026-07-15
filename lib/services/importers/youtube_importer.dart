@@ -32,25 +32,32 @@ class YoutubeImporter {
   /// Pulls the caption track for [url] and returns an ImportedAudio whose
   /// `precomputedTranscript` and `precomputedSegments` are populated.
   /// The wavPath is empty — caller should treat this as caption-only import.
-  static Future<ImportedAudio> importByUrl(String url,
-      {String preferredLang = 'en'}) async {
+  static Future<ImportedAudio> importByUrl(
+    String url, {
+    String preferredLang = 'en',
+  }) async {
     final videoId = _extractVideoId(url);
     if (videoId == null) {
       throw StateError('Could not find a YouTube video ID in URL: $url');
     }
     final watchUri = Uri.parse('https://www.youtube.com/watch?v=$videoId');
-    final res = await http.get(watchUri, headers: {
-      'User-Agent':
-          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-      'Accept-Language': '$preferredLang,en;q=0.9',
-    });
+    final res = await http.get(
+      watchUri,
+      headers: {
+        'User-Agent':
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Accept-Language': '$preferredLang,en;q=0.9',
+      },
+    );
     if (res.statusCode != 200) {
       throw StateError('YouTube returned HTTP ${res.statusCode}');
     }
     final html = res.body;
 
-    final captionTrackUrl =
-        _findCaptionTrackUrl(html, preferredLang: preferredLang);
+    final captionTrackUrl = _findCaptionTrackUrl(
+      html,
+      preferredLang: preferredLang,
+    );
     if (captionTrackUrl == null) {
       throw NoCaptionsAvailable(videoId);
     }
@@ -100,8 +107,10 @@ class YoutubeImporter {
 
   /// Pull the captionTracks list out of the ytInitialPlayerResponse JSON
   /// blob embedded in the watch HTML, and pick the best match.
-  static String? _findCaptionTrackUrl(String html,
-      {required String preferredLang}) {
+  static String? _findCaptionTrackUrl(
+    String html, {
+    required String preferredLang,
+  }) {
     // The JSON is inline: var ytInitialPlayerResponse = {...};
     final start = html.indexOf('captionTracks');
     if (start < 0) return null;
@@ -115,9 +124,9 @@ class YoutubeImporter {
     // rather than full JSON parsing because the surrounding context isn't
     // always strict JSON (escapes vary).
     final entries = RegExp(
-            r'\{[^}]*?"baseUrl":"([^"]+)"[^}]*?"languageCode":"([^"]+)"',
-            multiLine: true)
-        .allMatches(raw);
+      r'\{[^}]*?"baseUrl":"([^"]+)"[^}]*?"languageCode":"([^"]+)"',
+      multiLine: true,
+    ).allMatches(raw);
     String? firstUrl;
     String? englishUrl;
     String? preferredUrl;
@@ -133,7 +142,8 @@ class YoutubeImporter {
   }
 
   static List<({int startMs, int endMs, String body})> _parseTimedText(
-      String body) {
+    String body,
+  ) {
     final out = <({int startMs, int endMs, String body})>[];
     try {
       final doc = xml.XmlDocument.parse(body);

@@ -74,20 +74,23 @@ void main() {
       expect((await relaunch()).currentTier, Tier.free);
     });
 
-    test('the purchase date is preserved for lifetime grandfathering',
-        () async {
-      final svc = await relaunch();
-      await svc.recordPurchase(
-        purchaseId: 'txn-1',
-        productId: ProductIds.pro,
-        tier: Tier.pro,
-        purchasedAt: DateTime(2026, 3, 15),
-      );
-      final row = (await db.select(db.purchases).get())
-          .firstWhere((r) => r.id == 'txn-1');
-      expect(row.purchasedAt, DateTime(2026, 3, 15));
-      expect(row.source, 'store');
-    });
+    test(
+      'the purchase date is preserved for lifetime grandfathering',
+      () async {
+        final svc = await relaunch();
+        await svc.recordPurchase(
+          purchaseId: 'txn-1',
+          productId: ProductIds.pro,
+          tier: Tier.pro,
+          purchasedAt: DateTime(2026, 3, 15),
+        );
+        final row = (await db.select(db.purchases).get()).firstWhere(
+          (r) => r.id == 'txn-1',
+        );
+        expect(row.purchasedAt, DateTime(2026, 3, 15));
+        expect(row.source, 'store');
+      },
+    );
   });
 
   group('restore idempotency', () {
@@ -95,10 +98,10 @@ void main() {
       final svc = await relaunch();
 
       Future<bool> deliver() => svc.recordPurchase(
-            purchaseId: 'txn-topup-1',
-            productId: ProductIds.topUp25,
-            tier: null, // top-ups grant credits, not a tier
-          );
+        purchaseId: 'txn-topup-1',
+        productId: ProductIds.topUp25,
+        tier: null, // top-ups grant credits, not a tier
+      );
 
       expect(await deliver(), isTrue, reason: 'first delivery is new');
       if (await deliver()) fail('a replayed purchase must not read as new');

@@ -162,9 +162,7 @@ produce; when in doubt, mark it uncertain.''',
 /// [resolvePersona]. (Both mistakes shipped: the summary header rendered
 /// "OVERVIEW · custom:1752438…", and the persona chip claimed "Meeting notes"
 /// while a custom template was selected.)
-final Map<String, Persona> personasByKey = {
-  for (final p in personas) p.key: p,
-};
+final Map<String, Persona> personasByKey = {for (final p in personas) p.key: p};
 
 Persona personaForStyle(SummaryStyle style) =>
     personas.firstWhere((p) => p.style == style);

@@ -90,10 +90,7 @@ class MicPolicy {
   /// Order: an explicit user pin > wired/USB > built-in > anything left. A
   /// Bluetooth input is chosen ONLY if it is genuinely the only thing available,
   /// and never silently.
-  static MicChoice choose(
-    List<InputDevice> devices, {
-    String? pinnedId,
-  }) {
+  static MicChoice choose(List<InputDevice> devices, {String? pinnedId}) {
     if (devices.isEmpty) {
       return const MicChoice(device: null, reason: MicChoiceReason.onlyOption);
     }
@@ -117,16 +114,14 @@ class MicPolicy {
 
     for (final d in devices) {
       if (isBuiltIn(d) && !isBluetooth(d)) {
-        return MicChoice(
-            device: d, reason: MicChoiceReason.preferredBuiltIn);
+        return MicChoice(device: d, reason: MicChoiceReason.preferredBuiltIn);
       }
     }
 
     // Nothing recognised as built-in. Prefer anything that is not Bluetooth.
     for (final d in devices) {
       if (!isBluetooth(d)) {
-        return MicChoice(
-            device: d, reason: MicChoiceReason.preferredBuiltIn);
+        return MicChoice(device: d, reason: MicChoiceReason.preferredBuiltIn);
       }
     }
 

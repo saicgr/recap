@@ -55,50 +55,60 @@ class HeuristicEntityExtractor implements EntityExtractor {
   /// bad transcript must yield an EMPTY glossary, not a wrong one.
   static final _acronymRegex = RegExp(r'\b[A-Z]{2,6}\b');
 
-  static final _moneyRegex =
-      RegExp(r'\$\s?\d+(?:,\d{3})*(?:\.\d+)?(?:\s?[kKmMbB])?');
+  static final _moneyRegex = RegExp(
+    r'\$\s?\d+(?:,\d{3})*(?:\.\d+)?(?:\s?[kKmMbB])?',
+  );
   static final _dateRegex = RegExp(
-      r'\b\d{4}-\d{2}-\d{2}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*\d{4})?\b',
-      caseSensitive: false);
+    r'\b\d{4}-\d{2}-\d{2}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,\s*\d{4})?\b',
+    caseSensitive: false,
+  );
 
   @override
   Future<List<Entity>> extract(String text) async {
     final out = <Entity>[];
     for (final m in _personRegex.allMatches(text)) {
-      out.add(Entity(
-        text: m.group(0)!,
-        kind: 'PERSON',
-        confidence: 0.6,
-        startChar: m.start,
-        endChar: m.end,
-      ));
+      out.add(
+        Entity(
+          text: m.group(0)!,
+          kind: 'PERSON',
+          confidence: 0.6,
+          startChar: m.start,
+          endChar: m.end,
+        ),
+      );
     }
     for (final m in _acronymRegex.allMatches(text)) {
-      out.add(Entity(
-        text: m.group(0)!,
-        kind: 'ORG',
-        confidence: 0.7,
-        startChar: m.start,
-        endChar: m.end,
-      ));
+      out.add(
+        Entity(
+          text: m.group(0)!,
+          kind: 'ORG',
+          confidence: 0.7,
+          startChar: m.start,
+          endChar: m.end,
+        ),
+      );
     }
     for (final m in _moneyRegex.allMatches(text)) {
-      out.add(Entity(
-        text: m.group(0)!,
-        kind: 'MONEY',
-        confidence: 0.85,
-        startChar: m.start,
-        endChar: m.end,
-      ));
+      out.add(
+        Entity(
+          text: m.group(0)!,
+          kind: 'MONEY',
+          confidence: 0.85,
+          startChar: m.start,
+          endChar: m.end,
+        ),
+      );
     }
     for (final m in _dateRegex.allMatches(text)) {
-      out.add(Entity(
-        text: m.group(0)!,
-        kind: 'DATE',
-        confidence: 0.75,
-        startChar: m.start,
-        endChar: m.end,
-      ));
+      out.add(
+        Entity(
+          text: m.group(0)!,
+          kind: 'DATE',
+          confidence: 0.75,
+          startChar: m.start,
+          endChar: m.end,
+        ),
+      );
     }
     return out;
   }
@@ -120,7 +130,7 @@ class GlinerEntityExtractor implements EntityExtractor {
   OrtSession? _session;
 
   GlinerEntityExtractor({HeuristicEntityExtractor? fallback})
-      : _fallback = fallback ?? HeuristicEntityExtractor();
+    : _fallback = fallback ?? HeuristicEntityExtractor();
 
   Future<String> _modelPath() async {
     final docs = await getApplicationSupportDirectory();
@@ -176,8 +186,9 @@ class GlinerEntityExtractor implements EntityExtractor {
       // route through the heuristic path until the tokenizer + post-process
       // shim are wired — keeps the API consistent.
       // ignore: unused_local_variable
-      final session =
-          _session ??= await OnnxRuntime().createSession(await _modelPath());
+      final session = _session ??= await OnnxRuntime().createSession(
+        await _modelPath(),
+      );
       return _fallback.extract(text);
     } catch (e) {
       debugPrint('GLiNER extract failed, falling back: $e');

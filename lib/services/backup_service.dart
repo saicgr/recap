@@ -49,13 +49,15 @@ class BackupService {
             'createdAt': m.createdAt.toIso8601String(),
             'durationMs': m.durationMs,
             'status': m.status.name,
-          }
+          },
       ],
     };
-    encoder.addArchiveFile(ArchiveFile.string(
-      'manifest.json',
-      const JsonEncoder.withIndent('  ').convert(manifest),
-    ));
+    encoder.addArchiveFile(
+      ArchiveFile.string(
+        'manifest.json',
+        const JsonEncoder.withIndent('  ').convert(manifest),
+      ),
+    );
 
     // 2. Per-meeting JSON dump (transcript + segments + summaries +
     //    bookmarks). Faster restore than re-running schema migrations.
@@ -73,8 +75,9 @@ class BackupService {
           'durationMs': m.durationMs,
           'status': m.status.name,
         },
-        'transcript':
-            tr == null ? null : {'body': tr.body, 'modelId': tr.modelId},
+        'transcript': tr == null
+            ? null
+            : {'body': tr.body, 'modelId': tr.modelId},
         'segments': [
           for (final s in segs)
             {
@@ -83,7 +86,7 @@ class BackupService {
               'endMs': s.endMs,
               'body': s.body,
               'speakerLabel': s.speakerLabel,
-            }
+            },
         ],
         'summaries': [
           for (final s in summaries)
@@ -94,21 +97,19 @@ class BackupService {
               'backend': s.backend.name,
               'modelId': s.modelId,
               'createdAt': s.createdAt.toIso8601String(),
-            }
+            },
         ],
         'bookmarks': [
           for (final b in bookmarks)
-            {
-              'id': b.id,
-              'atMs': b.atMs,
-              'note': b.note,
-            }
+            {'id': b.id, 'atMs': b.atMs, 'note': b.note},
         ],
       };
-      encoder.addArchiveFile(ArchiveFile.string(
-        'meetings/${m.id}.json',
-        const JsonEncoder.withIndent('  ').convert(meetingBlob),
-      ));
+      encoder.addArchiveFile(
+        ArchiveFile.string(
+          'meetings/${m.id}.json',
+          const JsonEncoder.withIndent('  ').convert(meetingBlob),
+        ),
+      );
 
       // 3. Audio file (if present). Big — most of the zip size lives here.
       final audioFile = File(m.audioPath);

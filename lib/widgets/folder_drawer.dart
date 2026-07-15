@@ -42,8 +42,10 @@ class FolderDrawer extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                      child: Text('Folders',
-                          style: RT.titleLg.copyWith(color: t.textPrimary)),
+                      child: Text(
+                        'Folders',
+                        style: RT.titleLg.copyWith(color: t.textPrimary),
+                      ),
                     ),
                     Expanded(
                       child: ListView(
@@ -62,8 +64,7 @@ class FolderDrawer extends StatelessWidget {
                               child: Text(
                                 'No folders yet. Create one to organise your '
                                 'recordings — it works offline, no account needed.',
-                                style:
-                                    RT.bodySm.copyWith(color: t.textMuted),
+                                style: RT.bodySm.copyWith(color: t.textMuted),
                               ),
                             ),
                           // Flat list, parents first. Nesting is supported in the
@@ -166,8 +167,7 @@ class FolderDrawer extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(12.0 + indent * 16, 12, 12, 12),
           child: Row(
             children: [
-              Icon(icon,
-                  size: 18, color: active ? t.accent : t.textMuted),
+              Icon(icon, size: 18, color: active ? t.accent : t.textMuted),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -180,8 +180,7 @@ class FolderDrawer extends StatelessWidget {
                 ),
               ),
               if (count > 0)
-                Text('$count',
-                    style: RT.caption.copyWith(color: t.textMuted)),
+                Text('$count', style: RT.caption.copyWith(color: t.textMuted)),
             ],
           ),
         ),
@@ -215,16 +214,25 @@ class FolderDrawer extends StatelessWidget {
             const SizedBox(height: 8),
             ListTile(
               leading: Icon(Icons.edit_outlined, color: t.textPrimary),
-              title: Text('Rename',
-                  style: RT.body.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Rename',
+                style: RT.body.copyWith(color: t.textPrimary),
+              ),
               onTap: () => Navigator.pop(ctx, 'rename'),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              title: Text('Delete folder',
-                  style: RT.body.copyWith(color: Colors.redAccent)),
-              subtitle: Text('Recordings stay — only the folder is removed',
-                  style: RT.caption.copyWith(color: t.textMuted)),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
+              title: Text(
+                'Delete folder',
+                style: RT.body.copyWith(color: Colors.redAccent),
+              ),
+              subtitle: Text(
+                'Recordings stay — only the folder is removed',
+                style: RT.caption.copyWith(color: t.textMuted),
+              ),
               onTap: () => Navigator.pop(ctx, 'delete'),
             ),
             const SizedBox(height: 8),
@@ -287,8 +295,7 @@ Future<String?> promptForText(
         ),
         TextButton(
           onPressed: () => Navigator.pop(ctx, controller.text),
-          child: Text(confirmLabel,
-              style: RT.label.copyWith(color: t.accent)),
+          child: Text(confirmLabel, style: RT.label.copyWith(color: t.accent)),
         ),
       ],
     ),

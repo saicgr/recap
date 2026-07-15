@@ -74,7 +74,8 @@ class Exporter {
       case ExportTarget.slack:
         // v1.1 — workflow integrations.
         throw UnimplementedError(
-            '${target.name} export ships in v1.1. Use share-sheet for now.');
+          '${target.name} export ships in v1.1. Use share-sheet for now.',
+        );
     }
   }
 

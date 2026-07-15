@@ -30,8 +30,7 @@ class KeyWrap {
   static Future<SimpleKeyPair> generateIdentity() => _x25519.newKeyPair();
 
   /// Fresh symmetric key for a workspace (or for a new generation of one).
-  static Future<SecretKey> generateWorkspaceKey() =>
-      _aead.newSecretKey();
+  static Future<SecretKey> generateWorkspaceKey() => _aead.newSecretKey();
 
   /// Encrypt [workspaceKey] to [recipientPublicKey].
   ///
@@ -84,8 +83,10 @@ class KeyWrap {
       throw const KeyWrapError('wrapped key is truncated');
     }
 
-    final ephemeralPub =
-        SimplePublicKey(raw.sublist(0, 32), type: KeyPairType.x25519);
+    final ephemeralPub = SimplePublicKey(
+      raw.sublist(0, 32),
+      type: KeyPairType.x25519,
+    );
     final nonce = raw.sublist(32, 44);
     final rest = raw.sublist(44);
     final cipherText = rest.sublist(0, rest.length - 16);

@@ -92,21 +92,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Summary tab in TranscriptScreen instead.
 
   void _openSettings() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+  );
 
   void _openImport() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ImportScreen()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const ImportScreen()),
+  );
 
   /// Chat over the whole corpus. On-device, so every tier gets it — including
   /// Privacy, where Granola's cloud-only chat simply cannot go.
   void _openChat() => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ChatScreen()),
-      );
+    context,
+    MaterialPageRoute(builder: (_) => const ChatScreen()),
+  );
 
   void _openSearch() {
     if (!entitlements.currentTier.crossMeetingSearch) {
@@ -196,12 +196,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Column(
       children: [
         TopBar(
-          leading: Text('Recap',
-              style: RT.subtitle.copyWith(
-                color: t.textPrimary,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
-              )),
+          leading: Text(
+            'Recap',
+            style: RT.subtitle.copyWith(
+              color: t.textPrimary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
+            ),
+          ),
           trailing: [
             IconBtn(icon: Icons.file_upload_outlined, onPressed: _openImport),
             const SizedBox(width: 4),
@@ -217,8 +219,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               children: [
                 _quietIllustration(t),
                 const SizedBox(height: 32),
-                Text('No recordings yet',
-                    style: RT.titleLg.copyWith(color: t.textPrimary)),
+                Text(
+                  'No recordings yet',
+                  style: RT.titleLg.copyWith(color: t.textPrimary),
+                ),
                 const SizedBox(height: 10),
                 Text(
                   'Tap the button below to record your first meeting. Audio stays on your device.',
@@ -231,8 +235,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: [
                     Icon(Icons.lock_outline, size: 13, color: t.textMuted),
                     const SizedBox(width: 6),
-                    Text('Fully offline · No account',
-                        style: RT.label.copyWith(color: t.textMuted)),
+                    Text(
+                      'Fully offline · No account',
+                      style: RT.label.copyWith(color: t.textMuted),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -384,9 +390,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Flexible(
-                    child: Text(_folder?.name ?? 'All recordings',
-                        overflow: TextOverflow.ellipsis,
-                        style: RT.titleLg.copyWith(color: t.textPrimary)),
+                    child: Text(
+                      _folder?.name ?? 'All recordings',
+                      overflow: TextOverflow.ellipsis,
+                      style: RT.titleLg.copyWith(color: t.textPrimary),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Padding(
@@ -394,7 +402,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     child: Text(
                       '${meetings.length} · $totalDuration',
                       style: RT.label.copyWith(
-                          color: t.textMuted, fontWeight: FontWeight.w500),
+                        color: t.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -412,8 +422,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               for (final entry in grouped.entries) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-                  child: Text(entry.key.toUpperCase(),
-                      style: RT.caption.copyWith(color: t.textMuted)),
+                  child: Text(
+                    entry.key.toUpperCase(),
+                    style: RT.caption.copyWith(color: t.textMuted),
+                  ),
                 ),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -469,8 +481,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   border: Border.all(color: t.border),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.groups_outlined,
-                    size: 16, color: t.textSecondary),
+                child: Icon(
+                  Icons.groups_outlined,
+                  size: 16,
+                  color: t.textSecondary,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -495,8 +510,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               .copyWith(color: t.textMuted)
                               .merge(RT.num),
                         ),
-                        Text(' · ',
-                            style: RT.bodySm.copyWith(color: t.textMuted)),
+                        Text(
+                          ' · ',
+                          style: RT.bodySm.copyWith(color: t.textMuted),
+                        ),
                         Text(
                           DateFormat('h:mm a').format(m.createdAt),
                           style: RT.bodySm.copyWith(color: t.textMuted),
@@ -540,9 +557,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text('COMING UP',
-                style: RT.caption.copyWith(
-                    color: t.textMuted, fontWeight: FontWeight.w600)),
+            child: Text(
+              'COMING UP',
+              style: RT.caption.copyWith(
+                color: t.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           for (final e in _upcoming.take(5))
             Padding(
@@ -550,11 +571,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: SurfaceCard(
                 onTap: _startRecording,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Icon(
-                      e.isNow ? Icons.radio_button_checked : Icons.event_outlined,
+                      e.isNow
+                          ? Icons.radio_button_checked
+                          : Icons.event_outlined,
                       size: 18,
                       color: e.isNow ? t.accent : t.textMuted,
                     ),
@@ -563,9 +588,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(e.title,
-                              overflow: TextOverflow.ellipsis,
-                              style: RT.body.copyWith(color: t.textPrimary)),
+                          Text(
+                            e.title,
+                            overflow: TextOverflow.ellipsis,
+                            style: RT.body.copyWith(color: t.textPrimary),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             _whenLabel(e),
@@ -615,9 +642,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(width: 4),
             IconBtn(icon: Icons.settings_outlined, onPressed: _openSettings),
           ],
-          largeTitle: Text(_folder?.name ?? '',
-              overflow: TextOverflow.ellipsis,
-              style: RT.titleLg.copyWith(color: t.textPrimary)),
+          largeTitle: Text(
+            _folder?.name ?? '',
+            overflow: TextOverflow.ellipsis,
+            style: RT.titleLg.copyWith(color: t.textPrimary),
+          ),
         ),
         Expanded(
           child: Center(
@@ -626,12 +655,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.folder_open_outlined,
-                      size: 40, color: t.textMuted),
+                  Icon(
+                    Icons.folder_open_outlined,
+                    size: 40,
+                    color: t.textMuted,
+                  ),
                   const SizedBox(height: 16),
-                  Text('Nothing in this folder yet',
-                      textAlign: TextAlign.center,
-                      style: RT.subtitle.copyWith(color: t.textPrimary)),
+                  Text(
+                    'Nothing in this folder yet',
+                    textAlign: TextAlign.center,
+                    style: RT.subtitle.copyWith(color: t.textPrimary),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Open a recording and use "Move to folder" to file it here.',
@@ -682,26 +716,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(label,
-              style: RT.caption.copyWith(
-                color: t.textMuted,
-                letterSpacing: 0.8,
-              )),
+          Text(
+            label,
+            style: RT.caption.copyWith(color: t.textMuted, letterSpacing: 0.8),
+          ),
           const SizedBox(width: 8),
-          Text(current,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: color,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              )),
-          Text(' / $cap',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: t.textMuted,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              )),
+          Text(
+            current,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: color,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          Text(
+            ' / $cap',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: t.textMuted,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
         ],
       ),
     );

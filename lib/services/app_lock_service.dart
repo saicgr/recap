@@ -91,7 +91,9 @@ class AppLockService extends ChangeNotifier {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(
-        'confidential_meetings', _confidentialMeetingIds.toList());
+      'confidential_meetings',
+      _confidentialMeetingIds.toList(),
+    );
     notifyListeners();
   }
 }

@@ -36,16 +36,19 @@ class WhisperAsrEngine implements AsrEngine {
     // captions through that existing pipeline rather than through this
     // method. Surface a clear error if someone calls this directly.
     throw const AsrUnavailableException(
-        AsrUnavailableReason.unsupportedPlatform,
-        'Whisper streaming is provided by LiveCaptionsService — use that '
-        'service for streaming captions, not AsrEngine.transcribeStreaming.');
+      AsrUnavailableReason.unsupportedPlatform,
+      'Whisper streaming is provided by LiveCaptionsService — use that '
+      'service for streaming captions, not AsrEngine.transcribeStreaming.',
+    );
   }
 
   @override
   Future<String> transcribeFile(String wavPath, {String lang = 'en'}) async {
     if (!await transcriber.isModelInstalled) {
-      throw const AsrUnavailableException(AsrUnavailableReason.notInstalled,
-          'Whisper model not downloaded yet.');
+      throw const AsrUnavailableException(
+        AsrUnavailableReason.notInstalled,
+        'Whisper model not downloaded yet.',
+      );
     }
     return transcriber.transcribe(wavPath, lang: lang);
   }

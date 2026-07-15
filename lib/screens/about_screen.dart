@@ -23,8 +23,10 @@ class AboutScreen extends StatelessWidget {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('About',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'About',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -35,17 +37,29 @@ class AboutScreen extends StatelessWidget {
                   _row(t, 'Version', '0.1.0'),
                   _row(t, 'Build', 'dev'),
                   _row(t, 'Whisper', 'whisper.cpp + ggml'),
-                  _row(t, 'Diarization',
-                      'Pyannote 3.0 + WeSpeaker (via sherpa-onnx)'),
-                  _row(t, 'On-device LLM',
-                      'Gemma 4 E2B / E4B + Apple Foundation Models + Ollama (desktop)'),
-                  _row(t, 'Cloud (opt-in)',
-                      'Gemini 3.1 Flash Lite via Render proxy'),
+                  _row(
+                    t,
+                    'Diarization',
+                    'Pyannote 3.0 + WeSpeaker (via sherpa-onnx)',
+                  ),
+                  _row(
+                    t,
+                    'On-device LLM',
+                    'Gemma 4 E2B / E4B + Apple Foundation Models + Ollama (desktop)',
+                  ),
+                  _row(
+                    t,
+                    'Cloud (opt-in)',
+                    'Gemini 3.1 Flash Lite via Render proxy',
+                  ),
                   const SizedBox(height: 24),
                   _linkRow(t, 'Privacy policy', _privacyPolicyUrl),
                   _linkRow(t, 'Terms of service', _tosUrl),
                   _linkRow(
-                      t, 'Source code (privacy-critical paths)', _sourceUrl),
+                    t,
+                    'Source code (privacy-critical paths)',
+                    _sourceUrl,
+                  ),
                   _linkRow(t, 'Open-source licenses', _licensesUrl),
                 ],
               ),
@@ -62,12 +76,18 @@ class AboutScreen extends StatelessWidget {
         children: [
           Icon(Icons.mic, size: 48, color: t.accent),
           const SizedBox(height: 12),
-          Text('Recap',
-              style: RT.titleLg
-                  .copyWith(color: t.textPrimary, fontWeight: FontWeight.w700)),
+          Text(
+            'Recap',
+            style: RT.titleLg.copyWith(
+              color: t.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Voice Memos, with on-device AI.',
-              style: RT.body.copyWith(color: t.textSecondary)),
+          Text(
+            'Voice Memos, with on-device AI.',
+            style: RT.body.copyWith(color: t.textSecondary),
+          ),
         ],
       ),
     );
@@ -85,8 +105,8 @@ class AboutScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-              child:
-                  Text(label, style: RT.body.copyWith(color: t.textPrimary))),
+            child: Text(label, style: RT.body.copyWith(color: t.textPrimary)),
+          ),
           Text(value, style: RT.bodySm.copyWith(color: t.textSecondary)),
         ],
       ),

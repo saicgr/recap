@@ -154,16 +154,18 @@ class CalendarMatcher {
           if (title == null || title.isEmpty || start == null) continue;
           if (e.allDay == true) continue; // OOO / birthdays, not meetings
           if (e.eventId == null) continue;
-          out.add(UpcomingEvent(
-            id: e.eventId!,
-            title: title,
-            start: start,
-            end: e.end?.toLocal(),
-            attendees: (e.attendees ?? [])
-                .where((a) => a?.name != null && a!.name!.trim().isNotEmpty)
-                .map((a) => a!.name!.trim())
-                .toList(),
-          ));
+          out.add(
+            UpcomingEvent(
+              id: e.eventId!,
+              title: title,
+              start: start,
+              end: e.end?.toLocal(),
+              attendees: (e.attendees ?? [])
+                  .where((a) => a?.name != null && a!.name!.trim().isNotEmpty)
+                  .map((a) => a!.name!.trim())
+                  .toList(),
+            ),
+          );
         }
       }
 
@@ -184,9 +186,9 @@ class CalendarMatcher {
   }
 
   CalendarMatch _empty() => const CalendarMatch(
-        eventTitle: null,
-        attendees: [],
-        eventStart: null,
-        eventId: null,
-      );
+    eventTitle: null,
+    attendees: [],
+    eventStart: null,
+    eventId: null,
+  );
 }

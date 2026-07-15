@@ -72,20 +72,26 @@ class _SignInScreenState extends State<SignInScreen> {
                 icon: Icons.close,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Free+',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Free+',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                 children: [
-                  Text('Unlock Free+',
-                      style: RT.titleLg.copyWith(color: t.textPrimary)),
+                  Text(
+                    'Unlock Free+',
+                    style: RT.titleLg.copyWith(color: t.textPrimary),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Free+ doubles your meetings/day, extends per-meeting cap to 40 min, and unlocks Apple Reminders / Apple Notes exports.',
-                    style:
-                        RT.body.copyWith(color: t.textSecondary, height: 1.5),
+                    style: RT.body.copyWith(
+                      color: t.textSecondary,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   _bullets(t, const [
@@ -102,10 +108,13 @@ class _SignInScreenState extends State<SignInScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _busy ? null : _withApple,
                         icon: const Icon(Icons.apple, color: Colors.white),
-                        label: const Text('Sign in with Apple',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600)),
+                        label: const Text(
+                          'Sign in with Apple',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           minimumSize: const Size.fromHeight(48),
@@ -134,26 +143,35 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.g_mobiledata,
-                                size: 24, color: t.textMuted),
+                            Icon(
+                              Icons.g_mobiledata,
+                              size: 24,
+                              color: t.textMuted,
+                            ),
                             const SizedBox(width: 6),
-                            Text('Sign in with Google · coming soon',
-                                style: RT.body.copyWith(color: t.textMuted)),
+                            Text(
+                              'Sign in with Google · coming soon',
+                              style: RT.body.copyWith(color: t.textMuted),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Row(children: [
-                    Expanded(child: Divider(color: t.divider)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('OR EMAIL',
-                          style: RT.caption.copyWith(color: t.textMuted)),
-                    ),
-                    Expanded(child: Divider(color: t.divider)),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: t.divider)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'OR EMAIL',
+                          style: RT.caption.copyWith(color: t.textMuted),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: t.divider)),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _email,
@@ -196,9 +214,11 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
-                    Text(_error!,
-                        style: RT.body.copyWith(color: t.recordRed),
-                        textAlign: TextAlign.center),
+                    Text(
+                      _error!,
+                      style: RT.body.copyWith(color: t.recordRed),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ],
               ),
@@ -222,9 +242,13 @@ class _SignInScreenState extends State<SignInScreen> {
                 Icon(Icons.check, size: 14, color: t.accent),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(line,
-                      style: RT.bodySm
-                          .copyWith(color: t.textSecondary, height: 1.5)),
+                  child: Text(
+                    line,
+                    style: RT.bodySm.copyWith(
+                      color: t.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
                 ),
               ],
             ),

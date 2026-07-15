@@ -45,7 +45,7 @@ class ChapterDetector {
 
   Future<List<Chapter>> detect(
     List<({String id, int startMs, int endMs, String body, String? speaker})>
-        segments,
+    segments,
   ) async {
     if (segments.length <= 1) {
       return [
@@ -98,7 +98,9 @@ class ChapterDetector {
 
     // Greedy pick: highest score wins, then enforce min-duration spacing.
     final indexed = List<({int i, double score})>.generate(
-        scores.length, (idx) => (i: idx + 1, score: scores[idx]));
+      scores.length,
+      (idx) => (i: idx + 1, score: scores[idx]),
+    );
     indexed.sort((a, b) => b.score.compareTo(a.score));
 
     final breakPoints = <int>{0};
@@ -106,7 +108,8 @@ class ChapterDetector {
       if (entry.score < 0.6) break; // threshold for "real" break
       final startMs = segments[entry.i].startMs;
       final tooClose = breakPoints.any(
-          (p) => (segments[p].startMs - startMs).abs() < minChapterDurationMs);
+        (p) => (segments[p].startMs - startMs).abs() < minChapterDurationMs,
+      );
       if (tooClose) continue;
       breakPoints.add(entry.i);
       // Cap chapter count at ~6 for usability.
@@ -117,15 +120,18 @@ class ChapterDetector {
     final chapters = <Chapter>[];
     for (var b = 0; b < sortedBreaks.length; b++) {
       final start = sortedBreaks[b];
-      final end =
-          b + 1 < sortedBreaks.length ? sortedBreaks[b + 1] : segments.length;
+      final end = b + 1 < sortedBreaks.length
+          ? sortedBreaks[b + 1]
+          : segments.length;
       final slice = segments.sublist(start, end);
-      chapters.add(Chapter(
-        title: _titleFrom(slice.first.body),
-        startMs: slice.first.startMs,
-        endMs: slice.last.endMs,
-        segmentIds: slice.map((s) => s.id).toList(),
-      ));
+      chapters.add(
+        Chapter(
+          title: _titleFrom(slice.first.body),
+          startMs: slice.first.startMs,
+          endMs: slice.last.endMs,
+          segmentIds: slice.map((s) => s.id).toList(),
+        ),
+      );
     }
     return chapters;
   }

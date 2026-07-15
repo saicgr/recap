@@ -60,20 +60,26 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 icon: Icons.close,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Cloud summaries',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Cloud summaries',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 children: [
-                  Text('Top up cloud summaries',
-                      style: RT.titleLg.copyWith(color: t.textPrimary)),
+                  Text(
+                    'Top up cloud summaries',
+                    style: RT.titleLg.copyWith(color: t.textPrimary),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     'One-time IAP. Credits never expire. Use only when you hit your monthly cloud quota.',
-                    style:
-                        RT.body.copyWith(color: t.textSecondary, height: 1.5),
+                    style: RT.body.copyWith(
+                      color: t.textSecondary,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   for (final entry in _packs) ...[
@@ -104,8 +110,10 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     onPressed: _busy ? null : _buy,
                   ),
                   const SizedBox(height: 8),
-                  Text('Charged through your App Store / Play account.',
-                      style: RT.bodySm.copyWith(color: t.textMuted)),
+                  Text(
+                    'Charged through your App Store / Play account.',
+                    style: RT.bodySm.copyWith(color: t.textMuted),
+                  ),
                 ],
               ),
             ),
@@ -124,7 +132,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
         decoration: BoxDecoration(
           color: picked ? t.accentSoft : t.surface,
           border: Border.all(
-              color: picked ? t.accent : t.border, width: picked ? 1.5 : 1),
+            color: picked ? t.accent : t.border,
+            width: picked ? 1.5 : 1,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -149,20 +159,30 @@ class _TopUpScreenState extends State<TopUpScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.$2,
-                      style: RT.subtitle.copyWith(
-                          color: t.textPrimary, fontWeight: FontWeight.w700)),
+                  Text(
+                    entry.$2,
+                    style: RT.subtitle.copyWith(
+                      color: t.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   if (entry.$4 != null) ...[
                     const SizedBox(height: 3),
-                    Text(entry.$4!,
-                        style: RT.caption.copyWith(color: t.accent)),
+                    Text(
+                      entry.$4!,
+                      style: RT.caption.copyWith(color: t.accent),
+                    ),
                   ],
                 ],
               ),
             ),
-            Text(entry.$3,
-                style: RT.subtitle.copyWith(
-                    color: t.textPrimary, fontWeight: FontWeight.w700)),
+            Text(
+              entry.$3,
+              style: RT.subtitle.copyWith(
+                color: t.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),

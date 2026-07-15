@@ -53,8 +53,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Insights',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Insights',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: w == null
@@ -83,14 +85,18 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Coming soon',
-                                  style: RT.subtitle
-                                      .copyWith(color: t.textPrimary)),
+                              Text(
+                                'Coming soon',
+                                style: RT.subtitle.copyWith(
+                                  color: t.textPrimary,
+                                ),
+                              ),
                               const SizedBox(height: 8),
                               Text(
                                 'Talk-time per speaker · Words-per-minute breakdown · Meeting-series trends · Cross-meeting topic clustering. All local. All private.',
-                                style:
-                                    RT.bodySm.copyWith(color: t.textSecondary),
+                                style: RT.bodySm.copyWith(
+                                  color: t.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -130,14 +136,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.$2,
-                          style: RT.titleLg.copyWith(
-                              color: t.textPrimary,
-                              fontWeight: FontWeight.w700)),
+                      Text(
+                        s.$2,
+                        style: RT.titleLg.copyWith(
+                          color: t.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(s.$1.toUpperCase(),
-                          style: RT.caption.copyWith(
-                              color: t.textMuted, letterSpacing: 0.8)),
+                      Text(
+                        s.$1.toUpperCase(),
+                        style: RT.caption.copyWith(
+                          color: t.textMuted,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                     ],
                   ),
                 ),

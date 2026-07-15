@@ -58,8 +58,10 @@ class HelpScreen extends StatelessWidget {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Help',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Help',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
             ),
             Expanded(
               child: ListView(
@@ -77,8 +79,10 @@ class HelpScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Still stuck?',
-                            style: RT.subtitle.copyWith(color: t.textPrimary)),
+                        Text(
+                          'Still stuck?',
+                          style: RT.subtitle.copyWith(color: t.textPrimary),
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'We don\'t track support tickets. Email us with what happened + any logs you want to share. We\'ll get back to you.',
@@ -91,7 +95,8 @@ class HelpScreen extends StatelessWidget {
                           trailing: Icons.mail_outline,
                           onPressed: () async {
                             final uri = Uri.parse(
-                                'mailto:support@recapfreenote.com?subject=Recap%20support');
+                              'mailto:support@recapfreenote.com?subject=Recap%20support',
+                            );
                             if (await canLaunchUrl(uri)) {
                               await launchUrl(uri);
                             }
@@ -120,17 +125,23 @@ class HelpScreen extends StatelessWidget {
       child: ExpansionTile(
         shape: const Border(),
         collapsedShape: const Border(),
-        title: Text(q,
-            style: RT.body
-                .copyWith(color: t.textPrimary, fontWeight: FontWeight.w600)),
+        title: Text(
+          q,
+          style: RT.body.copyWith(
+            color: t.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         iconColor: t.textMuted,
         collapsedIconColor: t.textMuted,
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(a,
-                style: RT.bodySm.copyWith(color: t.textSecondary, height: 1.5)),
+            child: Text(
+              a,
+              style: RT.bodySm.copyWith(color: t.textSecondary, height: 1.5),
+            ),
           ),
         ],
       ),

@@ -52,8 +52,9 @@ class SlackExporter implements WorkflowExporter {
     if (token == null || channel == null) {
       return ExportResult.err('Connect Slack first (Settings → Exports).');
     }
-    final summaryText =
-        summaries.isEmpty ? '(no summary)' : summaries.first.body;
+    final summaryText = summaries.isEmpty
+        ? '(no summary)'
+        : summaries.first.body;
     final res = await http.post(
       Uri.parse('https://slack.com/api/chat.postMessage'),
       headers: {

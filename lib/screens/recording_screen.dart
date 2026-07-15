@@ -111,8 +111,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
       // Records from the BUILT-IN mic even when AirPods are connected — see
       // MicPolicy. They keep playing audio over A2DP; we just refuse to capture
       // through their narrowband HFP microphone.
-      final choice =
-          await recorder.start(_currentChunkPath, pinnedDeviceId: settings.pinnedMicId);
+      final choice = await recorder.start(
+        _currentChunkPath,
+        pinnedDeviceId: settings.pinnedMicId,
+      );
       if (mounted && MicPolicy.shouldWarn(choice)) {
         setState(() => _micWarning = MicPolicy.warning);
       }
@@ -121,9 +123,11 @@ class _RecordingScreenState extends State<RecordingScreen> {
       // to already be granted. Only safe to start it after recorder.start()
       // returns successfully — at that point the mic permission has been
       // granted and Android will let us run a microphone FGS.
-      unawaited(backgroundRecorder
-          .startForeground(meetingTitle: 'Recording…')
-          .catchError((_) {}));
+      unawaited(
+        backgroundRecorder
+            .startForeground(meetingTitle: 'Recording…')
+            .catchError((_) {}),
+      );
 
       // Captions reader (depends on the WAV file existing — which it does
       // now that the recorder has started writing it).
@@ -172,7 +176,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
         _chunkIndex++;
         _currentChunkPath = _chunkPath(_chunkIndex);
         _chunkPaths.add(_currentChunkPath);
-        await recorder.start(_currentChunkPath, pinnedDeviceId: settings.pinnedMicId);
+        await recorder.start(
+          _currentChunkPath,
+          pinnedDeviceId: settings.pinnedMicId,
+        );
         await _startCaptions(_currentChunkPath);
       } else {
         // PAUSE → stop the recorder (closes file, releases mic, kills the
@@ -254,14 +261,16 @@ class _RecordingScreenState extends State<RecordingScreen> {
 
     // 4. Finish stop ops + merge + caption batch + transcription in the
     //    background, all off the UI critical path.
-    unawaited(_finalizeInBackground(
-      stopOps: stopOps,
-      meetingId: meetingId,
-      chunks: chunks,
-      mergedPath: mergedPath,
-      captions: captions,
-      elapsed: elapsed,
-    ));
+    unawaited(
+      _finalizeInBackground(
+        stopOps: stopOps,
+        meetingId: meetingId,
+        chunks: chunks,
+        mergedPath: mergedPath,
+        captions: captions,
+        elapsed: elapsed,
+      ),
+    );
   }
 
   Future<void> _finalizeInBackground({
@@ -274,16 +283,12 @@ class _RecordingScreenState extends State<RecordingScreen> {
   }) async {
     try {
       // Wait for recorder.stop() + captions.stop() to flush their last chunk.
-      await Future.wait(stopOps).timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => const <void>[],
-      );
+      await Future.wait(
+        stopOps,
+      ).timeout(const Duration(seconds: 5), onTimeout: () => const <void>[]);
 
       // Streaming WAV merge — runs through 64 KB buffers, no big allocations.
-      await WavUtils.mergeWavs(
-        inputPaths: chunks,
-        outputPath: mergedPath,
-      );
+      await WavUtils.mergeWavs(inputPaths: chunks, outputPath: mergedPath);
 
       // Best-effort: delete the intermediate chunks now that the merge exists.
       for (final path in chunks) {
@@ -320,17 +325,23 @@ class _RecordingScreenState extends State<RecordingScreen> {
       // Now the heavy step — Whisper transcription + diarization.
       await _runFinalTranscription(meetingId, mergedPath, elapsed);
     } catch (e) {
-      await (db.update(db.meetings)..where((t) => t.id.equals(meetingId)))
-          .write(MeetingsCompanion(
-        status: const Value(MeetingStatus.failed),
-        failureReason: Value(e.toString()),
-        updatedAt: Value(DateTime.now()),
-      ));
+      await (db.update(
+        db.meetings,
+      )..where((t) => t.id.equals(meetingId))).write(
+        MeetingsCompanion(
+          status: const Value(MeetingStatus.failed),
+          failureReason: Value(e.toString()),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
     }
   }
 
   Future<void> _runFinalTranscription(
-      String id, String path, Duration elapsed) async {
+    String id,
+    String path,
+    Duration elapsed,
+  ) async {
     try {
       // Route the final pass through AsrRouter instead of calling the Whisper
       // transcriber directly. By default the router resolves to Whisper (native
@@ -361,7 +372,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
       }
 
       final text = await engine.transcribeFile(path);
-      await db.into(db.transcripts).insertOnConflictUpdate(
+      await db
+          .into(db.transcripts)
+          .insertOnConflictUpdate(
             TranscriptsCompanion.insert(
               meetingId: id,
               body: text,
@@ -437,12 +450,16 @@ class _RecordingScreenState extends State<RecordingScreen> {
   }
 
   Future<void> _bookmark() async {
-    await db.into(db.bookmarks).insert(BookmarksCompanion.insert(
-          id: const Uuid().v4(),
-          meetingId: _id,
-          atMs: _elapsed.inMilliseconds,
-          createdAt: DateTime.now(),
-        ));
+    await db
+        .into(db.bookmarks)
+        .insert(
+          BookmarksCompanion.insert(
+            id: const Uuid().v4(),
+            meetingId: _id,
+            atMs: _elapsed.inMilliseconds,
+            createdAt: DateTime.now(),
+          ),
+        );
     if (!mounted) return;
     setState(() {
       _flashBookmark = true;
@@ -479,14 +496,17 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 children: [
                   Icon(Icons.mic_off, size: 48, color: t.recordRed),
                   const SizedBox(height: 16),
-                  Text(_error!,
-                      textAlign: TextAlign.center,
-                      style: RT.body.copyWith(color: t.textPrimary)),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: RT.body.copyWith(color: t.textPrimary),
+                  ),
                   const SizedBox(height: 16),
                   Btn(
-                      label: 'Back',
-                      variant: BtnVariant.secondary,
-                      onPressed: () => Navigator.pop(context)),
+                    label: 'Back',
+                    variant: BtnVariant.secondary,
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ],
               ),
             ),
@@ -498,9 +518,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
     if (_starting) {
       return Scaffold(
         backgroundColor: t.bg,
-        body: Center(
-          child: CircularProgressIndicator(color: t.accent),
-        ),
+        body: Center(child: CircularProgressIndicator(color: t.accent)),
       );
     }
 
@@ -517,23 +535,27 @@ class _RecordingScreenState extends State<RecordingScreen> {
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: t.recordRed.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: t.recordRed.withValues(alpha: 0.35)),
+                  border: Border.all(
+                    color: t.recordRed.withValues(alpha: 0.35),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.bluetooth_audio,
-                        size: 16, color: t.recordRed),
+                    Icon(Icons.bluetooth_audio, size: 16, color: t.recordRed),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(_micWarning!,
-                          style: RT.caption.copyWith(color: t.textPrimary)),
+                      child: Text(
+                        _micWarning!,
+                        style: RT.caption.copyWith(color: t.textPrimary),
+                      ),
                     ),
                   ],
                 ),
@@ -548,10 +570,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                   // Back button — leaves the recording screen (currently
                   // stops recording, since we don't have proper background
                   // recording yet).
-                  IconBtn(
-                    icon: Icons.close,
-                    onPressed: () => _confirmExit(),
-                  ),
+                  IconBtn(icon: Icons.close, onPressed: () => _confirmExit()),
                 ],
               ),
             ),
@@ -561,8 +580,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
               child: Center(
                 child: Column(
                   children: [
-                    Text(_fmt(_elapsed),
-                        style: RT.timer.copyWith(color: t.textPrimary)),
+                    Text(
+                      _fmt(_elapsed),
+                      style: RT.timer.copyWith(color: t.textPrimary),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -571,8 +592,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
                         Icon(Icons.cloud_off, size: 13, color: t.textMuted),
                         const SizedBox(width: 6),
                         Text(
-                            'On-device · Whisper ${transcriber.model.modelName}',
-                            style: RT.label.copyWith(color: t.textMuted)),
+                          'On-device · Whisper ${transcriber.model.modelName}',
+                          style: RT.label.copyWith(color: t.textMuted),
+                        ),
                       ],
                     ),
                   ],
@@ -602,25 +624,31 @@ class _RecordingScreenState extends State<RecordingScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(children: [
-                          Text('LIVE CAPTIONS',
-                              style: RT.caption.copyWith(color: t.textMuted)),
-                          if (_bookmarkCount > 0) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: t.accentSoft,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '$_bookmarkCount bookmark${_bookmarkCount == 1 ? "" : "s"}',
-                                style: RT.caption.copyWith(color: t.accent),
-                              ),
+                        Row(
+                          children: [
+                            Text(
+                              'LIVE CAPTIONS',
+                              style: RT.caption.copyWith(color: t.textMuted),
                             ),
+                            if (_bookmarkCount > 0) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: t.accentSoft,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '$_bookmarkCount bookmark${_bookmarkCount == 1 ? "" : "s"}',
+                                  style: RT.caption.copyWith(color: t.accent),
+                                ),
+                              ),
+                            ],
                           ],
-                        ]),
+                        ),
                         _bookmarkBtn(t),
                       ],
                     ),
@@ -632,9 +660,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
                             ? Padding(
                                 padding: const EdgeInsets.only(top: 40),
                                 child: Center(
-                                  child: Text('Listening…',
-                                      style:
-                                          RT.body.copyWith(color: t.textMuted)),
+                                  child: Text(
+                                    'Listening…',
+                                    style: RT.body.copyWith(color: t.textMuted),
+                                  ),
                                 ),
                               )
                             : Text(
@@ -738,8 +767,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
         children: [
           child,
           const SizedBox(height: 8),
-          Text(label.toUpperCase(),
-              style: RT.caption.copyWith(color: t.textMuted)),
+          Text(
+            label.toUpperCase(),
+            style: RT.caption.copyWith(color: t.textMuted),
+          ),
         ],
       ),
     );
@@ -757,10 +788,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (!_paused) ...[
-            const RecDot(size: 7),
-            const SizedBox(width: 6),
-          ],
+          if (!_paused) ...[const RecDot(size: 7), const SizedBox(width: 6)],
           Text(
             '${_paused ? "Paused" : "Recording"} · $_persona',
             style: TextStyle(
@@ -781,8 +809,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: t.surface,
-        title: Text('Stop and discard?',
-            style: RT.subtitle.copyWith(color: t.textPrimary)),
+        title: Text(
+          'Stop and discard?',
+          style: RT.subtitle.copyWith(color: t.textPrimary),
+        ),
         content: Text(
           'Background recording isn\'t wired yet — closing this screen will discard the current recording. Tap Stop to save it as a meeting first.',
           style: RT.body.copyWith(color: t.textSecondary),

@@ -61,7 +61,8 @@ class GoogleDocsExporter implements WorkflowExporter {
     );
     if (createRes.statusCode != 200) {
       return ExportResult.err(
-          'Google Docs create: HTTP ${createRes.statusCode}');
+        'Google Docs create: HTTP ${createRes.statusCode}',
+      );
     }
     final created = jsonDecode(createRes.body) as Map<String, dynamic>;
     final docId = created['documentId'] as String;
@@ -95,10 +96,12 @@ class GoogleDocsExporter implements WorkflowExporter {
     );
     if (updateRes.statusCode != 200) {
       return ExportResult.err(
-          'Google Docs update: HTTP ${updateRes.statusCode}');
+        'Google Docs update: HTTP ${updateRes.statusCode}',
+      );
     }
 
     return ExportResult.ok(
-        url: 'https://docs.google.com/document/d/$docId/edit');
+      url: 'https://docs.google.com/document/d/$docId/edit',
+    );
   }
 }

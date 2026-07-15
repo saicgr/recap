@@ -14,34 +14,49 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> seedMeeting(String id) async {
-    await db.into(db.meetings).insert(MeetingsCompanion.insert(
-          id: id,
-          title: 'Meeting $id',
-          durationMs: const Value(1000),
-          audioPath: '/tmp/$id.wav',
-          createdAt: DateTime(2026, 7, 1),
-          updatedAt: DateTime(2026, 7, 1),
-          status: MeetingStatus.ready,
-        ));
-    await db.into(db.transcripts).insert(TranscriptsCompanion.insert(
-          meetingId: id,
-          body: 'hello',
-          modelId: 'whisper',
-          processingMs: const Value(10),
-          createdAt: DateTime(2026, 7, 1),
-        ));
-    await db.into(db.bookmarks).insert(BookmarksCompanion.insert(
-          id: 'bm-$id',
-          meetingId: id,
-          atMs: 500,
-          createdAt: DateTime(2026, 7, 1),
-        ));
+    await db
+        .into(db.meetings)
+        .insert(
+          MeetingsCompanion.insert(
+            id: id,
+            title: 'Meeting $id',
+            durationMs: const Value(1000),
+            audioPath: '/tmp/$id.wav',
+            createdAt: DateTime(2026, 7, 1),
+            updatedAt: DateTime(2026, 7, 1),
+            status: MeetingStatus.ready,
+          ),
+        );
+    await db
+        .into(db.transcripts)
+        .insert(
+          TranscriptsCompanion.insert(
+            meetingId: id,
+            body: 'hello',
+            modelId: 'whisper',
+            processingMs: const Value(10),
+            createdAt: DateTime(2026, 7, 1),
+          ),
+        );
+    await db
+        .into(db.bookmarks)
+        .insert(
+          BookmarksCompanion.insert(
+            id: 'bm-$id',
+            meetingId: id,
+            atMs: 500,
+            createdAt: DateTime(2026, 7, 1),
+          ),
+        );
   }
 
   test('foreign_keys pragma is actually ON', () async {
     final rows = await db.customSelect('PRAGMA foreign_keys').get();
-    expect(rows.first.data.values.first, 1,
-        reason: 'without this every onDelete: cascade is inert decoration');
+    expect(
+      rows.first.data.values.first,
+      1,
+      reason: 'without this every onDelete: cascade is inert decoration',
+    );
   });
 
   test('deleting a meeting cascades to its children', () async {
@@ -58,13 +73,17 @@ void main() {
 
   test('a child row referencing a missing parent is rejected', () async {
     await expectLater(
-      db.into(db.transcripts).insert(TranscriptsCompanion.insert(
-            meetingId: 'does-not-exist',
-            body: 'orphan',
-            modelId: 'whisper',
-            processingMs: const Value(1),
-            createdAt: DateTime(2026, 7, 1),
-          )),
+      db
+          .into(db.transcripts)
+          .insert(
+            TranscriptsCompanion.insert(
+              meetingId: 'does-not-exist',
+              body: 'orphan',
+              modelId: 'whisper',
+              processingMs: const Value(1),
+              createdAt: DateTime(2026, 7, 1),
+            ),
+          ),
       throwsA(anything),
       reason: 'FK enforcement should refuse an orphan at write time',
     );

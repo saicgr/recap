@@ -63,8 +63,10 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
                 icon: Icons.arrow_back,
                 onPressed: () => Navigator.pop(context),
               ),
-              title: Text('Action items',
-                  style: RT.subtitle.copyWith(color: t.textPrimary)),
+              title: Text(
+                'Action items',
+                style: RT.subtitle.copyWith(color: t.textPrimary),
+              ),
               trailing: [
                 IconBtn(
                   icon: _showCompleted
@@ -78,8 +80,10 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
             Expanded(
               child: filtered.isEmpty
                   ? Center(
-                      child: Text('All clear — nothing pending',
-                          style: RT.body.copyWith(color: t.textMuted)),
+                      child: Text(
+                        'All clear — nothing pending',
+                        style: RT.body.copyWith(color: t.textMuted),
+                      ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
@@ -135,16 +139,24 @@ class _ActionItemsScreenState extends State<ActionItemsScreen> {
                       Row(
                         children: [
                           if (item.assignee != null) ...[
-                            Icon(Icons.person_outline,
-                                size: 13, color: t.textMuted),
+                            Icon(
+                              Icons.person_outline,
+                              size: 13,
+                              color: t.textMuted,
+                            ),
                             const SizedBox(width: 3),
-                            Text(item.assignee!,
-                                style: RT.caption.copyWith(color: t.textMuted)),
+                            Text(
+                              item.assignee!,
+                              style: RT.caption.copyWith(color: t.textMuted),
+                            ),
                             const SizedBox(width: 12),
                           ],
                           if (item.dueDate != null) ...[
-                            Icon(Icons.event_outlined,
-                                size: 13, color: t.textMuted),
+                            Icon(
+                              Icons.event_outlined,
+                              size: 13,
+                              color: t.textMuted,
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               DateFormat.MMMd().format(item.dueDate!),

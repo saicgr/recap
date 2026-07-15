@@ -18,7 +18,9 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Future<void> seedMeeting(String id) => db.into(db.meetings).insert(
+  Future<void> seedMeeting(String id) => db
+      .into(db.meetings)
+      .insert(
         MeetingsCompanion.insert(
           id: id,
           title: 'Meeting $id',
@@ -40,8 +42,9 @@ void main() {
       expect((await svc.childrenOf(null)).single.id, work.id);
 
       await svc.renameFolder(work.id, '  Work Stuff  ');
-      final renamed =
-          (await svc.allFolders()).firstWhere((f) => f.id == work.id);
+      final renamed = (await svc.allFolders()).firstWhere(
+        (f) => f.id == work.id,
+      );
       expect(renamed.name, 'Work Stuff', reason: 'name should be trimmed');
     });
 
@@ -61,25 +64,29 @@ void main() {
 
       // A legitimate move still works.
       await svc.moveFolder(c.id, a.id);
-      expect((await svc.childrenOf(a.id)).map((f) => f.id),
-          containsAll([b.id, c.id]));
+      expect(
+        (await svc.childrenOf(a.id)).map((f) => f.id),
+        containsAll([b.id, c.id]),
+      );
     });
 
-    test('deleting a folder promotes its children instead of destroying them',
-        () async {
-      final root = await svc.createFolder(name: 'Root');
-      final mid = await svc.createFolder(name: 'Mid', parentId: root.id);
-      final leaf = await svc.createFolder(name: 'Leaf', parentId: mid.id);
+    test(
+      'deleting a folder promotes its children instead of destroying them',
+      () async {
+        final root = await svc.createFolder(name: 'Root');
+        final mid = await svc.createFolder(name: 'Mid', parentId: root.id);
+        final leaf = await svc.createFolder(name: 'Leaf', parentId: mid.id);
 
-      await svc.deleteFolder(mid.id);
+        await svc.deleteFolder(mid.id);
 
-      final all = await svc.allFolders();
-      expect(all.map((f) => f.id), containsAll([root.id, leaf.id]));
-      expect(all.any((f) => f.id == mid.id), isFalse);
-      // Silently deleting the subtree because the user removed one node is not
-      // a trade anyone would accept.
-      expect((await svc.childrenOf(root.id)).single.id, leaf.id);
-    });
+        final all = await svc.allFolders();
+        expect(all.map((f) => f.id), containsAll([root.id, leaf.id]));
+        expect(all.any((f) => f.id == mid.id), isFalse);
+        // Silently deleting the subtree because the user removed one node is not
+        // a trade anyone would accept.
+        expect((await svc.childrenOf(root.id)).single.id, leaf.id);
+      },
+    );
   });
 
   group('meeting assignment', () {
@@ -122,43 +129,45 @@ void main() {
   });
 
   group('migration from SharedPreferences', () {
-    test('moves legacy folders/tags into Drift and clears the old keys',
-        () async {
-      await seedMeeting('m1');
-      SharedPreferences.setMockInitialValues({
-        'folders_v1': jsonEncode([
-          {
-            'id': 'legacy-1',
-            'name': 'Legacy',
-            'parentId': null,
-            'colorIndex': 2,
-            'createdAt': DateTime(2026, 1, 1).toIso8601String(),
-          }
-        ]),
-        'meeting_folders_v1': jsonEncode({
-          'm1': ['legacy-1'],
-          // A meeting that no longer exists. Foreign keys are enforced now, so
-          // inserting this would throw and abort the whole migration.
-          'ghost': ['legacy-1'],
-        }),
-        'meeting_tags_v1': jsonEncode({
-          'm1': ['q3'],
-          'ghost': ['orphan'],
-        }),
-      });
+    test(
+      'moves legacy folders/tags into Drift and clears the old keys',
+      () async {
+        await seedMeeting('m1');
+        SharedPreferences.setMockInitialValues({
+          'folders_v1': jsonEncode([
+            {
+              'id': 'legacy-1',
+              'name': 'Legacy',
+              'parentId': null,
+              'colorIndex': 2,
+              'createdAt': DateTime(2026, 1, 1).toIso8601String(),
+            },
+          ]),
+          'meeting_folders_v1': jsonEncode({
+            'm1': ['legacy-1'],
+            // A meeting that no longer exists. Foreign keys are enforced now, so
+            // inserting this would throw and abort the whole migration.
+            'ghost': ['legacy-1'],
+          }),
+          'meeting_tags_v1': jsonEncode({
+            'm1': ['q3'],
+            'ghost': ['orphan'],
+          }),
+        });
 
-      await svc.migrateFromPrefs();
+        await svc.migrateFromPrefs();
 
-      expect((await svc.allFolders()).single.name, 'Legacy');
-      expect(await svc.foldersForMeeting('m1'), {'legacy-1'});
-      expect(await svc.tagsForMeeting('m1'), {'q3'});
-      // The dangling rows were dropped, not fatal.
-      expect((await db.select(db.meetingFolders).get()).length, 1);
+        expect((await svc.allFolders()).single.name, 'Legacy');
+        expect(await svc.foldersForMeeting('m1'), {'legacy-1'});
+        expect(await svc.tagsForMeeting('m1'), {'q3'});
+        // The dangling rows were dropped, not fatal.
+        expect((await db.select(db.meetingFolders).get()).length, 1);
 
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('folders_v1'), isNull);
-      expect(prefs.getBool('folders_migrated_to_drift_v1'), isTrue);
-    });
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('folders_v1'), isNull);
+        expect(prefs.getBool('folders_migrated_to_drift_v1'), isTrue);
+      },
+    );
 
     test('is idempotent — a second run does not duplicate', () async {
       await seedMeeting('m1');
@@ -170,7 +179,7 @@ void main() {
             'parentId': null,
             'colorIndex': 0,
             'createdAt': DateTime(2026, 1, 1).toIso8601String(),
-          }
+          },
         ]),
       });
 
@@ -180,12 +189,14 @@ void main() {
       expect((await svc.allFolders()).length, 1);
     });
 
-    test('a clean install marks itself migrated without touching the db',
-        () async {
-      await svc.migrateFromPrefs();
-      expect(await svc.allFolders(), isEmpty);
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('folders_migrated_to_drift_v1'), isTrue);
-    });
+    test(
+      'a clean install marks itself migrated without touching the db',
+      () async {
+        await svc.migrateFromPrefs();
+        expect(await svc.allFolders(), isEmpty);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getBool('folders_migrated_to_drift_v1'), isTrue);
+      },
+    );
   });
 }
