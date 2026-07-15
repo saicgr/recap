@@ -421,6 +421,13 @@ const String kCompressionNotice =
     '\n\n> ⚠️ This meeting was long enough that some detail was compressed. '
     'Open the transcript for anything not covered here.';
 
+/// Appended to a chaptered (3-6+ hour) summary. Unlike [kCompressionNotice] this
+/// is NOT an apology — chaptering summarizes each section in full, so it is a
+/// navigation hint, not a warning about lost detail.
+const String kChapteredNotice =
+    '\n\n> This meeting was summarized in chapters — each section above is '
+    'covered in full. Jump to the timestamp you need.';
+
 /// Appended when the notes carried uncertain terms and the final document has no
 /// Low-confidence section — the model dropped it, or ran out of window before
 /// reaching it. Silence there does not read as "detail was lost", it reads as

@@ -86,6 +86,22 @@ void main() {
           reason: 'a 3–6 hour meeting must fan out into many model calls',
         );
 
+        // (1b) It used the CHAPTERED architecture — navigable, timestamped
+        // sections — so narrative quality does not decay with total length.
+        final chapterCount = RegExp(
+          r'## Chapter \d+',
+        ).allMatches(result.text).length;
+        expect(
+          chapterCount,
+          greaterThanOrEqualTo(3),
+          reason: 'a 3–6 hour meeting must be summarized in multiple chapters',
+        );
+        expect(
+          result.text.toLowerCase(),
+          contains('summarized in chapters'),
+          reason: 'the chaptered navigation notice must be present',
+        );
+
         // (2) Every mustContain + continuity needle survived — via the safety net
         // alone, since the model dropped everything.
         final summary = result.text.toLowerCase();

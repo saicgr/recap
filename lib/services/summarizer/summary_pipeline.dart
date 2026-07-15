@@ -22,6 +22,13 @@ const int _kReserveTokens = 200;
 /// compression notice rather than another ten minutes of GPU time.
 const int _kMaxFoldLevels = 3;
 
+/// At/above this many chunks (~3 hours) a meeting is summarized CHAPTERED instead
+/// of flat map-reduce: split into ~4-chunk chapters, summarize each fully, then
+/// compose. Flat fold collapses a 6-hour narrative; chapters keep each section
+/// within the model's competent context so quality does not decay with length.
+/// Aligned with [SummaryPlan.isExtreme] so 1.5-2h stays flat and 3h+ chapters.
+const int _kChapterThreshold = 12;
+
 /// Map stage is extraction — near-deterministic. Reduce is the one stage that
 /// composes prose. The critic must be as literal as the backend allows.
 const double _kMapTemperature = 0.2;
@@ -201,6 +208,29 @@ class SummaryPipeline {
     }
 
     final chunks = chunkSegments(input.segments, targetTokens: targetTokens);
+
+    // --- Hierarchical (chaptered) path for VERY long meetings --------------
+    // Flat map-reduce folds ALL notes into one shrinking blob — narrative quality
+    // collapses on a 3-6 hour meeting not because the model is too small, but
+    // because it is asked to synthesize hours at once. Instead, split into
+    // chapters, summarize EACH fully and independently (bounded context, where a
+    // 2B is competent), then compose the chapter summaries. Quality per chapter is
+    // the SAME as a normal long meeting and does NOT decay with total length — the
+    // right architecture for a deposition or a Sev1 bridge, and it yields a
+    // navigable, timestamped, chaptered document.
+    if (chunks.length >= _kChapterThreshold) {
+      return _summarizeChaptered(
+        backend: backend,
+        input: input,
+        persona: persona,
+        system: system,
+        transcript: transcript,
+        caps: caps,
+        onProgress: onProgress,
+        cancel: cancel,
+        sw: sw,
+      );
+    }
 
     // preparing + one map per chunk + reduce + critic. Folds bump the total as
     // they are discovered; a skipped critic is absorbed by done().
@@ -533,6 +563,101 @@ class SummaryPipeline {
       processingTime: sw.elapsed,
     );
   }
+
+  /// Chaptered (hierarchical) summary for a 3-6+ hour meeting. Split into
+  /// ~4-chunk chapters, summarize each with the FULL pipeline (recursively —
+  /// each chapter is small enough to take the flat path, so recursion is one
+  /// level deep), then compose: a synthesized top TL;DR, rolled-up Decisions /
+  /// Next steps / People across chapters, and the chapters themselves as
+  /// navigable, timestamped sections. The mechanical safety net runs over the
+  /// whole transcript last, so every figure / date / dictated ID / handoff is
+  /// preserved regardless of any single chapter's model output.
+  Future<SummaryResult> _summarizeChaptered({
+    required SummaryBackend backend,
+    required SummaryInput input,
+    required Persona persona,
+    required String system,
+    required String transcript,
+    required BackendCapabilities caps,
+    required Stopwatch sw,
+    void Function(SummaryProgress)? onProgress,
+    CancelToken? cancel,
+  }) async {
+    final chapters = _splitChapters(input.segments, caps.maxInputTokens * 3);
+    final reporter = _Progress(onProgress, totalSteps: chapters.length + 2);
+    reporter.emit(
+      SummaryStage.preparing,
+      'Long meeting — summarizing in ${chapters.length} chapters...',
+    );
+
+    final docs = <_ChapterDoc>[];
+    for (var i = 0; i < chapters.length; i++) {
+      cancel?.throwIfCancelled();
+      reporter.emit(
+        SummaryStage.mapping,
+        'Summarizing chapter ${i + 1} of ${chapters.length}...',
+      );
+      final res = await run(
+        backend: backend,
+        input: SummaryInput(
+          segments: chapters[i],
+          meetingTitle: '${input.meetingTitle} (part ${i + 1})',
+          glossary: input.glossary,
+        ),
+        persona: persona,
+        cancel: cancel,
+      );
+      docs.add(_ChapterDoc(range: _rangeLabel(chapters[i]), body: res.text));
+    }
+
+    cancel?.throwIfCancelled();
+    reporter.emit(SummaryStage.reducing, 'Composing the meeting overview...');
+
+    // Top-level TL;DR: synthesize from the chapter TL;DRs (small, safe input). A
+    // failure here is non-fatal — the chapter list below carries the detail.
+    final chapterTldrs = docs
+        .map((d) => _extractMdSection(d.body, 'TL;DR'))
+        .where((s) => s.trim().isNotEmpty)
+        .join('\n');
+    var topTldr = chapterTldrs;
+    if (chapterTldrs.trim().isNotEmpty) {
+      try {
+        final synthesized = (await backend.generate(
+          prompt:
+              'These are per-chapter highlights from ONE long meeting. Merge '
+              'them into a single meeting TL;DR of at most 5 bullets. Keep every '
+              '[mm:ss] and every number/name exactly; invent nothing.\n\n'
+              '$chapterTldrs',
+          system: system,
+          temperature: _kReduceTemperature,
+          cancel: cancel,
+        )).trim();
+        if (synthesized.isNotEmpty) topTldr = synthesized;
+      } catch (_) {
+        // keep the concatenated chapter TL;DRs
+      }
+    }
+
+    final composed = _composeChapters(docs, topTldr);
+    final text = _mechanicalSafetyNet(
+      text: composed,
+      transcript: transcript,
+      segments: input.segments,
+    );
+    if (text.trim().isEmpty) {
+      throw StateError(
+        '${backend.modelId} produced an empty chaptered summary for '
+        '"${input.meetingTitle}" (${chapters.length} chapters).',
+      );
+    }
+    cancel?.throwIfCancelled();
+    reporter.done();
+    return SummaryResult(
+      text: '$text$kChapteredNotice',
+      modelId: backend.modelId,
+      processingTime: sw.elapsed,
+    );
+  }
 }
 
 /// The content lines sitting under a given note [heading] (e.g. 'LOW CONFIDENCE',
@@ -605,6 +730,106 @@ List<String> _detectSpacedDigits(String transcript) {
     }
   }
   return out;
+}
+
+class _ChapterDoc {
+  final String range;
+  final String body;
+  const _ChapterDoc({required this.range, required this.body});
+}
+
+/// Group segments into chapters of ~[targetTokens] each, on segment boundaries.
+/// Each chapter is small enough that the recursive [SummaryPipeline.run] takes
+/// the flat path (fewer than [_kChapterThreshold] chunks), so recursion is one
+/// level deep and a chapter is summarized at full, non-decaying quality.
+List<List<PromptSegment>> _splitChapters(
+  List<PromptSegment> segs,
+  int targetTokens,
+) {
+  final chapters = <List<PromptSegment>>[];
+  var cur = <PromptSegment>[];
+  var tok = 0;
+  for (final s in segs) {
+    final c = estimateTokens(renderSegment(s));
+    if (cur.isNotEmpty && tok + c > targetTokens) {
+      chapters.add(cur);
+      cur = <PromptSegment>[];
+      tok = 0;
+    }
+    cur.add(s);
+    tok += c;
+  }
+  if (cur.isNotEmpty) chapters.add(cur);
+  return chapters;
+}
+
+/// "[mm:ss–mm:ss]" spanning a chapter's segments.
+String _rangeLabel(List<PromptSegment> segs) {
+  final a = segs.first.startMs;
+  final b = segs.last.endMs ?? segs.last.startMs;
+  if (a == null) return '';
+  return (b != null && b != a)
+      ? '[${formatTimestamp(a)}–${formatTimestamp(b)}]'
+      : '[${formatTimestamp(a)}]';
+}
+
+/// The content lines under a "## <heading>" in a chapter summary, to the next
+/// heading. Empty when absent or when the body is just "None".
+String _extractMdSection(String doc, String heading) {
+  final want = heading.toLowerCase();
+  final out = <String>[];
+  var inSection = false;
+  for (final line in doc.split('\n')) {
+    final h = RegExp(r'^#{1,6}\s+(.*)$').firstMatch(line.trimLeft());
+    if (h != null) {
+      final name = h
+          .group(1)!
+          .toLowerCase()
+          .replaceAll(RegExp(r'[^a-z ]'), '')
+          .trim();
+      inSection = name.contains(want);
+      continue;
+    }
+    if (inSection && line.trim().isNotEmpty) out.add(line.trimRight());
+  }
+  final body = out.join('\n').trim();
+  return RegExp(r'^-?\s*none\b', caseSensitive: false).hasMatch(body)
+      ? ''
+      : body;
+}
+
+/// Compose chapter summaries into one navigable document: a top TL;DR, the
+/// rolled-up Decisions / Next steps / People across all chapters, then each
+/// chapter as its own timestamped section (its internal ## headings demoted to
+/// ### so the chapter structure reads as a sub-level).
+String _composeChapters(List<_ChapterDoc> chapters, String topTldr) {
+  final buf = StringBuffer()
+    ..writeln('## TL;DR')
+    ..writeln(
+      topTldr.trim().isEmpty ? '- See the chapters below.' : topTldr.trim(),
+    );
+
+  String rollup(String heading) => chapters
+      .map((c) => _extractMdSection(c.body, heading))
+      .where((s) => s.isNotEmpty)
+      .join('\n');
+  for (final h in const ['Decisions', 'Next steps', 'People & continuity']) {
+    final r = rollup(h);
+    if (r.isNotEmpty) {
+      buf
+        ..writeln('\n## $h')
+        ..writeln(r);
+    }
+  }
+
+  for (var i = 0; i < chapters.length; i++) {
+    var demoted = chapters[i].body.replaceAll('\n## ', '\n### ');
+    if (demoted.startsWith('## ')) demoted = '### ${demoted.substring(3)}';
+    buf
+      ..writeln('\n## Chapter ${i + 1} — ${chapters[i].range}')
+      ..writeln(demoted.trim());
+  }
+  return buf.toString();
 }
 
 /// The transcript-based safety net for the SINGLE-PASS path (short meeting on a
