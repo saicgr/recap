@@ -10,7 +10,9 @@ import '../main.dart';
 import '../services/audio_player_service.dart';
 import '../services/summary_glossary.dart';
 import '../services/template_service.dart';
+import '../billing/entitlement_service.dart';
 import '../services/summarizer/gemma_downloader.dart';
+import '../services/summarizer/summary_pipeline.dart';
 import '../services/summarizer/summary_router.dart';
 import '../services/summarizer/summary_types.dart';
 import '../services/summarizer/transcript_formatter.dart';
@@ -140,14 +142,42 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
       );
       cancel.throwIfCancelled();
 
+      final input = SummaryInput(
+        segments: promptSegments,
+        meetingTitle: _title,
+        glossary: glossary.terms,
+      );
+
+      // Offer-a-choice cloud upgrade for a LONG meeting on a non-Privacy tier.
+      // On-device is faithful but slow and 2B-limited at length; cloud nails it.
+      // Privacy never reaches here (shouldOfferCloudUpgrade returns false), and a
+      // short meeting is never offered — on-device is reliable + free there.
+      var requestedMode = settings.summaryMode;
+      if (requestedMode == SummaryMode.onDevice) {
+        final plan = SummaryPipeline.planFor(
+          input: input,
+          caps: gemmaBackend.capabilities,
+        );
+        final cloudDecision = await entitlements.decideSummary(
+          SummaryMode.cloud,
+        );
+        if (shouldOfferCloudUpgrade(
+          tier: entitlements.currentTier,
+          mode: requestedMode,
+          plan: plan,
+          cloudUsable: cloudDecision is AllowSummary,
+        )) {
+          cancel.throwIfCancelled();
+          if (!mounted) return;
+          final choice = await _offerCloudUpgrade(plan);
+          if (choice == SummaryMode.cloud) requestedMode = SummaryMode.cloud;
+        }
+      }
+
       final res = await summaryRouter.summarize(
-        input: SummaryInput(
-          segments: promptSegments,
-          meetingTitle: _title,
-          glossary: glossary.terms,
-        ),
+        input: input,
         persona: persona,
-        requested: settings.summaryMode,
+        requested: requestedMode,
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
         },
@@ -207,6 +237,65 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
         });
       }
     }
+  }
+
+  /// Offer a cloud summary for a long meeting. Returns the chosen mode, or null
+  /// if dismissed (treated as on-device). Only reached on a non-Privacy tier for
+  /// a meeting that would map-reduce on-device, with cloud quota available.
+  Future<SummaryMode?> _offerCloudUpgrade(SummaryPlan plan) async {
+    final t = RecapThemeScope.of(context);
+    // ~1.5 min per on-device chunk is a rough phone estimate; the point is to set
+    // an expectation, not a promise.
+    final mins = (plan.chunkCount * 1.5).ceil();
+    final extreme = plan.isExtreme;
+    return showModalBottomSheet<SummaryMode>(
+      context: context,
+      backgroundColor: t.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                extreme ? 'Very long meeting' : 'Long meeting',
+                style: RT.title.copyWith(color: t.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                extreme
+                    ? 'This runs entirely on your device — about $mins minutes, '
+                          'and it will run the phone hot. For a meeting this long a '
+                          'cloud summary is faster and sharper.'
+                    : 'On-device stays private and free, but takes about $mins '
+                          'minutes and may miss some detail. A cloud summary is '
+                          'faster and more complete.',
+                style: RT.body.copyWith(color: t.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              Btn(
+                label: extreme
+                    ? 'Summarize in the cloud (recommended)'
+                    : 'Summarize in the cloud',
+                variant: BtnVariant.primary,
+                onPressed: () => Navigator.pop(ctx, SummaryMode.cloud),
+              ),
+              const SizedBox(height: 8),
+              Btn(
+                label: 'Keep it on-device',
+                variant: BtnVariant.ghost,
+                onPressed: () => Navigator.pop(ctx, SummaryMode.onDevice),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Persona _resolvePersona(String key) =>
