@@ -131,8 +131,9 @@ class SyncEngine {
       };
     }
 
-    final m = await (db.select(db.meetings)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final m = await (db.select(
+      db.meetings,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (m == null) return null; // deleted locally before we pushed the upsert
 
     return {
@@ -147,17 +148,20 @@ class SyncEngine {
   }
 
   Future<String> _seal(
-      String plaintext, String rowId, String field, String hlc) =>
-      Envelope.seal(
-        plaintext: plaintext,
-        workspaceKey: workspaceKey,
-        kid: kid,
-        workspaceId: workspaceId,
-        table: 'meetings',
-        rowId: rowId,
-        field: field,
-        hlc: hlc,
-      );
+    String plaintext,
+    String rowId,
+    String field,
+    String hlc,
+  ) => Envelope.seal(
+    plaintext: plaintext,
+    workspaceKey: workspaceKey,
+    kid: kid,
+    workspaceId: workspaceId,
+    table: 'meetings',
+    rowId: rowId,
+    field: field,
+    hlc: hlc,
+  );
 
   // -- pull -------------------------------------------------------------------
 
@@ -168,13 +172,16 @@ class SyncEngine {
     // monotonic, so re-fetching a small window prevents a row that committed at
     // "the same" timestamp from being skipped forever. Apply is idempotent, so
     // re-seeing a row is free.
-    final rows = await api.select('meetings', query: {
-      'workspace_id': 'eq.$workspaceId',
-      'hlc': 'gt.$cursor',
-      'order': 'hlc.asc',
-      'limit': '200',
-      'select': 'id,hlc,duration_ms,deleted_at,title_enc',
-    });
+    final rows = await api.select(
+      'meetings',
+      query: {
+        'workspace_id': 'eq.$workspaceId',
+        'hlc': 'gt.$cursor',
+        'order': 'hlc.asc',
+        'limit': '200',
+        'select': 'id,hlc,duration_ms,deleted_at,title_enc',
+      },
+    );
     if (rows.isEmpty) return 0;
 
     var applied = 0;
@@ -205,8 +212,9 @@ class SyncEngine {
       return false;
     }
 
-    final existing = await (db.select(db.meetings)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final existing = await (db.select(
+      db.meetings,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
 
     // Last-writer-wins: if our local copy is newer, keep it. We compare the
     // stored HLC we last applied; a locally-edited row carries a pending outbox
@@ -227,12 +235,22 @@ class SyncEngine {
       return true;
     }
 
-    final title = await _open(row['title_enc'] as String?, id, 'title', remoteHlc);
-    if (title == null) return false; // undecryptable (missing key) — skip, do not corrupt
+    final title = await _open(
+      row['title_enc'] as String?,
+      id,
+      'title',
+      remoteHlc,
+    );
+    if (title == null) {
+      // undecryptable (missing key) — skip, do not corrupt
+      return false;
+    }
 
     final now = DateTime.now();
     if (existing == null) {
-      await db.into(db.meetings).insert(
+      await db
+          .into(db.meetings)
+          .insert(
             MeetingsCompanion.insert(
               id: id,
               title: title,
@@ -247,15 +265,20 @@ class SyncEngine {
             mode: InsertMode.insertOrReplace,
           );
     } else {
-      await (db.update(db.meetings)..where((t) => t.id.equals(id)))
-          .write(MeetingsCompanion(title: Value(title), updatedAt: Value(now)));
+      await (db.update(db.meetings)..where((t) => t.id.equals(id))).write(
+        MeetingsCompanion(title: Value(title), updatedAt: Value(now)),
+      );
     }
     await _setLocalHlc('meetings', id, remoteHlc);
     return true;
   }
 
   Future<String?> _open(
-      String? sealed, String rowId, String field, String hlc) async {
+    String? sealed,
+    String rowId,
+    String field,
+    String hlc,
+  ) async {
     if (sealed == null) return null;
     try {
       return await Envelope.open(
@@ -283,10 +306,12 @@ class SyncEngine {
   // this step; promoted to a real table when the sync schema settles.
 
   Future<String?> _localHlcFor(String table, String id) async {
-    final rows = await db.customSelect(
-      'SELECT v FROM sync_meta WHERE k = ?',
-      variables: [Variable<String>('hlc:$table:$id')],
-    ).get();
+    final rows = await db
+        .customSelect(
+          'SELECT v FROM sync_meta WHERE k = ?',
+          variables: [Variable<String>('hlc:$table:$id')],
+        )
+        .get();
     return rows.isEmpty ? null : rows.first.read<String>('v');
   }
 
@@ -297,22 +322,26 @@ class SyncEngine {
         ['hlc:$table:$id', hlc],
       );
 
-  Future<void> _clearLocalHlc(String table, String id) =>
-      db.customStatement('DELETE FROM sync_meta WHERE k = ?', ['hlc:$table:$id']);
+  Future<void> _clearLocalHlc(String table, String id) => db.customStatement(
+    'DELETE FROM sync_meta WHERE k = ?',
+    ['hlc:$table:$id'],
+  );
 
   Future<String> _readCursor() async {
-    final rows = await db.customSelect(
-      'SELECT v FROM sync_meta WHERE k = ?',
-      variables: [Variable<String>(_cursorKey)],
-    ).get();
+    final rows = await db
+        .customSelect(
+          'SELECT v FROM sync_meta WHERE k = ?',
+          variables: [Variable<String>(_cursorKey)],
+        )
+        .get();
     return rows.isEmpty ? '' : rows.first.read<String>('v');
   }
 
   Future<void> _writeCursor(String cursor) => db.customStatement(
-        'INSERT INTO sync_meta(k,v) VALUES(?,?) '
-        'ON CONFLICT(k) DO UPDATE SET v=excluded.v',
-        [_cursorKey, cursor],
-      );
+    'INSERT INTO sync_meta(k,v) VALUES(?,?) '
+    'ON CONFLICT(k) DO UPDATE SET v=excluded.v',
+    [_cursorKey, cursor],
+  );
 
   /// Rewind the cursor by ~10s worth of HLC millis so an overlapping window is
   /// re-scanned next pull. Cheap insurance against a row committed at a boundary
@@ -320,8 +349,11 @@ class SyncEngine {
   String _overlap(String hlc) {
     try {
       final h = Hlc.parse(hlc);
-      final rewound =
-          Hlc(millis: (h.millis - 10000).clamp(0, h.millis), counter: 0, nodeId: h.nodeId);
+      final rewound = Hlc(
+        millis: (h.millis - 10000).clamp(0, h.millis),
+        counter: 0,
+        nodeId: h.nodeId,
+      );
       return rewound.toString();
     } catch (_) {
       return hlc;

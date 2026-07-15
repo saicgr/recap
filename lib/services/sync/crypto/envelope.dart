@@ -57,10 +57,9 @@ class Envelope {
     required String rowId,
     required String field,
     required String hlc,
-  }) =>
-      Uint8List.fromList(
-        utf8.encode('$workspaceId|$kid|$table|$rowId|$field|$hlc'),
-      );
+  }) => Uint8List.fromList(
+    utf8.encode('$workspaceId|$kid|$table|$rowId|$field|$hlc'),
+  );
 
   static Future<SecretKey> _deriveRowKey({
     required SecretKey workspaceKey,
@@ -68,12 +67,11 @@ class Envelope {
     required String table,
     required String rowId,
     required String field,
-  }) =>
-      _hkdf.deriveKey(
-        secretKey: workspaceKey,
-        nonce: salt,
-        info: utf8.encode('recap/enc/v1/$table/$rowId/$field'),
-      );
+  }) => _hkdf.deriveKey(
+    secretKey: workspaceKey,
+    nonce: salt,
+    info: utf8.encode('recap/enc/v1/$table/$rowId/$field'),
+  );
 
   /// Encrypt [plaintext] for one field of one row.
   static Future<String> seal({
@@ -85,6 +83,7 @@ class Envelope {
     required String rowId,
     required String field,
     required String hlc,
+
     /// Test-only determinism. Never pass this in production — a reused
     /// salt+nonce under the same key is catastrophic for AES-GCM.
     List<int>? salt,
@@ -92,7 +91,9 @@ class Envelope {
   }) async {
     final s = salt ?? _randomBytes(_saltLen);
     final n = nonce ?? _randomBytes(_nonceLen);
-    if (s.length != _saltLen) throw ArgumentError('salt must be $_saltLen bytes');
+    if (s.length != _saltLen) {
+      throw ArgumentError('salt must be $_saltLen bytes');
+    }
     if (n.length != _nonceLen) {
       throw ArgumentError('nonce must be $_nonceLen bytes');
     }
