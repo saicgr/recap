@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_gemma/flutter_gemma.dart'
+    show DownloadException, DownloadErrorMessage;
 
 import 'gemma_backend.dart';
 
@@ -84,6 +86,12 @@ class GemmaDownloader extends ChangeNotifier {
         },
       );
       _setStatus(GemmaDownloadStatus.installed);
+    } on DownloadException catch (e) {
+      // Typed: surface the HTTP-specific guidance (a gated model like E4B 401s
+      // and needs a HuggingFace token; a 404 means the URL is wrong) instead of
+      // a raw exception string.
+      _failureReason = e.error.toUserMessage();
+      _setStatus(GemmaDownloadStatus.failed);
     } catch (e) {
       _failureReason = e.toString();
       _setStatus(GemmaDownloadStatus.failed);
