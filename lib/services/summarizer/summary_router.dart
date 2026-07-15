@@ -120,6 +120,9 @@ class SummaryRouter {
     required SummaryMode requested,
     void Function(SummaryProgress)? onProgress,
     CancelToken? cancel,
+    // On-device 3-6h meetings: stream chapters + resume from a store.
+    void Function(SummaryResult)? onPartial,
+    ChapterStore? chapterStore,
   }) async {
     final tier = entitlements.currentTier;
 
@@ -162,6 +165,8 @@ class SummaryRouter {
             persona,
             onProgress,
             cancel,
+            onPartial: onPartial,
+            chapterStore: chapterStore,
           );
           return onDevice ?? SummaryFailed(e, s);
         }
@@ -190,6 +195,8 @@ class SummaryRouter {
               persona,
               onProgress,
               cancel,
+              onPartial: onPartial,
+              chapterStore: chapterStore,
             );
             return onDevice ?? SummaryFailed(e, s);
           }
@@ -200,6 +207,8 @@ class SummaryRouter {
             persona,
             onProgress,
             cancel,
+            onPartial: onPartial,
+            chapterStore: chapterStore,
           );
           return onDevice ?? const SummaryBlockedByQuota();
         case BlockedCloudDisabled():
@@ -209,13 +218,22 @@ class SummaryRouter {
             persona,
             onProgress,
             cancel,
+            onPartial: onPartial,
+            chapterStore: chapterStore,
           );
           return onDevice ?? const SummaryBlockedByQuota();
       }
     }
 
     // On-device path.
-    final r = await _tryOnDevice(input, persona, onProgress, cancel);
+    final r = await _tryOnDevice(
+      input,
+      persona,
+      onProgress,
+      cancel,
+      onPartial: onPartial,
+      chapterStore: chapterStore,
+    );
     if (r != null) return r;
     return const SummaryNeedsGemmaDownload();
   }
@@ -224,8 +242,10 @@ class SummaryRouter {
     SummaryInput input,
     Persona persona,
     void Function(SummaryProgress)? onProgress,
-    CancelToken? cancel,
-  ) async {
+    CancelToken? cancel, {
+    void Function(SummaryResult)? onPartial,
+    ChapterStore? chapterStore,
+  }) async {
     // Priority order on-device:
     //   1. Ollama (desktop only) — runs 27B+ models, biggest quality jump
     //   2. OS built-in — Gemini Nano (Android) / Apple FM (iOS/macOS),
@@ -234,7 +254,15 @@ class SummaryRouter {
     // Each gracefully falls through to the next if isAvailable() returns false.
     if (await ollama.isAvailable()) {
       try {
-        final r = await _run(ollama, input, persona, onProgress, cancel);
+        final r = await _run(
+          ollama,
+          input,
+          persona,
+          onProgress,
+          cancel,
+          onPartial: onPartial,
+          chapterStore: chapterStore,
+        );
         return SummaryReady(r, SummaryRoute.ollama);
       } on SummaryCancelled {
         rethrow;
@@ -248,7 +276,15 @@ class SummaryRouter {
     }
     if (await builtinAi.isAvailable()) {
       try {
-        final r = await _run(builtinAi, input, persona, onProgress, cancel);
+        final r = await _run(
+          builtinAi,
+          input,
+          persona,
+          onProgress,
+          cancel,
+          onPartial: onPartial,
+          chapterStore: chapterStore,
+        );
         return SummaryReady(r, SummaryRoute.builtinAi);
       } on SummaryCancelled {
         rethrow;
@@ -258,7 +294,15 @@ class SummaryRouter {
     }
     if (await gemma.isAvailable()) {
       try {
-        final r = await _run(gemma, input, persona, onProgress, cancel);
+        final r = await _run(
+          gemma,
+          input,
+          persona,
+          onProgress,
+          cancel,
+          onPartial: onPartial,
+          chapterStore: chapterStore,
+        );
         return SummaryReady(r, SummaryRoute.gemma);
       } on SummaryCancelled {
         rethrow;
@@ -274,12 +318,16 @@ class SummaryRouter {
     SummaryInput input,
     Persona persona,
     void Function(SummaryProgress)? onProgress,
-    CancelToken? cancel,
-  ) => _pipeline.run(
+    CancelToken? cancel, {
+    void Function(SummaryResult)? onPartial,
+    ChapterStore? chapterStore,
+  }) => _pipeline.run(
     backend: backend,
     input: input,
     persona: persona,
     onProgress: onProgress,
     cancel: cancel,
+    onPartial: onPartial,
+    chapterStore: chapterStore,
   );
 }
