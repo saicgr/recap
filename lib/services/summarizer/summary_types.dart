@@ -82,6 +82,14 @@ class SummaryPlan {
 
   /// A meeting worth offering a cloud upgrade for.
   bool get isLong => willMapReduce;
+
+  /// A meeting so long (>=12 chunks — roughly 3 hours and up: a prod war room, a
+  /// legal deposition) that on-device is genuinely impractical: 30-60+ minutes of
+  /// sustained, hot, sequential compute, with heavy fold compression. Here cloud
+  /// should be STRONGLY recommended, not merely offered — the on-device path
+  /// stays available for privileged/Privacy-tier work but with an honest warning
+  /// about time and compression.
+  bool get isExtreme => chunkCount >= 12;
 }
 
 enum SummaryStage { preparing, mapping, reducing, checking, done }

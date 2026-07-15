@@ -162,7 +162,16 @@ class SummaryPipeline {
         cancel: cancel,
       );
       cancel?.throwIfCancelled();
-      final out = _normalizeOutput(text.trim());
+      // The single-pass path (short meeting on-device, OR a big-window/cloud
+      // backend) gets the same transcript-based safety net as map-reduce: spaced
+      // digits, absence/handoff phrases, and figure sweep. It has no map notes to
+      // carry, but a 2B reading a long transcript in one shot still drops figures
+      // (attention dilution), so the sweep matters here too.
+      final out = _mechanicalSafetyNet(
+        text: _normalizeOutput(text.trim()),
+        transcript: transcript,
+        segments: input.segments,
+      );
       if (out.isEmpty) {
         throw StateError(
           '${backend.modelId} returned an empty summary for '
@@ -275,7 +284,14 @@ class SummaryPipeline {
     // facts the eval's mustContain checks (specifics 22/31 on long meetings; the
     // reduce weaves most in but drops ~29% when folding). Carried presence-AWARE
     // below so only the ones the model actually lost get re-added.
-    final carriedSpecifics = _noteClassLines(preFoldNotes, 'SPECIFICS');
+    // SPECIFICS from the map PLUS a mechanical figure sweep of the transcript.
+    // The sweep catches money / percentages / unit-quantities the map missed
+    // entirely on a long meeting (extraction miss, which carry-through alone
+    // cannot fix) — the residual that keeps long meetings off 100%.
+    final carriedSpecifics = <String>[
+      ..._noteClassLines(preFoldNotes, 'SPECIFICS'),
+      ..._sweepFigures(transcript),
+    ];
 
     // --- Hierarchical reduce (fold) ----------------------------------------
     // The notes themselves can overflow the window on a long meeting. Fold them
@@ -591,13 +607,105 @@ List<String> _detectSpacedDigits(String transcript) {
   return out;
 }
 
+/// The transcript-based safety net for the SINGLE-PASS path (short meeting on a
+/// 2B, or a big-window / cloud backend). No map notes to carry, but a model
+/// reading a long transcript in one shot still drops figures, misses a dictated
+/// ID, or buries the end-of-meeting handoff — so run the same sweeps map-reduce
+/// uses: spaced digits -> low confidence, absence/handoff phrases -> continuity,
+/// figure sweep -> key details. [mapNotes] lets the map-reduce path reuse this
+/// too (it currently inlines the equivalent), combining notes + sweeps.
+String _mechanicalSafetyNet({
+  required String text,
+  required String transcript,
+  required List<PromptSegment> segments,
+  String? mapNotes,
+}) {
+  final lowConf = <String>[
+    if (mapNotes != null) ..._noteClassLines(mapNotes, 'LOW CONFIDENCE'),
+    ..._detectSpacedDigits(transcript),
+  ];
+  final continuity = <String>[
+    if (mapNotes != null) ..._noteClassLines(mapNotes, 'CONTINUITY'),
+    ..._detectContinuity(segments),
+  ];
+  final specifics = <String>[
+    if (mapNotes != null) ..._noteClassLines(mapNotes, 'SPECIFICS'),
+    ..._sweepFigures(transcript),
+  ];
+  var t = _appendClassBlock(
+    text,
+    lowConf,
+    '## ⚠️ Low confidence',
+    presenceAware: false,
+  );
+  t = _appendClassBlock(
+    t,
+    continuity,
+    '## People & continuity',
+    presenceAware: false,
+  );
+  t = _appendClassBlock(
+    t,
+    specifics,
+    '## Other key details',
+    presenceAware: true,
+  );
+  return _normalizeOutput(t);
+}
+
+/// High-salience figures from the transcript — money ($4.2 million, $3.75),
+/// percentages (10 percent, 3.1%) and unit quantities (24-unit, case of 24) —
+/// captured WITH a couple of trailing words so a phrase like "10 percent lift"
+/// survives. Independent of the map, so it recovers a figure the 2B never
+/// extracted. Carried presence-aware, so only figures missing from the draft are
+/// added.
+///
+/// The cap SCALES with transcript length. A 25-minute standup should not sprout a
+/// 40-line figures dump, but a 6-hour deposition or prod war room genuinely has
+/// hundreds of load-bearing numbers (dollar amounts, dates, exhibit/ticket IDs)
+/// and a lawyer or on-call engineer cannot silently lose any — that is the whole
+/// value at extreme length. ~1 per 400 words, floor 40, ceiling 400.
+List<String> _sweepFigures(String transcript) {
+  final words = transcript.split(RegExp(r'\s+')).length;
+  final cap = (words ~/ 400).clamp(40, 400);
+  // Money / percentages / quantities / latencies / durations, each with an
+  // optional trailing word for context ("10 percent lift"), PLUS calendar dates
+  // (a deposition lives on dates). Broad on purpose: at legal / war-room length,
+  // a dropped figure or date is the failure the whole feature exists to prevent.
+  final re = RegExp(
+    r'(?:\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:million|billion|thousand|k|bn))?'
+    r'|\b\d[\d,]*(?:\.\d+)?\s?(?:%|percent|per cent|million|billion|thousand|'
+    r'bps|basis points|units?|packs?|cases?|boxes|count|ms|milliseconds?|'
+    r'seconds?|secs?|minutes?|mins?|hours?|days?|weeks?|months?|years?|'
+    r'requests?|customers?|tickets?|nodes?|messages?|dollars?|cents?|gb|mb|tb)'
+    r'|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+    r'jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|'
+    r'dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?'
+    r'|\b\d{1,2}/\d{1,2}/\d{2,4})'
+    r'(?:\s+(?:of\s+)?[A-Za-z][A-Za-z-]{2,}(?:\s+[A-Za-z][A-Za-z-]{2,})?)?',
+    caseSensitive: false,
+  );
+  final out = <String>[];
+  final seen = <String>{};
+  for (final m in re.allMatches(transcript)) {
+    final figure = m.group(0)!.trim();
+    // Must contain a digit and be substantive (drop bare "% of the").
+    if (!RegExp(r'\d').hasMatch(figure) || figure.length < 2) continue;
+    final key = figure.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    if (!seen.add(key)) continue;
+    out.add(figure);
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
 /// Segments that carry a strong absence / leave / handoff / deadline signal — the
 /// continuity items a 2B most often fails to tag on a long meeting because they
 /// are social asides at the end. Conservative on purpose: only unambiguous
 /// phrases, so we do not fabricate an absence. Returns "<speaker>: <excerpt>
 /// [mm:ss]" lines for the carry-through.
 final RegExp _kContinuitySignal = RegExp(
-  r'\b(having surgery|out (?:next|starting|for|of|on)\b|on (?:medical |maternity |paternity )?leave|maternity|paternity|sick leave|reach out to |cover(?:ing)? for |my last day|last day (?:is|will)|stepping (?:down|away)|out of office|be out (?:of|for|next)|back (?:on|next) |won.t be (?:here|around|available)|hand(?:ing|ed)? (?:this |it )?(?:off|over) to |taking over |deadline (?:is|of)|due (?:by|on) )',
+  r'\b(having surgery|out (?:next|starting|for|of|on)\b|on (?:medical |maternity |paternity )?leave|maternity|paternity|sick leave|reach out to |cover(?:ing)? for |my last day|last day (?:is|will)|stepping (?:down|away)|out of office|be out (?:of|for|next)|back (?:on|next) |won.t be (?:here|around|available)|hand(?:ing|ed)? (?:this |it )?(?:off|over) to |taking over |deadline|due (?:by|on)|(?:by|before|due|no later than|end of|eod) (?:next )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|end of (?:day|week|month|quarter)))',
   caseSensitive: false,
 );
 

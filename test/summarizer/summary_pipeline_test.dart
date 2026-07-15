@@ -853,6 +853,97 @@ void main() {
     });
   });
 
+  group('mechanical safety net — deterministic, no model judgment', () {
+    test(
+      'injects a dropped figure, a dictated ID, and an end handoff',
+      () async {
+        final segs = [
+          const PromptSegment(
+            speaker: 'Ana',
+            startMs: 0,
+            text: 'Revenue came in at 4.2 million for the quarter, up nicely.',
+          ),
+          const PromptSegment(
+            speaker: 'Ben',
+            startMs: 5000,
+            text: 'The incident ticket is 7 3 0 2 if anyone needs it.',
+          ),
+          const PromptSegment(
+            speaker: 'Ana',
+            startMs: 10000,
+            text:
+                "I'm having surgery next week, so reach out to Lisa for "
+                'anything urgent while I am out.',
+          ),
+        ];
+        // A backend that writes a THIN summary, dropping all three — the safety
+        // net must restore them regardless of what the model chose to keep.
+        final backend = FakeBackend(
+          caps: const BackendCapabilities(
+            contextTokens: 1000000,
+            maxOutputTokens: 8192,
+          ),
+          respond: (_) => '## TL;DR\n- The team met and discussed the quarter.',
+        );
+        final r = await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(segments: segs, meetingTitle: 'Q review'),
+          persona: personasByKey['basic']!,
+        );
+        final t = r.text.toLowerCase();
+        expect(
+          t,
+          contains('4.2 million'),
+          reason: 'figure sweep must restore a figure the model dropped',
+        );
+        expect(
+          t,
+          contains('7302'),
+          reason: 'digit detection must join the dictated ID 7 3 0 2 -> 7302',
+        );
+        expect(
+          t,
+          contains('lisa'),
+          reason: 'continuity detection must restore the surgery handoff',
+        );
+      },
+    );
+
+    test(
+      'does not fabricate — a clean meeting gets no injected junk',
+      () async {
+        final segs = [
+          const PromptSegment(
+            speaker: 'Ana',
+            startMs: 0,
+            text: 'Good morning, quick sync.',
+          ),
+          const PromptSegment(
+            speaker: 'Ben',
+            startMs: 4000,
+            text: 'All green on my side, nothing to report.',
+          ),
+        ];
+        final backend = FakeBackend(
+          caps: const BackendCapabilities(
+            contextTokens: 1000000,
+            maxOutputTokens: 8192,
+          ),
+          respond: (_) =>
+              '## TL;DR\n- Quick sync, all green.\n\n## Decisions\n- None.',
+        );
+        final r = await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(segments: segs, meetingTitle: 'Sync'),
+          persona: personasByKey['basic']!,
+        );
+        // No figures/digits/handoffs in the transcript -> no injected sections.
+        expect(r.text.contains('Other key details'), isFalse);
+        expect(r.text.toLowerCase(), isNot(contains('heard, unverified')));
+      },
+    );
+  });
+
   _planForTests();
 }
 
