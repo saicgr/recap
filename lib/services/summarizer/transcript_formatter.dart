@@ -32,10 +32,9 @@ List<PromptSegment> buildPromptSegments({
   required String fallbackBody,
   Map<String, String> speakerAliases = const {},
 }) {
-  final usable = segments
-      .where((s) => s.body.trim().isNotEmpty)
-      .toList(growable: false)
-    ..sort((a, b) => a.startMs.compareTo(b.startMs));
+  final usable =
+      segments.where((s) => s.body.trim().isNotEmpty).toList(growable: false)
+        ..sort((a, b) => a.startMs.compareTo(b.startMs));
 
   if (usable.isEmpty) {
     final body = fallbackBody.trim();
@@ -55,7 +54,8 @@ List<PromptSegment> buildPromptSegments({
     final text = s.body.trim();
 
     final last = merged.isEmpty ? null : merged.last;
-    final canMerge = last != null &&
+    final canMerge =
+        last != null &&
         last.speaker == speaker &&
         last.text.length + text.length + 1 <= _mergeCharLimit &&
         (last.endMs == null || s.startMs - last.endMs! <= _mergeGapMs);
@@ -68,12 +68,14 @@ List<PromptSegment> buildPromptSegments({
         text: '${last.text} $text',
       );
     } else {
-      merged.add(PromptSegment(
-        speaker: speaker,
-        startMs: s.startMs,
-        endMs: s.endMs,
-        text: text,
-      ));
+      merged.add(
+        PromptSegment(
+          speaker: speaker,
+          startMs: s.startMs,
+          endMs: s.endMs,
+          text: text,
+        ),
+      );
     }
   }
   return merged;

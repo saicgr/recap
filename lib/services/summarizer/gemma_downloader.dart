@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 
 import 'gemma_backend.dart';
 
@@ -10,7 +9,7 @@ enum GemmaDownloadStatus {
   notInstalled,
   downloading,
   installed,
-  failed
+  failed,
 }
 
 /// ChangeNotifier wrapper around [GemmaBackend] for the UI. Tracks install
@@ -35,14 +34,16 @@ class GemmaDownloader extends ChangeNotifier {
   String? get failureReason => _failureReason;
   double get progress => _progress;
 
-  /// Probe disk. Idempotent; safe to call from initState.
+  /// Probe install state. Idempotent; safe to call from initState. Delegates to
+  /// the backend so there is one source of truth for "is a model active".
   Future<void> refreshStatus() async {
     try {
-      final installed =
-          await FlutterGemmaPlugin.instance.modelManager.isModelInstalled;
-      _setStatus(installed
-          ? GemmaDownloadStatus.installed
-          : GemmaDownloadStatus.notInstalled);
+      final installed = await backend.isAvailable();
+      _setStatus(
+        installed
+            ? GemmaDownloadStatus.installed
+            : GemmaDownloadStatus.notInstalled,
+      );
     } catch (e) {
       _failureReason = e.toString();
       _setStatus(GemmaDownloadStatus.failed);

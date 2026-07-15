@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_gemma/flutter_gemma.dart' hide CancelToken;
+import 'package:flutter_gemma_builtin_ai/flutter_gemma_builtin_ai.dart';
+import 'package:flutter_gemma_litertlm/flutter_gemma_litertlm.dart';
+import 'package:flutter_gemma_mediapipe/flutter_gemma_mediapipe.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:whisper_ggml/whisper_ggml.dart' show WhisperModel;
@@ -106,6 +110,23 @@ late final SherpaDiarizer diarizer;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Register the on-device inference engines with flutter_gemma 1.x. Cheap
+  // (no model load, no network) — it just tells the plugin which native runtimes
+  // are available so getActiveModel() can pick one:
+  //   • LiteRtLmEngine   — .litertlm (Gemma 4, NPU on Snapdragon/LunarLake)
+  //   • MediaPipeEngine  — .task (Gemma 3n fallback)
+  //   • BuiltInAiEngine  — Gemini Nano (Android/AICore) + Apple Foundation
+  //     Models (iOS 26+), where the OS owns the weights and nothing downloads.
+  // Must run before any GemmaBackend call; a no-op on platforms lacking a given
+  // engine. Nothing here touches the network — the Karpathy invariant holds.
+  await FlutterGemma.initialize(
+    inferenceEngines: const [
+      LiteRtLmEngine(),
+      MediaPipeEngine(),
+      BuiltInAiEngine(),
+    ],
+  );
 
   // ── Critical path (blocks first frame) ──────────────────────────────────
   //

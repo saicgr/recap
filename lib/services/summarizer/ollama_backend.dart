@@ -39,9 +39,9 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
 
   @override
   BackendCapabilities get capabilities => const BackendCapabilities(
-        contextTokens: _contextTokens,
-        maxOutputTokens: _maxOutputTokens,
-      );
+    contextTokens: _contextTokens,
+    maxOutputTokens: _maxOutputTokens,
+  );
 
   static String _defaultUrl() {
     const fromEnv = String.fromEnvironment('RECAP_OLLAMA_URL');
@@ -193,7 +193,8 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
     final model = bestModel();
     if (model == null) {
       throw StateError(
-          'No Ollama models installed. Run `ollama pull gemma3:27b` (or similar) first.');
+        'No Ollama models installed. Run `ollama pull gemma3:27b` (or similar) first.',
+      );
     }
 
     // Use the non-streaming /api/generate path for simplicity; the router
@@ -234,7 +235,8 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
     final text = (body['response'] as String? ?? '').trim();
     if (text.isEmpty) {
       throw StateError(
-          'Ollama model "${model.name}" returned an empty response');
+        'Ollama model "${model.name}" returned an empty response',
+      );
     }
     return text;
   }
@@ -278,7 +280,9 @@ class OllamaBackend extends ChangeNotifier implements SummaryBackend {
         if (total > 0 && onProgress != null) {
           onProgress(completed / total, status);
         }
-      } catch (_) {/* skip non-JSON lines */}
+      } catch (_) {
+        /* skip non-JSON lines */
+      }
     }
     await refreshStatus();
   }

@@ -34,118 +34,142 @@ void main() {
         persona: persona,
       );
 
-      expect(backend.calls.length, 1,
-          reason: 'summarizing a summary loses detail — when the transcript '
-              'fits, map-reduce must be skipped entirely');
+      expect(
+        backend.calls.length,
+        1,
+        reason:
+            'summarizing a summary loses detail — when the transcript '
+            'fits, map-reduce must be skipped entirely',
+      );
       expect(backend.calls.single.stage, Stage.singlePass);
       expect(result.text, isNotEmpty);
       expect(result.modelId, 'fake');
     });
 
-    test('the single-pass call carries the whole transcript and the self-check',
-        () async {
-      final backend = FakeBackend(
-        caps: const BackendCapabilities(
-          contextTokens: 1000000,
-          maxOutputTokens: 8192,
-        ),
-      );
-      final segs = _segments(count: 10, tokensEach: 40);
+    test(
+      'the single-pass call carries the whole transcript and the self-check',
+      () async {
+        final backend = FakeBackend(
+          caps: const BackendCapabilities(
+            contextTokens: 1000000,
+            maxOutputTokens: 8192,
+          ),
+        );
+        final segs = _segments(count: 10, tokensEach: 40);
 
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(segments: segs, meetingTitle: 'RGM sync'),
-        persona: persona,
-      );
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(segments: segs, meetingTitle: 'RGM sync'),
+          persona: persona,
+        );
 
-      final call = backend.calls.single;
-      for (final s in segs) {
-        expect(call.prompt, contains(s.text),
-            reason: 'the single pass must read the real transcript');
-      }
-      expect(call.prompt, contains('SELF-CHECK'),
-          reason: 'cloud stays ONE metered call, so the critic is embedded');
-      expect(call.prompt, contains('RGM sync'));
-    });
+        final call = backend.calls.single;
+        for (final s in segs) {
+          expect(
+            call.prompt,
+            contains(s.text),
+            reason: 'the single pass must read the real transcript',
+          );
+        }
+        expect(
+          call.prompt,
+          contains('SELF-CHECK'),
+          reason: 'cloud stays ONE metered call, so the critic is embedded',
+        );
+        expect(call.prompt, contains('RGM sync'));
+      },
+    );
 
-    test('an on-device backend takes the single-pass path for a SHORT meeting',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 3, tokensEach: 30),
-          meetingTitle: 'Standup',
-        ),
-        persona: persona,
-      );
-      expect(backend.calls.length, 1);
-      expect(backend.calls.single.stage, Stage.singlePass);
-    });
-
-    test('an empty model response is a StateError, never a blank summary',
-        () async {
-      final backend = FakeBackend(
-        caps: const BackendCapabilities(
-          contextTokens: 1000000,
-          maxOutputTokens: 8192,
-        ),
-        respond: (_) => '   ',
-      );
-
-      // CLAUDE.md: no silent degradation — never return "" pretending success.
-      expect(
-        () => const SummaryPipeline().run(
+    test(
+      'an on-device backend takes the single-pass path for a SHORT meeting',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        await const SummaryPipeline().run(
           backend: backend,
           input: SummaryInput(
-            segments: _segments(count: 5, tokensEach: 40),
-            meetingTitle: 'RGM sync',
+            segments: _segments(count: 3, tokensEach: 30),
+            meetingTitle: 'Standup',
           ),
           persona: persona,
-        ),
-        throwsA(isA<StateError>()),
-      );
-    });
+        );
+        expect(backend.calls.length, 1);
+        expect(backend.calls.single.stage, Stage.singlePass);
+      },
+    );
+
+    test(
+      'an empty model response is a StateError, never a blank summary',
+      () async {
+        final backend = FakeBackend(
+          caps: const BackendCapabilities(
+            contextTokens: 1000000,
+            maxOutputTokens: 8192,
+          ),
+          respond: (_) => '   ',
+        );
+
+        // CLAUDE.md: no silent degradation — never return "" pretending success.
+        expect(
+          () => const SummaryPipeline().run(
+            backend: backend,
+            input: SummaryInput(
+              segments: _segments(count: 5, tokensEach: 40),
+              meetingTitle: 'RGM sync',
+            ),
+            persona: persona,
+          ),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
   });
 
   group('map-reduce — it does not fit', () {
-    test('runs N map calls, then a reduce, then a critic — in that order',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
+    test(
+      'runs N map calls, then a reduce, then a critic — in that order',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
 
-      final result = await const SummaryPipeline().run(
-        backend: backend,
-        // ~3,600 est. tokens — a real 25-minute meeting, and far past Gemma's
-        // 3,072-token input budget.
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
+        final result = await const SummaryPipeline().run(
+          backend: backend,
+          // ~3,600 est. tokens — a real 25-minute meeting, and far past Gemma's
+          // 3,072-token input budget.
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
 
-      final stages = backend.calls.map((c) => c.stage).toList();
-      final mapCount = stages.where((s) => s == Stage.map).length;
+        final stages = backend.calls.map((c) => c.stage).toList();
+        final mapCount = stages.where((s) => s == Stage.map).length;
 
-      expect(mapCount, greaterThan(1),
-          reason: 'a 25-minute meeting must be chunked, not truncated');
-      expect(stages.where((s) => s == Stage.singlePass), isEmpty);
+        expect(
+          mapCount,
+          greaterThan(1),
+          reason: 'a 25-minute meeting must be chunked, not truncated',
+        );
+        expect(stages.where((s) => s == Stage.singlePass), isEmpty);
 
-      // Order: every map precedes the reduce, which precedes the critic.
-      final reduceAt = stages.indexOf(Stage.reduce);
-      final criticAt = stages.indexOf(Stage.critic);
-      expect(reduceAt, isNot(-1), reason: 'no reduce call was made');
-      expect(criticAt, isNot(-1), reason: 'no critic call was made');
-      expect(criticAt, greaterThan(reduceAt));
-      for (var i = 0; i < stages.length; i++) {
-        if (stages[i] == Stage.map) {
-          expect(i, lessThan(reduceAt), reason: 'a map ran after the reduce');
+        // Order: every map precedes the reduce, which precedes the critic.
+        final reduceAt = stages.indexOf(Stage.reduce);
+        final criticAt = stages.indexOf(Stage.critic);
+        expect(reduceAt, isNot(-1), reason: 'no reduce call was made');
+        expect(criticAt, isNot(-1), reason: 'no critic call was made');
+        expect(criticAt, greaterThan(reduceAt));
+        for (var i = 0; i < stages.length; i++) {
+          if (stages[i] == Stage.map) {
+            expect(i, lessThan(reduceAt), reason: 'a map ran after the reduce');
+          }
         }
-      }
-      expect(stages.last, Stage.critic);
-      expect(result.text, contains('checked'),
-          reason: 'the critic output is what ships, not the raw draft');
-    });
+        expect(stages.last, Stage.critic);
+        expect(
+          result.text,
+          contains('checked'),
+          reason: 'the critic output is what ships, not the raw draft',
+        );
+      },
+    );
 
     test('no map call ever exceeds the backend input budget', () async {
       final backend = FakeBackend(caps: _gemma);
@@ -164,7 +188,8 @@ void main() {
         expect(
           total,
           lessThanOrEqualTo(_gemma.maxInputTokens),
-          reason: '${c.stage.name} call is $total est. tokens, over the '
+          reason:
+              '${c.stage.name} call is $total est. tokens, over the '
               '${_gemma.maxInputTokens}-token input budget '
               '(${_gemma.contextTokens} context - ${_gemma.maxOutputTokens} '
               'reserved for the answer). This is the overflow bug.',
@@ -172,49 +197,60 @@ void main() {
       }
     });
 
-    test('every chunk of the transcript reaches a map call — nothing is lost',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      final segs = _segments(count: 60, tokensEach: 60);
+    test(
+      'every chunk of the transcript reaches a map call — nothing is lost',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        final segs = _segments(count: 60, tokensEach: 60);
 
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(segments: segs, meetingTitle: 'RGM sync'),
-        persona: persona,
-      );
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(segments: segs, meetingTitle: 'RGM sync'),
+          persona: persona,
+        );
 
-      final mapped = backend.calls
-          .where((c) => c.stage == Stage.map)
-          .map((c) => c.prompt)
-          .join('\n');
-      for (final s in segs) {
-        expect(mapped, contains(s.text),
-            reason: 'segment at ${s.startMs}ms never reached the model — the '
+        final mapped = backend.calls
+            .where((c) => c.stage == Stage.map)
+            .map((c) => c.prompt)
+            .join('\n');
+        for (final s in segs) {
+          expect(
+            mapped,
+            contains(s.text),
+            reason:
+                'segment at ${s.startMs}ms never reached the model — the '
                 'tail of a meeting is exactly where the surgery/handoff line '
-                'lives');
-      }
-    });
+                'lives',
+          );
+        }
+      },
+    );
 
-    test('map runs at a low temperature (extraction), reduce higher (prose)',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
+    test(
+      'map runs at a low temperature (extraction), reduce higher (prose)',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
 
-      final map = backend.calls.firstWhere((c) => c.stage == Stage.map);
-      final reduce = backend.calls.firstWhere((c) => c.stage == Stage.reduce);
-      final critic = backend.calls.firstWhere((c) => c.stage == Stage.critic);
+        final map = backend.calls.firstWhere((c) => c.stage == Stage.map);
+        final reduce = backend.calls.firstWhere((c) => c.stage == Stage.reduce);
+        final critic = backend.calls.firstWhere((c) => c.stage == Stage.critic);
 
-      expect(map.temperature, lessThan(reduce.temperature));
-      expect(critic.temperature, lessThanOrEqualTo(map.temperature),
-          reason: 'the critic must be the most literal pass of all');
-    });
+        expect(map.temperature, lessThan(reduce.temperature));
+        expect(
+          critic.temperature,
+          lessThanOrEqualTo(map.temperature),
+          reason: 'the critic must be the most literal pass of all',
+        );
+      },
+    );
 
     test('a single empty chunk note is dropped, not fatal', () async {
       var n = 0;
@@ -237,8 +273,7 @@ void main() {
       expect(result.text, isNotEmpty);
     });
 
-    test(
-        'EVERY chunk coming back empty is a StateError — a broken backend is '
+    test('EVERY chunk coming back empty is a StateError — a broken backend is '
         'not an empty meeting', () async {
       final backend = FakeBackend(
         caps: _gemma,
@@ -283,8 +318,11 @@ void main() {
       );
 
       final folds = backend.calls.where((c) => c.stage == Stage.fold);
-      expect(folds, isNotEmpty,
-          reason: 'notes over the window must be folded, not truncated');
+      expect(
+        folds,
+        isNotEmpty,
+        reason: 'notes over the window must be folded, not truncated',
+      );
       for (final f in folds) {
         expect(f.prompt, contains('NOTES:'));
       }
@@ -292,8 +330,7 @@ void main() {
       expect(result.text, isNot(contains('compressed')));
     });
 
-    test(
-        'a fold that cannot shrink the notes yields the VISIBLE compression '
+    test('a fold that cannot shrink the notes yields the VISIBLE compression '
         'warning', () async {
       final backend = FakeBackend(
         caps: _gemma,
@@ -317,61 +354,71 @@ void main() {
       );
 
       expect(backend.calls.any((c) => c.stage == Stage.fold), isTrue);
-      expect(result.text, contains(kCompressionNotice.trim()),
-          reason: 'detail was dropped and the user was not told');
+      expect(
+        result.text,
+        contains(kCompressionNotice.trim()),
+        reason: 'detail was dropped and the user was not told',
+      );
       expect(result.text.toLowerCase(), contains('compressed'));
     });
 
-    test('the fold loop terminates — it never spins on a non-shrinking model',
-        () async {
-      final backend = FakeBackend(
-        caps: _gemma,
-        respond: (call) {
-          if (call.stage == Stage.map) return _sized(900, 'note');
-          if (call.stage == Stage.fold) return _sized(1800, 'padded');
-          return _defaultResponse(call);
-        },
-      );
+    test(
+      'the fold loop terminates — it never spins on a non-shrinking model',
+      () async {
+        final backend = FakeBackend(
+          caps: _gemma,
+          respond: (call) {
+            if (call.stage == Stage.map) return _sized(900, 'note');
+            if (call.stage == Stage.fold) return _sized(1800, 'padded');
+            return _defaultResponse(call);
+          },
+        );
 
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
 
-      // A runaway fold would be minutes of GPU time on device.
-      expect(backend.calls.where((c) => c.stage == Stage.fold).length,
-          lessThanOrEqualTo(8));
-    }, timeout: const Timeout(Duration(seconds: 20)));
+        // A runaway fold would be minutes of GPU time on device.
+        expect(
+          backend.calls.where((c) => c.stage == Stage.fold).length,
+          lessThanOrEqualTo(8),
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 20)),
+    );
 
-    test('the reduce prompt never exceeds the window, even after folding',
-        () async {
-      final backend = FakeBackend(
-        caps: _gemma,
-        respond: (call) {
-          if (call.stage == Stage.map) return _sized(900, 'note');
-          if (call.stage == Stage.fold) return _sized(1800, 'padded');
-          return _defaultResponse(call);
-        },
-      );
+    test(
+      'the reduce prompt never exceeds the window, even after folding',
+      () async {
+        final backend = FakeBackend(
+          caps: _gemma,
+          respond: (call) {
+            if (call.stage == Stage.map) return _sized(900, 'note');
+            if (call.stage == Stage.fold) return _sized(1800, 'padded');
+            return _defaultResponse(call);
+          },
+        );
 
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
 
-      final reduce = backend.calls.firstWhere((c) => c.stage == Stage.reduce);
-      final total =
-          estimateTokens(reduce.system ?? '') + estimateTokens(reduce.prompt);
-      expect(total, lessThanOrEqualTo(_gemma.maxInputTokens));
-    });
+        final reduce = backend.calls.firstWhere((c) => c.stage == Stage.reduce);
+        final total =
+            estimateTokens(reduce.system ?? '') + estimateTokens(reduce.prompt);
+        expect(total, lessThanOrEqualTo(_gemma.maxInputTokens));
+      },
+    );
   });
 
   group('critic', () {
@@ -395,66 +442,84 @@ void main() {
         persona: persona,
       );
 
-      expect(backend.calls.where((c) => c.stage == Stage.critic), isEmpty,
-          reason: 'the critic prompt does not fit and must be skipped');
-      expect(result.text, hugeDraft,
-          reason: 'a skipped critic keeps the draft — it must never fail the '
-              'summary or return blank');
+      expect(
+        backend.calls.where((c) => c.stage == Stage.critic),
+        isEmpty,
+        reason: 'the critic prompt does not fit and must be skipped',
+      );
+      expect(
+        result.text,
+        hugeDraft,
+        reason:
+            'a skipped critic keeps the draft — it must never fail the '
+            'summary or return blank',
+      );
     });
 
-    test('a critic returning nothing keeps the draft rather than blanking it',
-        () async {
-      final backend = FakeBackend(
-        caps: _gemma,
-        respond: (call) {
-          if (call.stage == Stage.map) return 'FACTS\n- a fact [00:10]';
-          if (call.stage == Stage.reduce) return '## TL;DR\n- the real draft';
-          if (call.stage == Stage.critic) return '';
-          return _defaultResponse(call);
-        },
-      );
+    test(
+      'a critic returning nothing keeps the draft rather than blanking it',
+      () async {
+        final backend = FakeBackend(
+          caps: _gemma,
+          respond: (call) {
+            if (call.stage == Stage.map) return 'FACTS\n- a fact [00:10]';
+            if (call.stage == Stage.reduce) return '## TL;DR\n- the real draft';
+            if (call.stage == Stage.critic) return '';
+            return _defaultResponse(call);
+          },
+        );
 
-      final result = await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
-      expect(result.text, '## TL;DR\n- the real draft');
-    });
+        final result = await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
+        expect(result.text, '## TL;DR\n- the real draft');
+      },
+    );
 
-    test('the critic sees BOTH the notes and the draft — it cannot diff one',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
+    test(
+      'the critic sees BOTH the notes and the draft — it cannot diff one',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
 
-      final critic = backend.calls.firstWhere((c) => c.stage == Stage.critic);
-      expect(critic.prompt, contains('NOTES:'));
-      expect(critic.prompt, contains('DRAFT:'));
-      expect(critic.prompt, contains('Low confidence'),
-          reason: 'the critic must be able to MOVE an uncertain term rather '
-              'than delete it');
-      expect(critic.prompt.toLowerCase(), contains('restore'),
-          reason: 'a delete-only critic cannot fix the dropped-continuity '
-              'failure (Granola bug #3)');
-    });
+        final critic = backend.calls.firstWhere((c) => c.stage == Stage.critic);
+        expect(critic.prompt, contains('NOTES:'));
+        expect(critic.prompt, contains('DRAFT:'));
+        expect(
+          critic.prompt,
+          contains('Low confidence'),
+          reason:
+              'the critic must be able to MOVE an uncertain term rather '
+              'than delete it',
+        );
+        expect(
+          critic.prompt.toLowerCase(),
+          contains('restore'),
+          reason:
+              'a delete-only critic cannot fix the dropped-continuity '
+              'failure (Granola bug #3)',
+        );
+      },
+    );
   });
 
   group('the prompts that actually reach the model', () {
     const glossary = ['Scan Apps', 'RGM', 'PTC-driven', 'must-buy', 'loyalty'];
 
-    test(
-        'every call carries the ASR-repair rules — no stage loses the preamble',
-        () async {
+    test('the generating stages carry the full ASR-repair rules; the critic '
+        'carries the lighter verify-only system so it fits the window', () async {
       final backend = FakeBackend(caps: _gemma);
       await const SummaryPipeline().run(
         backend: backend,
@@ -468,83 +533,114 @@ void main() {
 
       expect(backend.calls.length, greaterThan(2));
       for (final c in backend.calls) {
-        expect(c.system, isNotNull,
-            reason: '${c.stage.name} was sent with no system prompt — that '
-                'call has NO anti-hallucination rules at all');
-        expect(c.system!, contains("REPAIR, DON'T GUESS"));
-        expect(c.system!, contains('NEVER FABRICATE SPECIFICS'));
-        expect(c.system!, contains('PRESERVE CONTINUITY'));
-        expect(c.system!, contains('ATTRIBUTE'));
-      }
-    });
-
-    test('the map prompt is fed the glossary terms so ASR repair can happen',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-          glossary: glossary,
-        ),
-        persona: persona,
-      );
-
-      final map = backend.calls.firstWhere((c) => c.stage == Stage.map);
-      // The glossary is what turns "skin apps" into Scan Apps.
-      for (final term in glossary) {
-        expect(map.system!, contains(term),
-            reason: 'glossary term "$term" never reached the map call');
-      }
-      expect(map.prompt, contains('TRANSCRIPT SEGMENT:'));
-      expect(map.prompt, contains('Extract structured notes'));
-      expect(map.prompt, contains('LOW CONFIDENCE'),
-          reason: 'the uncertainty channel must exist at extraction time, or '
-              'there is nothing left to mark uncertain later');
-      expect(map.prompt, contains('CONTINUITY'));
-      expect(map.prompt, contains('RGM sync'));
-    });
-
-    test('map prompts are part-numbered so the model may leave a thread open',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-      );
-
-      final maps = backend.calls.where((c) => c.stage == Stage.map).toList();
-      for (var i = 0; i < maps.length; i++) {
-        expect(maps[i].prompt, contains('Part ${i + 1} of ${maps.length}'));
+        expect(
+          c.system,
+          isNotNull,
+          reason:
+              '${c.stage.name} was sent with no system prompt — that '
+              'call has NO guardrails at all',
+        );
+        if (c.stage == Stage.critic) {
+          // The critic reads notes + a draft, not the transcript, and must NOT
+          // repair terms — so it gets kCriticSystem, not the full 8-rule
+          // preamble. That ~565-token saving is exactly what lets the critic fit
+          // a 4096-token window and actually run on a map-reduced meeting; with
+          // the full preamble it was structurally skipped. The safety-relevant
+          // invariant (never add info, only remove/flag) is still present.
+          expect(c.system, kCriticSystem);
+          expect(c.system!.toLowerCase(), contains('never add information'));
+        } else {
+          // Every stage that GENERATES content still carries all the rules.
+          expect(c.system!, contains("REPAIR, DON'T GUESS"));
+          expect(c.system!, contains('NEVER FABRICATE SPECIFICS'));
+          expect(c.system!, contains('PRESERVE CONTINUITY'));
+          expect(c.system!, contains('ATTRIBUTE'));
+        }
       }
     });
 
     test(
-        'the reduce prompt carries the persona lens and the mandatory sections',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      final sales = personasByKey['sales_call']!;
+      'the map prompt is fed the glossary terms so ASR repair can happen',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+            glossary: glossary,
+          ),
+          persona: persona,
+        );
 
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: sales,
-      );
+        final map = backend.calls.firstWhere((c) => c.stage == Stage.map);
+        // The glossary is what turns "skin apps" into Scan Apps.
+        for (final term in glossary) {
+          expect(
+            map.system!,
+            contains(term),
+            reason: 'glossary term "$term" never reached the map call',
+          );
+        }
+        expect(map.prompt, contains('TRANSCRIPT SEGMENT:'));
+        expect(map.prompt, contains('Extract structured notes'));
+        expect(
+          map.prompt,
+          contains('LOW CONFIDENCE'),
+          reason:
+              'the uncertainty channel must exist at extraction time, or '
+              'there is nothing left to mark uncertain later',
+        );
+        expect(map.prompt, contains('CONTINUITY'));
+        expect(map.prompt, contains('RGM sync'));
+      },
+    );
 
-      final reduce = backend.calls.firstWhere((c) => c.stage == Stage.reduce);
-      expect(reduce.prompt, contains('## People & continuity'));
-      expect(reduce.prompt, contains('Low confidence'));
-      expect(reduce.prompt, contains(sales.prompt.trim()),
-          reason: 'the persona is a LENS appended to the shared contract');
-    });
+    test(
+      'map prompts are part-numbered so the model may leave a thread open',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+        );
+
+        final maps = backend.calls.where((c) => c.stage == Stage.map).toList();
+        for (var i = 0; i < maps.length; i++) {
+          expect(maps[i].prompt, contains('Part ${i + 1} of ${maps.length}'));
+        }
+      },
+    );
+
+    test(
+      'the reduce prompt carries the persona lens and the mandatory sections',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        final sales = personasByKey['sales_call']!;
+
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: sales,
+        );
+
+        final reduce = backend.calls.firstWhere((c) => c.stage == Stage.reduce);
+        expect(reduce.prompt, contains('## People & continuity'));
+        expect(reduce.prompt, contains('Low confidence'));
+        expect(
+          reduce.prompt,
+          contains(sales.prompt.trim()),
+          reason: 'the persona is a LENS appended to the shared contract',
+        );
+      },
+    );
 
     test('an untitled meeting is never a hallucination seed', () async {
       final backend = FakeBackend(caps: _gemma);
@@ -562,36 +658,42 @@ void main() {
   });
 
   group('cancellation', () {
-    test('cancelling BETWEEN chunks throws SummaryCancelled and stops the work',
-        () async {
-      final cancel = CancelToken();
-      final backend = FakeBackend(
-        caps: _gemma,
-        onCall: (call) {
-          // The user hits Cancel while chunk 1 is in flight.
-          if (call.stage == Stage.map && call.index == 0) cancel.cancel();
-        },
-      );
+    test(
+      'cancelling BETWEEN chunks throws SummaryCancelled and stops the work',
+      () async {
+        final cancel = CancelToken();
+        final backend = FakeBackend(
+          caps: _gemma,
+          onCall: (call) {
+            // The user hits Cancel while chunk 1 is in flight.
+            if (call.stage == Stage.map && call.index == 0) cancel.cancel();
+          },
+        );
 
-      await expectLater(
-        const SummaryPipeline().run(
-          backend: backend,
-          input: SummaryInput(
-            segments: _segments(count: 80, tokensEach: 60),
-            meetingTitle: 'RGM sync',
+        await expectLater(
+          const SummaryPipeline().run(
+            backend: backend,
+            input: SummaryInput(
+              segments: _segments(count: 80, tokensEach: 60),
+              meetingTitle: 'RGM sync',
+            ),
+            persona: persona,
+            cancel: cancel,
           ),
-          persona: persona,
-          cancel: cancel,
-        ),
-        throwsA(isA<SummaryCancelled>()),
-      );
+          throwsA(isA<SummaryCancelled>()),
+        );
 
-      final maps = backend.calls.where((c) => c.stage == Stage.map).length;
-      expect(maps, 1,
-          reason: 'the pipeline kept mapping after the user cancelled — '
-              'on device that is minutes of wasted GPU time');
-      expect(backend.calls.any((c) => c.stage == Stage.reduce), isFalse);
-    });
+        final maps = backend.calls.where((c) => c.stage == Stage.map).length;
+        expect(
+          maps,
+          1,
+          reason:
+              'the pipeline kept mapping after the user cancelled — '
+              'on device that is minutes of wasted GPU time',
+        );
+        expect(backend.calls.any((c) => c.stage == Stage.reduce), isFalse);
+      },
+    );
 
     test('a token cancelled up front does no work at all', () async {
       final cancel = CancelToken()..cancel();
@@ -612,27 +714,33 @@ void main() {
       expect(backend.calls, isEmpty);
     });
 
-    test('the CancelToken is handed to the backend so it can abort mid-flight',
-        () async {
-      final cancel = CancelToken();
-      final backend = FakeBackend(caps: _gemma);
+    test(
+      'the CancelToken is handed to the backend so it can abort mid-flight',
+      () async {
+        final cancel = CancelToken();
+        final backend = FakeBackend(caps: _gemma);
 
-      await const SummaryPipeline().run(
-        backend: backend,
-        input: SummaryInput(
-          segments: _segments(count: 60, tokensEach: 60),
-          meetingTitle: 'RGM sync',
-        ),
-        persona: persona,
-        cancel: cancel,
-      );
+        await const SummaryPipeline().run(
+          backend: backend,
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'RGM sync',
+          ),
+          persona: persona,
+          cancel: cancel,
+        );
 
-      for (final c in backend.calls) {
-        expect(c.sawCancelToken, isTrue,
-            reason: '${c.stage.name} cannot be interrupted — Gemma exposes '
-                'stopGeneration() and the pipeline must pass the token down');
-      }
-    });
+        for (final c in backend.calls) {
+          expect(
+            c.sawCancelToken,
+            isTrue,
+            reason:
+                '${c.stage.name} cannot be interrupted — Gemma exposes '
+                'stopGeneration() and the pipeline must pass the token down',
+          );
+        }
+      },
+    );
 
     test('cancelling during the single pass throws SummaryCancelled', () async {
       final cancel = CancelToken();
@@ -671,22 +779,27 @@ void main() {
       );
     });
 
-    test('segments that render blank throws StateError, never a blank summary',
-        () async {
-      final backend = FakeBackend(caps: _gemma);
-      expect(
-        () => const SummaryPipeline().run(
-          backend: backend,
-          input: const SummaryInput(
-            segments: [PromptSegment(text: '   '), PromptSegment(text: '\n')],
-            meetingTitle: 'RGM sync',
+    test(
+      'segments that render blank throws StateError, never a blank summary',
+      () async {
+        final backend = FakeBackend(caps: _gemma);
+        expect(
+          () => const SummaryPipeline().run(
+            backend: backend,
+            input: const SummaryInput(
+              segments: [
+                PromptSegment(text: '   '),
+                PromptSegment(text: '\n'),
+              ],
+              meetingTitle: 'RGM sync',
+            ),
+            persona: persona,
           ),
-          persona: persona,
-        ),
-        throwsA(isA<StateError>()),
-      );
-      expect(backend.calls, isEmpty, reason: 'do not burn a call on nothing');
-    });
+          throwsA(isA<StateError>()),
+        );
+        expect(backend.calls, isEmpty, reason: 'do not burn a call on nothing');
+      },
+    );
 
     test('the StateError names the meeting, per CLAUDE.md', () async {
       try {
@@ -720,8 +833,11 @@ void main() {
       expect(seen, isNotEmpty);
       for (var i = 1; i < seen.length; i++) {
         expect(seen[i].step, greaterThanOrEqualTo(seen[i - 1].step));
-        expect(seen[i].step, lessThanOrEqualTo(seen[i].totalSteps),
-            reason: 'the UI would render "part 9 of 7"');
+        expect(
+          seen[i].step,
+          lessThanOrEqualTo(seen[i].totalSteps),
+          reason: 'the UI would render "part 9 of 7"',
+        );
         expect(seen[i].fraction, inInclusiveRange(0, 1));
       }
       expect(seen.last.stage, SummaryStage.done);
@@ -736,6 +852,8 @@ void main() {
       expect(seen.any((p) => p.label.contains('Reading part 1 of')), isTrue);
     });
   });
+
+  _planForTests();
 }
 
 // ---------------------------------------------------------------------------
@@ -749,6 +867,84 @@ const _gemma = BackendCapabilities(
   maxOutputTokens: 1024,
   supportsSystemPrompt: false,
 );
+
+void _planForTests() {
+  group('planFor — the long-meeting escalation signal', () {
+    test('a short meeting is not flagged for map-reduce', () {
+      final plan = SummaryPipeline.planFor(
+        input: SummaryInput(
+          segments: _segments(count: 3, tokensEach: 30),
+          meetingTitle: 'Standup',
+        ),
+        caps: _gemma,
+      );
+      expect(plan.willMapReduce, isFalse);
+      expect(plan.isLong, isFalse);
+      expect(plan.chunkCount, 1);
+    });
+
+    test(
+      'a long meeting IS flagged, with >1 chunk — the UI would offer cloud',
+      () {
+        final plan = SummaryPipeline.planFor(
+          input: SummaryInput(
+            segments: _segments(count: 60, tokensEach: 60),
+            meetingTitle: 'Q3 board',
+          ),
+          caps: _gemma,
+        );
+        expect(plan.willMapReduce, isTrue);
+        expect(plan.isLong, isTrue);
+        expect(plan.chunkCount, greaterThan(1));
+      },
+    );
+
+    test('the SAME meeting fits single-pass on a big (cloud) window', () {
+      final input = SummaryInput(
+        segments: _segments(count: 60, tokensEach: 60),
+        meetingTitle: 'Q3 board',
+      );
+      expect(
+        SummaryPipeline.planFor(input: input, caps: _gemma).willMapReduce,
+        isTrue,
+      );
+      expect(
+        SummaryPipeline.planFor(
+          input: input,
+          caps: const BackendCapabilities(
+            contextTokens: 1000000,
+            maxOutputTokens: 8192,
+          ),
+        ).willMapReduce,
+        isFalse,
+        reason:
+            'a bigger window is exactly why cloud escapes the fold — the '
+            'preview must reflect that so the offer is honest',
+      );
+    });
+
+    test('the preview matches what run() actually does', () async {
+      final input = SummaryInput(
+        segments: _segments(count: 60, tokensEach: 60),
+        meetingTitle: 'Q3 board',
+      );
+      final plan = SummaryPipeline.planFor(input: input, caps: _gemma);
+      final backend = FakeBackend(caps: _gemma);
+      await const SummaryPipeline().run(
+        backend: backend,
+        input: input,
+        persona: personasByKey['basic']!,
+      );
+      final mapCalls = backend.calls.where((c) => c.stage == Stage.map).length;
+      expect(plan.willMapReduce, mapCalls > 0);
+      expect(
+        plan.chunkCount,
+        mapCalls,
+        reason: 'planFor must predict the exact chunk count run() produces',
+      );
+    });
+  });
+}
 
 enum Stage { singlePass, map, fold, reduce, critic, unknown }
 
@@ -788,9 +984,13 @@ class FakeBackend implements SummaryBackend {
     required BackendCapabilities caps,
     String Function(Call call)? respond,
     void Function(Call call)? onCall,
-  })  : _caps = caps,
-        _respond = respond ?? _defaultResponse,
-        _onCall = onCall;
+    // `caps`/`onCall` are public named params (call sites pass them);
+    // this._caps would rename them, so the initializing-formal lint can't apply.
+    // ignore: prefer_initializing_formals
+  }) : _caps = caps,
+       _respond = respond ?? _defaultResponse,
+       // ignore: prefer_initializing_formals
+       _onCall = onCall;
 
   final BackendCapabilities _caps;
   final String Function(Call) _respond;

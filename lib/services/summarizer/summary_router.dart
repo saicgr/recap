@@ -14,6 +14,32 @@ import 'summary_types.dart';
 
 enum SummaryRoute { ollama, appleFoundationModels, gemma, cloud, byok }
 
+/// Whether the UI should OFFER a cloud summary before running a LONG meeting
+/// on-device. Pure decision — the dialog ("~N min on-device, or 1 credit in the
+/// cloud for better quality?") is the thin UI layer on top of this.
+///
+/// The rules encode the product invariants:
+///   • Privacy tier: NEVER — cloud is structurally unreachable (Karpathy).
+///   • Only LONG meetings ([SummaryPlan.isLong]); short ones summarize well
+///     on-device, where a 2B is reliable and it's free + private.
+///   • Only when the user is defaulting to on-device — if they already chose
+///     cloud, there is nothing to offer.
+///   • Only when cloud is actually usable on this tier right now (quota + proxy).
+/// [SummaryPlan] comes from [SummaryPipeline.planFor] with the on-device backend's
+/// window, so the offer fires exactly when the on-device path would fold.
+bool shouldOfferCloudUpgrade({
+  required Tier tier,
+  required SummaryMode mode,
+  required SummaryPlan plan,
+  required bool cloudUsable,
+}) {
+  if (tier == Tier.privacy) return false;
+  if (!tier.cloudSummariesEnabled) return false;
+  if (mode == SummaryMode.cloud) return false;
+  if (!plan.isLong) return false;
+  return cloudUsable;
+}
+
 sealed class SummaryAttempt {
   const SummaryAttempt();
 }
@@ -71,6 +97,9 @@ class SummaryRouter {
     required this.byok,
     required this.ollama,
     SummaryPipeline pipeline = const SummaryPipeline(),
+    // `pipeline` is the public injection point (tests pass pipeline:);
+    // this._pipeline would rename it, so the initializing-formal lint can't apply.
+    // ignore: prefer_initializing_formals
   }) : _pipeline = pipeline;
 
   final EntitlementService entitlements;
@@ -124,8 +153,12 @@ class SummaryRouter {
           rethrow;
         } catch (e, s) {
           // BYOK failed — fall through to the standard cloud-quota path.
-          final onDevice =
-              await _tryOnDevice(input, persona, onProgress, cancel);
+          final onDevice = await _tryOnDevice(
+            input,
+            persona,
+            onProgress,
+            cancel,
+          );
           return onDevice ?? SummaryFailed(e, s);
         }
       }
@@ -148,19 +181,31 @@ class SummaryRouter {
             // Transient cloud failure (offline, 5xx, timeout) — try on-device
             // fallback. The 401-retry lives inside CloudBackend and has already
             // been exhausted by the time we see the error.
-            final onDevice =
-                await _tryOnDevice(input, persona, onProgress, cancel);
+            final onDevice = await _tryOnDevice(
+              input,
+              persona,
+              onProgress,
+              cancel,
+            );
             return onDevice ?? SummaryFailed(e, s);
           }
         case BlockedCloudQuota(:final onDeviceAvailable):
           if (!onDeviceAvailable) return const SummaryBlockedByQuota();
-          final onDevice =
-              await _tryOnDevice(input, persona, onProgress, cancel);
+          final onDevice = await _tryOnDevice(
+            input,
+            persona,
+            onProgress,
+            cancel,
+          );
           return onDevice ?? const SummaryBlockedByQuota();
         case BlockedCloudDisabled():
           // Shouldn't happen — we already coerced Privacy to onDevice above.
-          final onDevice =
-              await _tryOnDevice(input, persona, onProgress, cancel);
+          final onDevice = await _tryOnDevice(
+            input,
+            persona,
+            onProgress,
+            cancel,
+          );
           return onDevice ?? const SummaryBlockedByQuota();
       }
     }
@@ -225,12 +270,11 @@ class SummaryRouter {
     Persona persona,
     void Function(SummaryProgress)? onProgress,
     CancelToken? cancel,
-  ) =>
-      _pipeline.run(
-        backend: backend,
-        input: input,
-        persona: persona,
-        onProgress: onProgress,
-        cancel: cancel,
-      );
+  ) => _pipeline.run(
+    backend: backend,
+    input: input,
+    persona: persona,
+    onProgress: onProgress,
+    cancel: cancel,
+  );
 }

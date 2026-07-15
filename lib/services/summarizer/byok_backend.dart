@@ -43,10 +43,8 @@ class ByokBackend implements SummaryBackend {
   /// of them offers is far larger than this, so it is safe for all three, and
   /// generous enough that a meeting never needs chunking on the BYOK path.
   @override
-  BackendCapabilities get capabilities => const BackendCapabilities(
-        contextTokens: 128000,
-        maxOutputTokens: 4096,
-      );
+  BackendCapabilities get capabilities =>
+      const BackendCapabilities(contextTokens: 128000, maxOutputTokens: 4096);
 
   Future<({String provider, String key})?> _credentials() async {
     final provider = await _storage.read(key: _kProvider);
@@ -57,11 +55,11 @@ class ByokBackend implements SummaryBackend {
   }
 
   String? _modelFor(String provider) => switch (provider) {
-        'gemini' => _geminiModel,
-        'openai' => _openaiModel,
-        'anthropic' => _anthropicModel,
-        _ => null,
-      };
+    'gemini' => _geminiModel,
+    'openai' => _openaiModel,
+    'anthropic' => _anthropicModel,
+    _ => null,
+  };
 
   @override
   Future<bool> isAvailable() async => (await _credentials()) != null;
@@ -80,8 +78,9 @@ class ByokBackend implements SummaryBackend {
     if (creds == null) {
       throw StateError('ByokBackend: no key configured.');
     }
-    final sys =
-        (system == null || system.trim().isEmpty) ? null : system.trim();
+    final sys = (system == null || system.trim().isEmpty)
+        ? null
+        : system.trim();
     final maxOut = maxOutputTokens ?? capabilities.maxOutputTokens;
 
     cancel?.throwIfCancelled();
@@ -98,7 +97,8 @@ class ByokBackend implements SummaryBackend {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       throw StateError(
-          'BYOK provider "${creds.provider}" returned an empty summary');
+        'BYOK provider "${creds.provider}" returned an empty summary',
+      );
     }
     return trimmed;
   }
@@ -111,7 +111,8 @@ class ByokBackend implements SummaryBackend {
     int maxOutputTokens,
   ) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/$_geminiModel:generateContent?key=$key');
+      'https://generativelanguage.googleapis.com/v1beta/models/$_geminiModel:generateContent?key=$key',
+    );
     final resp = await _client.post(
       url,
       headers: {HttpHeaders.contentTypeHeader: 'application/json'},
@@ -119,17 +120,17 @@ class ByokBackend implements SummaryBackend {
         'contents': [
           {
             'parts': [
-              {'text': prompt}
-            ]
-          }
+              {'text': prompt},
+            ],
+          },
         ],
         // The preamble carries every anti-hallucination rule, so it goes in the
         // dedicated system slot where the model weights it hardest.
         if (system != null)
           'systemInstruction': {
             'parts': [
-              {'text': system}
-            ]
+              {'text': system},
+            ],
           },
         'generationConfig': {
           'temperature': temperature,

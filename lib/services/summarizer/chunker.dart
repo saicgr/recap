@@ -173,12 +173,15 @@ List<PromptSegment> _fitToBudget(PromptSegment s, int targetTokens) {
   if (_cost(s) <= targetTokens) return [s];
 
   // Budget for the text alone, minus what the `[mm:ss] Speaker:` prefix costs.
-  final prefixCost = _cost(PromptSegment(
-        speaker: s.speaker,
-        startMs: s.startMs,
-        endMs: s.endMs,
-        text: '',
-      )) +
+  final prefixCost =
+      _cost(
+        PromptSegment(
+          speaker: s.speaker,
+          startMs: s.startMs,
+          endMs: s.endMs,
+          text: '',
+        ),
+      ) +
       1;
   final textBudget = math.max(16, targetTokens - prefixCost);
 

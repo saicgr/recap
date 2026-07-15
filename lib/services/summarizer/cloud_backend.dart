@@ -30,8 +30,8 @@ class CloudBackend implements SummaryBackend {
     required this.cloudEnabled,
     http.Client? client,
     Duration? timeout,
-  })  : _client = client ?? http.Client(),
-        _timeout = timeout ?? const Duration(seconds: 90);
+  }) : _client = client ?? http.Client(),
+       _timeout = timeout ?? const Duration(seconds: 90);
 
   /// Read on every call so a Settings change takes effect without a restart.
   final String Function() proxyUrlProvider;
@@ -58,10 +58,8 @@ class CloudBackend implements SummaryBackend {
   String get modelId => _lastServerModelId ?? _fallbackModelId;
 
   @override
-  BackendCapabilities get capabilities => const BackendCapabilities(
-        contextTokens: 1000000,
-        maxOutputTokens: 8192,
-      );
+  BackendCapabilities get capabilities =>
+      const BackendCapabilities(contextTokens: 1000000, maxOutputTokens: 8192);
 
   @override
   Future<bool> isAvailable() async {
@@ -121,19 +119,26 @@ class CloudBackend implements SummaryBackend {
 
     switch (resp.statusCode) {
       case 401:
-        throw CloudError(CloudFailureKind.unauthorized,
-            'The cloud proxy rejected this install. Try again later.');
+        throw CloudError(
+          CloudFailureKind.unauthorized,
+          'The cloud proxy rejected this install. Try again later.',
+        );
       case 429:
-        throw CloudError(CloudFailureKind.rateLimited,
-            'Cloud rate limit reached. Wait a moment, or summarize on-device.');
+        throw CloudError(
+          CloudFailureKind.rateLimited,
+          'Cloud rate limit reached. Wait a moment, or summarize on-device.',
+        );
       case 402:
-        throw CloudError(CloudFailureKind.quotaExhausted,
-            'Your cloud allowance is used up for this month.');
+        throw CloudError(
+          CloudFailureKind.quotaExhausted,
+          'Your cloud allowance is used up for this month.',
+        );
       case 503:
         throw CloudError(
-            CloudFailureKind.budgetExhausted,
-            'The cloud service is at its daily limit. Try tomorrow, or '
-            'summarize on-device.');
+          CloudFailureKind.budgetExhausted,
+          'The cloud service is at its daily limit. Try tomorrow, or '
+          'summarize on-device.',
+        );
     }
     if (resp.statusCode >= 400) {
       throw CloudError(
@@ -147,13 +152,17 @@ class CloudBackend implements SummaryBackend {
     try {
       json = jsonDecode(resp.body) as Map<String, dynamic>;
     } catch (_) {
-      throw CloudError(CloudFailureKind.emptyResponse,
-          'Cloud summary returned an unreadable response.');
+      throw CloudError(
+        CloudFailureKind.emptyResponse,
+        'Cloud summary returned an unreadable response.',
+      );
     }
     final text = (json['text'] as String?)?.trim();
     if (text == null || text.isEmpty) {
       throw CloudError(
-          CloudFailureKind.emptyResponse, 'Cloud summary returned empty text.');
+        CloudFailureKind.emptyResponse,
+        'Cloud summary returned empty text.',
+      );
     }
 
     final serverModelId = (json['model_id'] as String?)?.trim();
@@ -188,14 +197,18 @@ class CloudBackend implements SummaryBackend {
           .post(Uri.parse('$base/v1/summarize'), headers: headers, body: body)
           .timeout(_timeout);
     } on TimeoutException {
-      throw CloudError(CloudFailureKind.timeout,
-          'The cloud summary timed out. Try again, or summarize on-device.');
+      throw CloudError(
+        CloudFailureKind.timeout,
+        'The cloud summary timed out. Try again, or summarize on-device.',
+      );
     } on IOException catch (e) {
       // SocketException, HandshakeException, TlsException, ... A captive portal
       // throws HandshakeException, not SocketException, so catching only the
       // latter would miss the most common real-world failure.
-      throw CloudError(CloudFailureKind.offline,
-          'Could not reach the cloud proxy: ${truncateForError('$e')}');
+      throw CloudError(
+        CloudFailureKind.offline,
+        'Could not reach the cloud proxy: ${truncateForError('$e')}',
+      );
     }
   }
 }

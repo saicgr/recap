@@ -65,6 +65,25 @@ class SummaryInput {
   });
 }
 
+/// Cheap preview (no generation) of how a summary will run on a given backend.
+/// The UI uses [willMapReduce] to decide whether to OFFER a cloud summary for a
+/// long meeting on a non-Privacy tier — the meetings where a 2B loses the most
+/// and where cloud is worth a credit. Computed the same way the pipeline decides,
+/// so the offer matches what would actually happen.
+class SummaryPlan {
+  /// True when the transcript does not fit the backend's single-pass window and
+  /// will be chunked + folded — i.e. a long meeting.
+  final bool willMapReduce;
+
+  /// Number of map chunks (1 for the single-pass path).
+  final int chunkCount;
+
+  const SummaryPlan({required this.willMapReduce, required this.chunkCount});
+
+  /// A meeting worth offering a cloud upgrade for.
+  bool get isLong => willMapReduce;
+}
+
 enum SummaryStage { preparing, mapping, reducing, checking, done }
 
 class SummaryProgress {

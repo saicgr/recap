@@ -184,8 +184,10 @@ CONTINUITY — absence, leave, surgery, handoff, coverage, deadline.
 LOW CONFIDENCE — "<as heard>" — why it is unresolved, or what you repaired it to
   from context alone.
 
-Every line ends with its [mm:ss]. If its source line has no [mm:ss], leave the
-citation off rather than inventing one.''';
+End each line with the [mm:ss] of the transcript line it came from when you can see
+one. If you are unsure, leave the citation off — NEVER invent or guess a time. A
+later pass stamps each note group with its own time range, so a missing per-line
+[mm:ss] is recovered; a wrong one is not.''';
 
 /// The Granola-beating contract. Sections are DERIVED from content, not a fixed
 /// Overview/Key points/Decisions/Actions template — that template is what caps
@@ -206,7 +208,12 @@ Merge them into the final meeting notes.
 
 Contract:
 - EVERY line traces back to a note. Add nothing the notes do not support.
-- Segments overlap: merge duplicate notes, keep the earliest [mm:ss].
+- Segments overlap: merge duplicate notes, keep the earliest [mm:ss]. Say a thing
+  ONCE — a fact that appears in three note groups is one bullet, not three.
+- CITE with a REAL time. Use the note's own [mm:ss]. A note without one: use the time
+  range in its "### Notes — part X of Y [mm:ss-mm:ss]" header. NEVER invent a
+  timestamp and never reuse one [mm:ss] for every line — a coarse real range beats a
+  precise fake time.
 - Keep every specific (number, ID, amount, pack size, field, system name) and every
   (heard, unverified) marker, attached to the point it belongs to.
 - Every BEHAVIOURS & LIMITS note MUST reach the output. A stated limit of a system,
@@ -216,9 +223,11 @@ Contract:
   unresolved if the room left it unresolved.
 - Preserve hedges. A hedged claim rendered as a flat fact is a fabrication.
 
-Output markdown in exactly this shape, IN THIS ORDER. Everything above the topic
-sections is mandatory and must be COMPLETE before you start them. Running short of
-room: write FEWER topic sections — never leave the sections above unfinished.
+Output markdown in exactly this shape, IN THIS ORDER. Emit each ## heading EXACTLY
+ONCE — put all of a heading's content under its single occurrence; a second "## Low
+confidence" or "## Decisions" later in the document is a bug. Everything above the
+topic sections is mandatory and must be COMPLETE before you start them. Running short
+of room: write FEWER topic sections — never leave the sections above unfinished.
 
 ## TL;DR
 - Max 3 bullets — what someone who missed the meeting must know.
@@ -241,20 +250,25 @@ before next week, else Lisa)".)
 
 ## ⚠️ Low confidence
 - "<as heard>" — unresolved, or repaired to <term> from context alone [mm:ss]
-(Omit ONLY if nothing was uncertain. Never make an uncertain term disappear by
+(This section is ONLY for GARBLED TERMS you could not resolve, or context-only
+repairs. A plain fact, number, behaviour, decision or open question NEVER belongs
+here — it goes in Decisions, Next steps, Open questions or a topic section. If you
+are unsure where a fact belongs, put it in a topic section, never here. Omit this
+section entirely if nothing was uncertain. Never make an uncertain term disappear by
 inventing a clean one, and never promote a (heard, unverified) value to a certain
-one. Do NOT list a term the transcript spells plainly elsewhere — one clean
-occurrence resolves every garbled one. A term listed here may not be asserted as
-fact anywhere else in the output; cite it as heard, in quotes.)
+one. Do NOT list a term the transcript spells plainly elsewhere. A term listed here
+may not be asserted as fact anywhere else; cite it as heard, in quotes.)
 
 ## Open questions
 - The question — who can answer it [mm:ss]
 
-## <Topic name>
+Then 2 to 6 TOPIC SECTIONS. Head each with "## " and a NAME YOU CHOOSE from its
+content — e.g. "## Loyalty vs targeted", "## Fuel rewards", "## APT pricing files".
+NEVER output the literal words "Topic name", "Discussion" or "Key points" as a
+heading.
 - Point [mm:ss]
   - supporting detail, number, or ID
-(Repeat 2-6 times, each named from its content — never "Discussion" or "Key points".
-The BEHAVIOURS & LIMITS lines belong here: a stated limit is a finding, not chatter.)
+(The BEHAVIOURS & LIMITS lines belong here: a stated limit is a finding, not chatter.)
 
 ${persona.prompt.trim()}''';
 
@@ -297,6 +311,17 @@ authoritative for:
 Then output the corrected DRAFT and nothing else — no preamble, no list of changes.
 Do not rewrite supported lines, do not add sections, do not improve the prose. If
 every line passes, output the DRAFT unchanged.''';
+
+/// A DELIBERATELY MINIMAL system for the critic call. The critic does not read the
+/// transcript and does not repair terms — [criticInstruction] already lists exactly
+/// what to check — so it does not need the full 8-rule preamble or the glossary. On a
+/// 4096-token on-device window those ~565 system tokens were the difference between
+/// the critic fitting and being skipped: with the full preamble the ledger + draft +
+/// instruction overflowed on every map-reduced meeting, which is exactly the meeting
+/// the critic exists for. Trading the preamble for this line is what lets it run.
+const String kCriticSystem =
+    'You verify meeting notes against extracted notes. You never add information, '
+    'never repair wording, and only remove or flag what the notes do not support.';
 
 /// Long-context backends (cloud, BYOK) read the transcript directly — summarizing
 /// a summary loses detail, so we skip map-reduce when the window allows. The
@@ -355,10 +380,11 @@ not be asserted as fact anywhere else in the output; cite it as heard, in quotes
 ## Open questions
 - The question — who can answer it [mm:ss]
 
-## <Topic name>
+Then 2 to 6 TOPIC SECTIONS. Head each with "## " and a NAME YOU CHOOSE from its
+content — e.g. "## Loyalty vs targeted", "## Fuel rewards". NEVER output the literal
+words "Topic name", "Discussion" or "Key points" as a heading.
 - Point [mm:ss]
   - supporting detail, number, or ID
-(Repeat 2-6 times, each named from its content — never "Discussion" or "Key points".)
 
 SELF-CHECK — do this before emitting anything, and do not show your working. Re-verify
 every number, ID, name, date and pack size against the transcript: what you cannot
@@ -420,7 +446,8 @@ Part ${chunk.index + 1} of ${chunk.total}.
 TRANSCRIPT SEGMENT:
 ${chunk.text}''';
 
-String buildFoldPrompt({required String notes}) => '''
+String buildFoldPrompt({required String notes}) =>
+    '''
 ${foldInstruction()}
 
 NOTES:
@@ -439,7 +466,8 @@ Meeting: ${_title(meetingTitle)}
 NOTES:
 $notes''';
 
-String buildCriticPrompt({required String notes, required String draft}) => '''
+String buildCriticPrompt({required String notes, required String draft}) =>
+    '''
 ${criticInstruction()}
 
 NOTES:

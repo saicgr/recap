@@ -149,8 +149,12 @@ class ThemeController extends ChangeNotifier {
     RecapMode mode = RecapMode.light,
     AccentOption? accent,
     RecapButtonStyle buttonStyle = RecapButtonStyle.flat,
-  })  : _mode = mode,
+  })  // `mode`/`buttonStyle` are public named params (call sites pass them);
+      // this._mode would rename them, so the initializing-formal lint can't apply.
+      // ignore: prefer_initializing_formals
+      : _mode = mode,
         _accent = accent ?? accentOptions[0],
+        // ignore: prefer_initializing_formals
         _buttonStyle = buttonStyle;
 
   RecapMode get mode => _mode;

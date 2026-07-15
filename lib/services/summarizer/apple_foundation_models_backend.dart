@@ -32,8 +32,9 @@ import 'summary_types.dart';
 ///                        temperature: double, maxOutputTokens: int})
 ///                → {text: String}
 class AppleFoundationModelsBackend implements SummaryBackend {
-  static const _channel =
-      MethodChannel('com.recapfreenote.recap/apple_foundation_models');
+  static const _channel = MethodChannel(
+    'com.recapfreenote.recap/apple_foundation_models',
+  );
 
   static const _modelId = 'apple-fm-3b';
 
@@ -50,9 +51,9 @@ class AppleFoundationModelsBackend implements SummaryBackend {
 
   @override
   BackendCapabilities get capabilities => const BackendCapabilities(
-        contextTokens: _contextTokens,
-        maxOutputTokens: _maxOutputTokens,
-      );
+    contextTokens: _contextTokens,
+    maxOutputTokens: _maxOutputTokens,
+  );
 
   @override
   Future<bool> isAvailable() async {
@@ -82,15 +83,13 @@ class AppleFoundationModelsBackend implements SummaryBackend {
     cancel?.throwIfCancelled();
 
     try {
-      final result = await _channel.invokeMapMethod<String, dynamic>(
-        'generate',
-        {
-          'prompt': prompt,
-          'system': system,
-          'temperature': temperature,
-          'maxOutputTokens': maxOutputTokens ?? _maxOutputTokens,
-        },
-      );
+      final result = await _channel
+          .invokeMapMethod<String, dynamic>('generate', {
+            'prompt': prompt,
+            'system': system,
+            'temperature': temperature,
+            'maxOutputTokens': maxOutputTokens ?? _maxOutputTokens,
+          });
       // A cancel that lands while the native side is generating cannot preempt
       // it (the framework exposes no cancellation handle), so we honour it on
       // return instead of handing back a summary the user no longer wants.

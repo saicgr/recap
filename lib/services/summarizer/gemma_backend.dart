@@ -1,6 +1,6 @@
-import 'package:flutter_gemma/core/model.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
-import 'package:flutter_gemma/pigeon.g.dart';
+// flutter_gemma 1.x exports its OWN CancelToken; ours (summary_types.dart) is the
+// pipeline's cancellation signal. Hide theirs so `CancelToken` here means ours.
+import 'package:flutter_gemma/flutter_gemma.dart' hide CancelToken;
 
 import 'summary_backend.dart';
 import 'summary_types.dart';
@@ -34,59 +34,74 @@ class GemmaBackend implements SummaryBackend {
 
   @override
   BackendCapabilities get capabilities => const BackendCapabilities(
-        contextTokens: _contextTokens,
-        maxOutputTokens: _maxOutputTokens,
-        // A MediaPipe `.task` session takes user messages only — there is no
-        // system role to address. We therefore prepend the preamble to the
-        // prompt in [generate] rather than dropping it: it carries every
-        // anti-hallucination rule and losing it is how the model starts
-        // inventing pack sizes.
-        supportsSystemPrompt: false,
-      );
+    contextTokens: _contextTokens,
+    maxOutputTokens: _maxOutputTokens,
+    // A MediaPipe `.task` session takes user messages only — there is no
+    // system role to address. We therefore prepend the preamble to the
+    // prompt in [generate] rather than dropping it: it carries every
+    // anti-hallucination rule and losing it is how the model starts
+    // inventing pack sizes.
+    supportsSystemPrompt: false,
+  );
 
   Future<void> _ensureLoaded() async {
     if (_model != null) return;
-    final manager = FlutterGemmaPlugin.instance.modelManager;
-    if (!await manager.isModelInstalled) {
+    if (!FlutterGemma.hasActiveModel()) {
       throw StateError(
-        'Gemma model not installed. Trigger download via GemmaBackend.download() '
+        'No active Gemma model. Trigger download via GemmaBackend.download() '
         'before summarizing.',
       );
     }
-    _model = await FlutterGemmaPlugin.instance.createModel(
-      modelType: ModelType.gemmaIt,
-      preferredBackend: PreferredBackend.gpu,
+    // getActiveModel reads the identity persisted by installModel().install()
+    // (modelType + fileType), so a .litertlm Gemma 4 and a .task Gemma 3n both
+    // load through the same call — the engine registered in
+    // FlutterGemma.initialize() picks the right runtime.
+    _model = await FlutterGemma.getActiveModel(
       maxTokens: _contextTokens,
+      preferredBackend: PreferredBackend.gpu,
     );
   }
 
-  /// Returns true if the model file is present on disk. Does NOT trigger a
-  /// download — use [download] for that.
+  /// True if a model is installed AND active. Does NOT trigger a download —
+  /// use [download] for that. Synchronous under the hood (reads persisted
+  /// identity), wrapped for interface conformance.
   @override
   Future<bool> isAvailable() async {
     try {
-      return await FlutterGemmaPlugin.instance.modelManager.isModelInstalled;
+      return FlutterGemma.hasActiveModel();
     } catch (_) {
       return false;
     }
   }
 
-  /// Trigger the model download. UI should show progress (0..1).
+  /// Trigger the model download + activation. UI should show progress (0..1).
+  ///
+  /// Gemma 4 ships as `.litertlm` (LiteRT-LM engine, NPU-capable); Gemma 3n as
+  /// `.task` (MediaPipe). The extension picks the file type, and install() also
+  /// sets the model active so [isAvailable] flips to true.
   Future<void> download({
     required String modelUrl,
     void Function(double progress)? onProgress,
   }) async {
-    final manager = FlutterGemmaPlugin.instance.modelManager;
-    final stream = manager.downloadModelFromNetworkWithProgress(modelUrl);
-    await for (final progress in stream) {
-      onProgress?.call(progress / 100.0);
-    }
+    final fileType = modelUrl.toLowerCase().endsWith('.litertlm')
+        ? ModelFileType.litertlm
+        : ModelFileType.task;
+    await FlutterGemma.installModel(
+          modelType: ModelType.gemmaIt,
+          fileType: fileType,
+        )
+        .fromNetwork(modelUrl)
+        .withProgress((int p) => onProgress?.call(p / 100.0))
+        .install();
   }
 
   Future<void> delete() async {
-    await FlutterGemmaPlugin.instance.modelManager.deleteModel();
     await _model?.close();
     _model = null;
+    // Clear the persisted "active model" identity so it isn't auto-restored on
+    // next launch. The file removal is handled by the model manager's cleanup;
+    // clearing the identity is what makes [isAvailable] read false again.
+    await FlutterGemma.clearActiveInferenceIdentity();
   }
 
   /// [maxOutputTokens] is accepted for interface conformance but cannot be
