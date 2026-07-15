@@ -27,6 +27,11 @@ class InMemoryChapterStore implements ChapterStore {
   Future<void> put(String key, String summary) async => _m[key] = summary;
 }
 
+/// The app-wide session store: a 3-6h summary the user navigates away from keeps
+/// its finished chapters. A Drift-backed store (device-side) would extend this to
+/// survive an app kill; this is the isolated, testable seam for that.
+final ChapterStore sessionChapterStore = InMemoryChapterStore();
+
 /// Stable FNV-1a hash of [s] — the chapter cache key. Deterministic across runs
 /// (unlike Object.hashCode), collision-negligible for this use.
 String chapterKey(String s) {

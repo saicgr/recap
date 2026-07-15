@@ -46,6 +46,11 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   /// spinner with no stage would read as a hang.
   SummaryProgress? _progress;
 
+  /// The meeting-so-far while a long (chaptered) summary streams in — chapters
+  /// appear one by one instead of a 40-minute opaque wait. Null when not
+  /// chaptering or idle.
+  String? _partialSummary;
+
   /// Cooperative cancellation for the in-flight summary. The user must be able
   /// to walk away from minutes of GPU work.
   CancelToken? _cancel;
@@ -181,6 +186,13 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
         onProgress: (p) {
           if (mounted) setState(() => _progress = p);
         },
+        // Stream chapters as they finish, and resume finished ones from the
+        // session store — a 3-6h meeting builds in front of the user and
+        // survives leaving the screen.
+        onPartial: (partial) {
+          if (mounted) setState(() => _partialSummary = partial.text);
+        },
+        chapterStore: sessionChapterStore,
         cancel: cancel,
       );
       switch (res) {
@@ -234,6 +246,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           _summarizing = false;
           _cancel = null;
           _progress = null;
+          _partialSummary = null;
         });
       }
     }
@@ -1064,10 +1077,15 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
           ],
         ),
         const SizedBox(height: 10),
-        SelectableText(
-          isTranslated ? translation.translatedBody : latest.body,
-          style: RT.bodyLg.copyWith(color: t.textPrimary, height: 26 / 16),
-        ),
+        isTranslated
+            ? SelectableText(
+                translation.translatedBody,
+                style: RT.bodyLg.copyWith(
+                  color: t.textPrimary,
+                  height: 26 / 16,
+                ),
+              )
+            : _SummaryMarkdown(latest.body, t, onSeekMs: _audio.seekMs),
         const SizedBox(height: 14),
         Text(
           isTranslated
@@ -1141,72 +1159,108 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   Widget _progressBlock(RecapTheme t) {
     final p = _progress;
     final label = p?.label ?? 'Generating…';
-    final showBar = p != null && p.totalSteps > 0;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: t.bgSubtle,
-        border: Border.all(color: t.border),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final frac = (p != null && p.totalSteps > 0)
+        ? p.fraction.clamp(0.0, 1.0)
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [t.accentSoft, t.bgSubtle],
+            ),
+            border: Border.all(color: t.accentBorder),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.5,
-                  valueColor: AlwaysStoppedAnimation(t.accent),
-                ),
+              Row(
+                children: [
+                  const _PulsingDot(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Text(
+                        label,
+                        key: ValueKey(label),
+                        style: RT.body.copyWith(color: t.textPrimary),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _cancel == null
+                        ? null
+                        : () {
+                            _cancel?.cancel();
+                            setState(
+                              () => _progress = const SummaryProgress(
+                                stage: SummaryStage.preparing,
+                                step: 0,
+                                totalSteps: 0,
+                                label: 'Cancelling…',
+                              ),
+                            );
+                          },
+                    child: Text(
+                      'Cancel',
+                      style: RT.label.copyWith(
+                        color: t.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: RT.body.copyWith(color: t.textSecondary),
-                ),
-              ),
-              TextButton(
-                onPressed: _cancel == null
-                    ? null
-                    : () {
-                        _cancel?.cancel();
-                        setState(
-                          () => _progress = const SummaryProgress(
-                            stage: SummaryStage.preparing,
-                            step: 0,
-                            totalSteps: 0,
-                            label: 'Cancelling…',
-                          ),
-                        );
-                      },
-                child: Text(
-                  'Cancel',
-                  style: RT.label.copyWith(
-                    color: t.textSecondary,
-                    fontWeight: FontWeight.w600,
+              if (frac != null) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: frac),
+                    duration: const Duration(milliseconds: 450),
+                    curve: Curves.easeOutCubic,
+                    builder: (_, v, __) => LinearProgressIndicator(
+                      value: v,
+                      minHeight: 5,
+                      backgroundColor: t.hairline,
+                      valueColor: AlwaysStoppedAnimation(t.accent),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
-          if (showBar) ...[
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: p.fraction.clamp(0.0, 1.0),
-                minHeight: 3,
-                backgroundColor: t.border,
-                valueColor: AlwaysStoppedAnimation(t.accent),
+        ),
+        // Streaming chapters — for a 3-6h meeting the summary builds in front of
+        // the user, chapter by chapter, instead of a long opaque wait.
+        if (_partialSummary != null) ...[
+          const SizedBox(height: 16),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Container(
+                key: ValueKey(_partialSummary!.length),
+                child: _SummaryMarkdown(
+                  _partialSummary!,
+                  t,
+                  onSeekMs: _audio.seekMs,
+                ),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -1954,6 +2008,239 @@ class _TranslateToggle extends StatelessWidget {
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A soft pulsing dot — the "working" indicator on the summarizing card. Reads
+/// as alive without the mechanical spin of a CircularProgressIndicator.
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = RecapThemeScope.of(context);
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) {
+        final v = 0.4 + 0.6 * _c.value;
+        return Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: t.accent.withValues(alpha: v),
+            boxShadow: [
+              BoxShadow(
+                color: t.accent.withValues(alpha: 0.35 * v),
+                blurRadius: 6 * v,
+                spreadRadius: 1.5 * v,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A lightweight, fluid renderer for a summary — no markdown package, just the
+/// small subset the summaries use: `## ` section headers, `### ` chapter
+/// sub-headers, `- ` bullets, `> ` notes, `**bold**`, and — the delight —
+/// tappable `[mm:ss]` citations that seek the audio. Turns a wall of raw text
+/// into an interactive, navigable document.
+class _SummaryMarkdown extends StatelessWidget {
+  final String text;
+  final RecapTheme t;
+  final void Function(int ms)? onSeekMs;
+  const _SummaryMarkdown(this.text, this.t, {this.onSeekMs});
+
+  @override
+  Widget build(BuildContext context) {
+    final blocks = <Widget>[];
+    for (final raw in text.split('\n')) {
+      final line = raw.trimRight();
+      if (line.trim().isEmpty) {
+        blocks.add(const SizedBox(height: 6));
+        continue;
+      }
+      final h2 = RegExp(r'^##\s+(.*)').firstMatch(line);
+      final h3 = RegExp(r'^###\s+(.*)').firstMatch(line);
+      final quote = RegExp(r'^>\s?(.*)').firstMatch(line);
+      final bullet = RegExp(r'^(\s*)[-*]\s+(.*)').firstMatch(line);
+      if (h2 != null) {
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 18, bottom: 6),
+            child: Text(
+              h2.group(1)!,
+              style: RT.subtitle.copyWith(
+                color: t.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        );
+      } else if (h3 != null) {
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 14, bottom: 4),
+            child: Text(
+              h3.group(1)!,
+              style: RT.body.copyWith(
+                color: t.accent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        );
+      } else if (quote != null) {
+        blocks.add(
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            decoration: BoxDecoration(
+              color: t.accentSoft,
+              border: Border(left: BorderSide(color: t.accent, width: 3)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: _rich(quote.group(1)!, muted: true),
+          ),
+        );
+      } else if (bullet != null) {
+        final indent = (bullet.group(1)!.length ~/ 2).clamp(0, 3);
+        blocks.add(
+          Padding(
+            padding: EdgeInsets.only(
+              left: 4 + indent * 16.0,
+              top: 3,
+              bottom: 3,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, right: 8),
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: t.textMuted,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                Expanded(child: _rich(bullet.group(2)!)),
+              ],
+            ),
+          ),
+        );
+      } else {
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: _rich(line),
+          ),
+        );
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: blocks,
+    );
+  }
+
+  Widget _rich(String s, {bool muted = false}) {
+    final base = RT.body.copyWith(
+      color: muted ? t.textSecondary : t.textPrimary,
+      height: 24 / 15,
+    );
+    final spans = <InlineSpan>[];
+    final tok = RegExp(r'\*\*(.+?)\*\*|\[(\d{1,2}):(\d{2})(?::(\d{2}))?\]');
+    var i = 0;
+    for (final m in tok.allMatches(s)) {
+      if (m.start > i) spans.add(TextSpan(text: s.substring(i, m.start)));
+      if (m.group(1) != null) {
+        spans.add(
+          TextSpan(
+            text: m.group(1),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        );
+      } else {
+        final hasH = m.group(4) != null;
+        final h = hasH ? int.parse(m.group(2)!) : 0;
+        final mm = hasH ? int.parse(m.group(3)!) : int.parse(m.group(2)!);
+        final ss = hasH ? int.parse(m.group(4)!) : int.parse(m.group(3)!);
+        final ms = ((h * 3600) + (mm * 60) + ss) * 1000;
+        final label = m.group(0)!;
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _TsChip(
+              label: label.substring(1, label.length - 1),
+              t: t,
+              onTap: onSeekMs == null ? null : () => onSeekMs!(ms),
+            ),
+          ),
+        );
+      }
+      i = m.end;
+    }
+    if (i < s.length) spans.add(TextSpan(text: s.substring(i)));
+    return SelectableText.rich(TextSpan(style: base, children: spans));
+  }
+}
+
+/// The tappable `[mm:ss]` citation chip — jumps the audio to that moment, tying
+/// the cited summary to the recording.
+class _TsChip extends StatelessWidget {
+  final String label;
+  final RecapTheme t;
+  final VoidCallback? onTap;
+  const _TsChip({required this.label, required this.t, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Material(
+        color: t.accentSoft,
+        borderRadius: BorderRadius.circular(5),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(5),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.play_arrow_rounded, size: 12, color: t.accent),
+                Text(
+                  label,
+                  style: RT.bodySm.copyWith(color: t.accent, height: 1.25),
+                ),
+              ],
+            ),
           ),
         ),
       ),
