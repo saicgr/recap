@@ -124,6 +124,11 @@ class SummaryPipeline {
     required Persona persona,
     void Function(SummaryProgress)? onProgress,
     CancelToken? cancel,
+    // For the chaptered (3-6h) path: resume completed chapters from [chapterStore]
+    // and stream each chapter as it lands via [onPartial]. Ignored on the flat
+    // and single-pass paths (a shorter meeting has nothing to stream/resume).
+    ChapterStore? chapterStore,
+    void Function(SummaryResult partial)? onPartial,
   }) async {
     final sw = Stopwatch()..start();
     cancel?.throwIfCancelled();
@@ -229,6 +234,8 @@ class SummaryPipeline {
         onProgress: onProgress,
         cancel: cancel,
         sw: sw,
+        chapterStore: chapterStore,
+        onPartial: onPartial,
       );
     }
 
@@ -582,6 +589,8 @@ class SummaryPipeline {
     required Stopwatch sw,
     void Function(SummaryProgress)? onProgress,
     CancelToken? cancel,
+    ChapterStore? chapterStore,
+    void Function(SummaryResult partial)? onPartial,
   }) async {
     final chapters = _splitChapters(input.segments, caps.maxInputTokens * 3);
     final reporter = _Progress(onProgress, totalSteps: chapters.length + 2);
@@ -593,21 +602,56 @@ class SummaryPipeline {
     final docs = <_ChapterDoc>[];
     for (var i = 0; i < chapters.length; i++) {
       cancel?.throwIfCancelled();
-      reporter.emit(
-        SummaryStage.mapping,
-        'Summarizing chapter ${i + 1} of ${chapters.length}...',
-      );
-      final res = await run(
-        backend: backend,
-        input: SummaryInput(
-          segments: chapters[i],
-          meetingTitle: '${input.meetingTitle} (part ${i + 1})',
-          glossary: input.glossary,
-        ),
-        persona: persona,
-        cancel: cancel,
-      );
-      docs.add(_ChapterDoc(range: _rangeLabel(chapters[i]), body: res.text));
+
+      // RESUME: a chapter whose transcript is unchanged is reused from the store
+      // — a 6-hour job that was interrupted (or the screen left) does not redo
+      // finished chapters.
+      final key = chapterKey(renderSegments(chapters[i]));
+      var body = await chapterStore?.get(key);
+      if (body == null) {
+        reporter.emit(
+          SummaryStage.mapping,
+          'Summarizing chapter ${i + 1} of ${chapters.length}...',
+        );
+        final res = await run(
+          backend: backend,
+          input: SummaryInput(
+            segments: chapters[i],
+            meetingTitle: '${input.meetingTitle} (part ${i + 1})',
+            glossary: input.glossary,
+          ),
+          persona: persona,
+          cancel: cancel,
+        );
+        body = res.text;
+        await chapterStore?.put(key, body);
+      } else {
+        reporter.emit(
+          SummaryStage.mapping,
+          'Chapter ${i + 1} of ${chapters.length} (resumed)...',
+        );
+      }
+      docs.add(_ChapterDoc(range: _rangeLabel(chapters[i]), body: body));
+
+      // STREAM: hand the caller the meeting-so-far after each chapter, so a long
+      // meeting shows chapter 1 while chapter 8 is still running. Cheap mechanical
+      // compose (no top-TL;DR model call) for partials; the final does the real one.
+      if (onPartial != null) {
+        final partial = _mechanicalSafetyNet(
+          text: _composeChapters(docs, ''),
+          transcript: transcript,
+          segments: input.segments,
+        );
+        onPartial(
+          SummaryResult(
+            text:
+                '$partial\n\n> Still summarizing — ${i + 1} of '
+                '${chapters.length} chapters done.',
+            modelId: backend.modelId,
+            processingTime: sw.elapsed,
+          ),
+        );
+      }
     }
 
     cancel?.throwIfCancelled();

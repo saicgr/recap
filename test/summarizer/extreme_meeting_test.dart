@@ -133,6 +133,71 @@ void main() {
       },
     );
   }
+
+  // Streaming + resume make a 6-hour summary EFFORTLESS: chapters appear as they
+  // finish, and an interrupted / navigated-away job does not redo finished work.
+  group('effortless long meetings — streaming + resume', () {
+    final war = cases.firstWhere((c) => c['id'] == 'extreme-6h-warroom');
+    final segs = _parse(war['transcript'] as String);
+    final input = SummaryInput(
+      segments: segs,
+      meetingTitle: war['title'] as String,
+    );
+
+    test('streams a partial summary after each chapter', () async {
+      final partials = <SummaryResult>[];
+      await const SummaryPipeline().run(
+        backend: _DroppingBackend(),
+        input: input,
+        persona: personasByKey['basic']!,
+        onPartial: partials.add,
+      );
+      expect(
+        partials.length,
+        greaterThanOrEqualTo(3),
+        reason: 'one partial per chapter — the user watches it build',
+      );
+      // Partials grow as chapters land, and each carries the running progress.
+      expect(
+        partials.last.text.length,
+        greaterThan(partials.first.text.length),
+      );
+      expect(partials.first.text.toLowerCase(), contains('still summarizing'));
+      // Even a mid-flight partial preserves facts (safety net runs each time).
+      expect(partials.last.text, contains('880421'));
+    });
+
+    test(
+      'resumes finished chapters from the store — a re-run barely re-generates',
+      () async {
+        final store = InMemoryChapterStore();
+        final first = _DroppingBackend();
+        await const SummaryPipeline().run(
+          backend: first,
+          input: input,
+          persona: personasByKey['basic']!,
+          chapterStore: store,
+        );
+        // Second run with the SAME store (e.g. the user came back, or the job was
+        // interrupted and retried): every chapter is cached, so almost no work.
+        final second = _DroppingBackend();
+        final r2 = await const SummaryPipeline().run(
+          backend: second,
+          input: input,
+          persona: personasByKey['basic']!,
+          chapterStore: store,
+        );
+        expect(
+          second.calls,
+          lessThan(first.calls ~/ 2),
+          reason: 'chapters resumed from the store; only the compose runs',
+        );
+        // ...and the resumed summary is still complete + faithful.
+        expect(r2.text, contains('880421'));
+        expect(r2.text.toLowerCase(), contains('surgery'));
+      },
+    );
+  });
 }
 
 bool _match(String hay, String needle) {

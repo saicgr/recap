@@ -5,6 +5,39 @@
 /// everything else here is what flows between the pipeline stages.
 library;
 
+/// A content-addressed cache of finished chapter summaries, so a 3-6 hour
+/// meeting can be summarized WITHOUT losing work when the user navigates away or
+/// the job is interrupted. Keyed by a hash of the chapter's transcript, so a
+/// chapter whose content is unchanged is reused; changed content re-summarizes.
+///
+/// The pipeline stays persistence-agnostic: it holds a [ChapterStore], not a DB.
+/// [InMemoryChapterStore] survives navigation within a session; a Drift-backed
+/// impl (device-side) survives an app kill for true resume.
+abstract class ChapterStore {
+  Future<String?> get(String key);
+  Future<void> put(String key, String summary);
+}
+
+/// Session-lifetime store — resumes across screen navigation, not an app kill.
+class InMemoryChapterStore implements ChapterStore {
+  final Map<String, String> _m = {};
+  @override
+  Future<String?> get(String key) async => _m[key];
+  @override
+  Future<void> put(String key, String summary) async => _m[key] = summary;
+}
+
+/// Stable FNV-1a hash of [s] — the chapter cache key. Deterministic across runs
+/// (unlike Object.hashCode), collision-negligible for this use.
+String chapterKey(String s) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < s.length; i++) {
+    h = (h ^ s.codeUnitAt(i)) & 0xffffffff;
+    h = (h * 0x01000193) & 0xffffffff;
+  }
+  return h.toRadixString(16);
+}
+
 /// What a backend can physically accept and emit in one call.
 ///
 /// [contextTokens] is the COMBINED input+output budget (that is how
